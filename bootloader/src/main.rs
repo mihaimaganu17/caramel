@@ -20,5 +20,5 @@ fn panic(_info: &PanicInfo) -> ! {
 // Used to not change the function name by compiler mangling
 #[no_mangle]
 fn entry() {
-    panit!("APPLES");
+    panic!("APPLES");
 }

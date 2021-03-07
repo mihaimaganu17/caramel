@@ -1,5 +1,5 @@
 [package]
-name = "bootloader"
+name = "pe_parser"
 version = "0.1.0"
 authors = ["mihaimaganu17"]
 edition = "2018"
@@ -7,15 +7,3 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
-# Solve `eh_personality`
-[profile.release]
-panic = "abort"
-opt-level = "z"
-lto = "fat"
-debug = true
-
-[profile.dev]
-panic = "abort"
-debug = true
-
