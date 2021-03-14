@@ -1,0 +1,1414 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameO­<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"><!-- saved from url=(0056)http://www.gamedev.net/reference/articles/article290.asp --><html><head><title>Operating Systems Development Series</title> 
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><link href="Files/reference.css" type="text/css" rel="stylesheet"> 
+<meta content="MSHTML 6.00.6000.16441" name="GENERATOR"></head> 
+<body text="#000000" vlink="#666699" alink="#000000" link="#666699" bgcolor="#ffffff" leftmargin="0" background="Files/watermark.gif" topmargin="0" marginheight="0" marginwidth="0"> 
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+        <div id="ad_main"> 
+
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+     </td> 
+  </tr> 
+
+</tbody></table> 
+
+<table cellspacing="0" cellpadding="3" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td class="tblhdr">Operating Systems Development Series</td> 
+</tr> 
+  <tr> 
+ 
+    <td align="middle" colspan="2"></td></tr></tbody></table> 
+<table cellspacing="0" cellpadding="5" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td> 
+ 
+ 
+<!-- Title --> 
+ 
+      <center><span class="title">Operating Systems Development - Portable Executable (PE)</span> 
+ 
+<br><span class="author">by Mike, 2011</span></center> 
+ 
+      <p>This series is intended to demonstrate and teach operating system development from
+	the ground up.</p>
+
+<!-- note: Google translator causes page to mess up; need to look into!! -->
+
+      <h1>Introduction</h1> 
+	<p>
+	Welcome!
+	</p>
+	<p>
+	Yey, this is going to be a long one.
+	</p>
+	<p>
+	This chapter is going to cover an advanced topic - the PE executable file format. We will be looking
+	at covering PE resources, dynamic linking, and more. This chapter is also planned for an update to
+	include more information to make the information as complete as possible.
+	</p>
+
+	<p>
+	Most of what is included in this chapter is for information purposes only and are only included
+	both for completness and in case any of our readers would like to provide support for them. Also
+	please note that a lot of the information provided can also be found in the official PE specification.
+	</p>
+	<p>
+	After this chapter, we will have everything we need to develop a loader and support a single tasking environment.
+	</p>
+	<p>
+	<i>Lets get started!</i>
+	</p>
+
+	<h1>File Format</h1>
+
+	<h2>Abstract</h2>
+
+	<p>
+	The <b>Portable Executable (PE)</b> file format is the standard executable file format used
+	in several operating systems, including Windows and Windows-like OSs, such as ReactOS. It is also
+	the standard file format used with booting on <b>Extensable Firmware Interface (EFI)</b> machines.
+	</p>
+
+	<p>
+	The PE executable file format is a complex format, supporting relocations, symbol tables, resources,
+	dynamic binding, and more.
+	</p>
+
+	<h2>Terms</h2>
+
+	<h3>VA (Virtual Address)</h3>
+
+	<p>
+	A <b>Virtual Address (VA)</b> is a linear address in the <b>Virtual Address Space (VAS)</b> of
+	the current program. All addresses in the PE executable format are virtual addresses. These addresses
+	are 32 bit linear addresses.
+	</p>
+
+	<h3>RVA (Relative Virtual Address)</h3>
+
+	<p>
+	A <b>Relative Virtual Address (RVA)</b> is a VA that is relative to the <b>base address</b> of the
+	executable program. The PE executable format uses RVAs in a lot of areas, so it is important to know
+	what RVAs are and how to obtain linear addresses from them. RVAs are just offsets from the base address,
+	thats all. So to obtain its linear address, just add the RVA to the base:
+	</p>
+	<blockquote><pre><div class="code">Linear address = Base address + RVA</div></pre></blockquote>
+
+	<p>
+	This one is important as we will need to perform this calculation in a lot of areas when parsing.
+	</p>
+
+	<h3>Sections and the Section Table</h3>
+
+<p><b>Sections</b></p>
+<p>
+Advanced executable file formats typically use <b>program sections</b> to simplify the linking process
+and provide structure to the software.
+
+Sections simplifies the linking process by providing a standard method for instructions and data to be
+stored within the executable image or object file.
+</p>
+<p>
+A section typically has a name associated with what elements are inside of the section. For example, <b>.data</b>
+is a common section name that contains variable, uninitialized data. Other section names have historical
+backgrounds. For example, <b>.text</b> is a typical name of a section containing executable or object code.
+<b>.bss</b> is typically used for global, program-wide initialized data.
+</p>
+<p>
+Using the C++ toolchain, for an example, variables defined in the global namespace or as <b>static</b>
+are stored in <b>.bss</b>. The resulting bytecode generated after compilation is stored in <b>.text</b>.
+</p>
+<p>
+The PE executable file format typically includes one or more
+of the following section names:
+</p>
+<ul>
+
+<li>.text</li>
+<li>.data</li>
+<li>.bss</li>
+<li>.arch</li>
+<li>.edata</li>
+<li>.idata</li>
+<li>.pdata</li>
+<li>.rdata</li>
+<li>.reloc</li>
+
+<li>.rsrc</li>
+<li>.sbss</li>
+<li>.sdata</li>
+<li>.srdata</li>
+<li>.xdata</li>
+</ul>
+<p><b>Section Table</b></p>
+<p>
+Program files and object files contain multiple sections. The base location of each section,
+and the name of that section, is typically stored in a <b>section table</b>. In some implimentations,
+a section table can be a simple linked list of structures or a hash table - different implimentations exist.
+</p>
+
+	<h3>Symbols and the Symbol Table</h3>
+
+<p><b>Symbols</b></p>
+<p>
+	While programming in C++, you most likley have encountered the unfamous <b>Undefined symbol</b> linker
+errors (or in some implimentations of C, warnings. Thats right, fully compiling and linking without error *ahem* old MSVC). This happens do to calling a function or referencing a variable
+by name whose definition could not be resolved during the linking stage.
+</p>
+<p>
+Functions and variables are referred to as <b>symbols</b> by the linker. A <b>symbol</b> contains the name, and
+information about what it is: such as a data type and value, for example. During compiling, the compilier
+must keep track of these symbols to insure that the final program can be linked. If a symbol is used that is not
+defined in the current <b>translation unit</b>, but is an EXTERN symbol, the compilier will need to mark it
+as an EXTERN symbol when writing the symbols to the object file.
+</p>
+<p>
+	If, during the linking stage, a symbol marked EXTERN still has no value associated with it (the symbol
+has no definition), the linker issues the above error.
+</p>
+<p>
+	Symbols are what allows programmers to define variables or functions across modules, translation units,
+or libraries.
+</p>
+<p>
+	There can only be one symbol with the same name through the entire program, and any libraries that it links with.
+	Because of this, and the high probability of naming collisions with the use of high level languages, variable and
+	function names typically have <b>name mangling</b> applied. This, of course, does not apply to assembly language.
+	The name mangling applied depends on multiple factors, and differ between toolchains.
+</p>
+<p>
+	Lets take a look. Here are some C function declarations, and their mangled symbolic
+	name on the right. The number in the mangled name is the number of bytes for the paramaters.
+</p>
+<blockquote><pre><div class="code">void _cdecl function (int i);   -&gt;   _function
+void _stdcall function(int i);  -&gt;   _function@4
+void _fastcall function(int i); -&gt;   @function@4
+</div></pre></blockquote>
+<p>
+	Notice that functions with the _cdecl call convention only have an underscore prepended. This allows
+C functions to be easily defined using assembly language, and allows C code to easily call those functions.
+</p>
+<p>
+	There isnt any standard for C++ name mangling. Some compiliers might produce a symbolic name
+like <b>?h@@YAXH@Z</b>, while others can produce <b>__7h__Fi</b> or <b>W?h$n(i)v</b> for the <b>same</b>
+function of <b>void h(int)</b>. This makes it impractical to use with assembly language. It is still possible,
+however.
+</p>
+
+<p><b>Symbol table</b></p>
+<p>
+	Simular to the section table there exists a <b>symbol table</b>. The symbol table allows a way for
+the software to look up symbolic names and information about the symbol, such as if its an exported symbol,
+its data type, properties, etc. Symbol tables are typically a linked list of information or implimented
+in hash tables.
+</p>
+
+	<h2>Structure</h2>
+
+	<h3>Abstract</h3>
+	<p>
+	We have taken a look at the structure of the PE executable format in our MSVC++ chapter.
+	When we load a PE executable in memory, that memory would contain an exact copy of
+	our loaded file. This means the first byte within the first structure of the PE
+	file format is actually located at the first byte from where the file was loaded in
+	memory.
+	</p>
+
+	<p>
+	For example, if we load a PE file to 1MB, the in-memory footprint might look like this:
+	</p>
+
+	<center><img src="http://www.brokenthorn.com/Resources/images/PEload.jpg"></center>
+
+	<p>
+	The above image should look famailier to our readers who have read the MSVC chapter. Looking at the above
+	image, if the PE file was loaded to 1MB, then the first on-disk structure, IMAGE_DOS_HEADER, begins at
+	that location in memory, followed by the rest of the structures in the file (including padding).
+	</p>
+	<p>
+	The above image is also an oversimplification - it does not, by any means, show the complete PE file format.
+	The structure of the PE file format is fairly large, composed of a lot of structures and tables.
+	</p>
+
+	<p>
+	Here is the complete format:
+	</p>
+
+	<ol>
+		<li>IMAGE_DOS_HEADER structure <b>(Important)</b></li>
+		<li>STUB program</li>
+		<li>IMAGE_FILE_HEADER structure [COFF Header] <b>(Important)</b></li>
+
+		<li>IMAGE_OPTIONAL_HEADER structure <b>(Important)</b></li>
+		<li>Segment Table</li>
+		<li>Resource Table</li>
+		<li>Resident Name Table</li>
+		<li>Module Reference Table</li>
+		<li>Imported Names Table</li>
+
+		<li>Entry Table</li>
+		<li>Non Resident Name Table</li>
+		<li>Segments</li>
+			<ol>
+			<li>Data</li>
+			<li>Info</li>
+
+			</ol>
+	</ol>
+	<p>
+	The above table lists the complete file format - from beginning to end. Items marked <b>important</b>
+	are required to know how to parse in order to just execute the program. All of the other information
+	if provided for information purposes only. The only important members in <b>IMAGE_OPTIONAL_HEADER</b>
+	structure are the member that contains the address of the entry point, and image base address.
+	</p>
+	<p>
+	We will cover parsing each section of this file in detail in the upcoming sections. We will also introduce the other structures
+	used when parsing tables and directories as well.
+	</p>
+
+	<h3>IMAGE_DOS_HEADER structure</h3>
+
+<p>
+<b>IMAGE_DOS_HEADER</b> is the first structure of the PE file. It contains global information
+about the program file and how to load it. Most of the information contained in this structure
+were more relivant to DOS software, and are only supported for backward compatability.
+</p>
+<p>
+The structure follows the format:
+</p>
+
+<blockquote><pre><div class="code">typedef struct _IMAGE_DOS_HEADER {  // DOS .EXE header
+    uint16_t e_magic;		// must contain "MZ"
+    uint16_t e_cblp;		// number of bytes on the last page of the file
+    uint16_t e_cp;		// number of pages in file
+    uint16_t e_crlc;		// relocations
+    uint16_t e_cparhdr;		// size of the header in paragraphs
+    uint16_t e_minalloc;	// minimum and maximum paragraphs to allocate
+    uint16_t e_maxalloc;
+    uint16_t e_ss;		// initial SS:SP to set by Loader
+    uint16_t e_sp;
+    uint16_t e_csum;		// checksum
+    uint16_t e_ip;		// initial CS:IP
+    uint16_t e_cs;
+    uint16_t e_lfarlc;		// address of relocation table
+    uint16_t e_ovno;		// overlay number
+    uint16_t e_res[4];		// resevered
+    uint16_t e_oemid;		// OEM id
+    uint16_t e_oeminfo;		// OEM info
+    uint16_t e_res2[10];	// reserved
+    uint32_t   e_lfanew;	// address of new EXE header
+} IMAGE_DOS_HEADER, *PIMAGE_DOS_HEADER;</div></pre></blockquote>
+<p>
+Alright, a lot of interesting things in this structure. The initial CS:IP and initial SS:SP members should be
+ignored as the operating system normally allocates a stack space and code descriptor value for CS. These members
+were more prominent during the DOS area and software requiring v8086 mode.
+</p>
+
+	<h3>STUB Program</h3>
+<p>
+Okay then! Lets look back up at the PE file image structure again (The above picture.)
+Notice how a DOS stub program is right after the <b>IMAGE_DOS_HEADER</b> structure.
+This is a useful program, actually. This is the program that displays "This program cannot
+be run in DOS Mode", if you try to execute a Windows program from within DOS.
+</p>
+<p>
+We can change the stub program by using the <b>/STUB</b> linker option:
+</p>
+<blockquote><pre><div class="code">/stub=myprog.exe</div></pre></blockquote>
+<p>
+	When DOS attempts to load the executable, it will parse the IMAGE_DOS_HEADER structure and attempt
+to execute the DOS stub program because it is a valid DOS program. When running under the Win32 subsystem,
+the Windows loader will ignore the stub program.
+</p>
+
+	<h3>IMAGE_NT_HEADERS</h3>
+
+<p>
+	Following the STUB program is a structure, <b>IMAGE_NT_HEADERS</b> that contains the
+	format of the PE header structures. Here is the structure:
+</p>
+
+<blockquote><pre><div class="code">typedef struct _IMAGE_NT_HEADERS {
+  DWORD                 Signature;
+  IMAGE_FILE_HEADER     FileHeader;
+  IMAGE_OPTIONAL_HEADER OptionalHeader;
+} IMAGE_NT_HEADERS, *PIMAGE_NT_HEADERS;</div></pre></blockquote>
+
+<p>
+	The signiture must match with "PE\0\0", where \0\0 are null characaters. The <b>IMAGE_FILE_HEADER</b>
+
+	contains additional information used by the loader and the complete size of the <b>IMAGE_OPTIONAL_HEADER</b>
+	structure. The <b>IMAGE_OPTIONAL_HEADER</b> is the largest and most important structure in the file.
+	It also does not have a defined size.
+</p>
+<p>
+	In order to locate this structure, the OS loader must use the <b>e_lfanew</b> member of IMAGE_DOS_HEADER.
+	<b>e_lfanew</b> is an RVA to this structure in memory, so in order to locate this structure, the loader
+	needs to perform the following:
+</p>
+<blockquote><pre><div class="code">IMAGE_DOS_HEADER* pFile = (IMAGE_DOS_HEADER*) imageBase;
+IMAGE_NT_HEADERS* pHeaders = (IMAGE_NT_HEADERS*) (pFile-&gt;e_lfanew + imageBase);</div></pre></blockquote>
+<p>
+	This assumes <b>imageBase</b> referres to the location where the program file was loaded into
+	memory. Because older operating systems, such as DOS are not aware of this member of the header,
+	it will be ignored by these OSs.
+</p>
+<p>
+	This structure contains the format for the other two header structures. Lets look at the first of these structures.
+</p>
+
+	<h3>IMAGE_FILE_HEADER</h3>
+
+<p>
+	The <b>IMAGE_FILE_HEADER</b> is the <b>Common Object File Format (COFF)</b> header structure. It follows
+the following format:
+</p>
+<blockquote><pre><div class="code">typedef struct _IMAGE_FILE_HEADER {
+    USHORT  Machine;
+    USHORT  NumberOfSections;			// Number of sections in section table
+    ULONG   TimeDateStamp;			// Date and time of program link
+    ULONG   PointerToSymbolTable;		// RVA of symbol table
+    ULONG   NumberOfSymbols;			// Number of symbols in table
+    USHORT  SizeOfOptionalHeader;		// Size of IMAGE_OPTIONAL_HEADER in bytes
+    USHORT  Characteristics;
+} IMAGE_FILE_HEADER, *PIMAGE_FILE_HEADER;</div></pre></blockquote>
+<p>
+	This structure isnt too complex. Most of the above is only useful for debuggers (symbol table parsing).
+<b>SizeOfOptionalHeader</b> is important - because IMAGE_OPTIONAL_HEADER does not have a defined size, this member
+lets you know the size of the structure.
+
+</p>
+<p>
+<b>Machine</b> can be one of the following values:
+</p><ul>
+<li>0x014c for x86 machines</li>
+<li>0x0200 for x64 machines</li>
+<li>0x8664 for AMD64 machines</li>
+</ul>
+<p></p>
+<p>
+In the usual case, it should be <b>0x014c</b> as we are developing for the x86 architecture.
+
+</p>
+<p>
+<b>Characteristics</b> is composed of bit flags that can be bitwise-ORd by the linker to let the loader
+know different properties of the type of executable image this is. Heres the format:
+</p>
+<ul>
+<li><b>Bit 0</b>: If set, image has no relocation information</li>
+<li><b>Bit 1</b>: If set, File is executable</li>
+<li><b>Bit 2</b>: If set, image has no COFF line numbers</li>
+<li><b>Bit 3</b>: If set, image has no COFF symbol table entries</li>
+
+<li><b>Bit 4</b>: If set, trim the working set for image. (Windows memory management specific. Obsolete)</li>
+<li><b>Bit 5</b>: If set, loader assumes executable can handle &gt;2GB VAs</li>
+<li><b>Bit 6</b>: If set, loader assumes image supports 32 bit words</li>
+<li><b>Bit 7</b>: If set, image has no debug information</li>
+<li><b>Bit 8</b>: If set, image wont run directly from network drive (Windows specific)</li>
+<li><b>Bit 9</b>: If set, image is treated as a SYSTEM file</li>
+
+<li><b>Bit 10</b>: If set, image is treated as a DLL file</li>
+<li><b>Bit 11</b>: If set, image will only run on single-processor machines</li>
+<li><b>Bit 12</b>: If set, big-endian. obsolete flag</li>
+</ul>
+<p>
+	The Windows headers use defined constants, such as IMAGE_FILE_RELOCS_STRIPPED and
+IMAGE_FILE_EXECUTABLE_IMAGE that can be used when setting these flags.
+</p>
+<p>
+As you can see, most of this structure is for information only for the loader on how to load
+the image. But wait! What about resources, symbol tables, debug info ... where is this at? Ah,
+behold the reason why <b>IMAGE_OPTIONAL_HEADER</b> does not have a defined size. Lets take a look!
+
+</p>
+
+	<h3>IMAGE_OPTIONAL_HEADER</h3>
+<p>
+	Ugh, here we go. This is the most complex structure in the file. The good news is that you
+	probably have seen this structure before:
+</p>
+<blockquote><pre><div class="code">struct _IMAGE_OPTIONAL_HEADER {
+
+    USHORT  Magic;				// not-so-magical number
+    UCHAR   MajorLinkerVersion;			// linker version
+    UCHAR   MinorLinkerVersion;
+    ULONG   SizeOfCode;				// size of .text in bytes
+    ULONG   SizeOfInitializedData;		// size of .bss (and others) in bytes
+    ULONG   SizeOfUninitializedData;		// size of .data,.sdata etc in bytes
+    ULONG   AddressOfEntryPoint;		// RVA of entry point
+    ULONG   BaseOfCode;				// base of .text
+    ULONG   BaseOfData;				// base of .data
+    ULONG   ImageBase;				// image base VA
+    ULONG   SectionAlignment;			// file section alignment
+    ULONG   FileAlignment;			// file alignment
+    USHORT  MajorOperatingSystemVersion;	// Windows specific. OS version required to run image
+    USHORT  MinorOperatingSystemVersion;
+    USHORT  MajorImageVersion;			// version of program
+    USHORT  MinorImageVersion;
+    USHORT  MajorSubsystemVersion;		// Windows specific. Version of SubSystem
+    USHORT  MinorSubsystemVersion;
+    ULONG   Reserved1;
+    ULONG   SizeOfImage;			// size of image in bytes
+    ULONG   SizeOfHeaders;			// size of headers (and stub program) in bytes
+    ULONG   CheckSum;				// checksum
+    USHORT  Subsystem;				// Windows specific. subsystem type
+    USHORT  DllCharacteristics;			// DLL properties
+    ULONG   SizeOfStackReserve;			// size of stack, in bytes
+    ULONG   SizeOfStackCommit;			// size of stack to commit
+    ULONG   SizeOfHeapReserve;			// size of heap, in bytes
+    ULONG   SizeOfHeapCommit;			// size of heap to commit
+    ULONG   LoaderFlags;			// no longer used
+    ULONG   NumberOfRvaAndSizes;		// number of DataDirectory entries
+    IMAGE_DATA_DIRECTORY DataDirectory[IMAGE_NUMBEROF_DIRECTORY_ENTRIES];
+} IMAGE_OPTIONAL_HEADER, *PIMAGE_OPTIONAL_HEADER;</div></pre></blockquote>
+<p>
+	First, take a look at that last member, <b>DataDirectory</b>. The constant, <b>IMAGE_NUMBEROF_DIRECTORY_ENTRIES</b>
+
+can, and has, changed through the years. This is that member that could change the size of this structure. We will
+look closer at that member a little later though as thats where all the fun stuff is at.
+</p>
+<p>
+You might be interested in why this is called an "optional" header even though its clearly not optional. This is
+due to it being optional for COFF object files. While its not optional for executable images, it is for object
+files :)
+</p>
+<p>
+<b>magic</b> can be one of the following:
+</p><ul>
+	<li>0x10b: 32bit executable image</li>
+	<li>0x20b: 64bit executable image</li>
+	<li>0x107: ROM image</li>
+
+</ul>
+In the usual case, it should be <b>0x10b</b>.
+<p></p>
+<p>
+A lot of the members in this structure really arent that complex.
+</p>
+<p>
+The <b>subsystem</b> member is Windows-specific. It tells Windows what subsystem the program requires
+in order to execute properly. It can be one of the following values (posted here for completness only)
+</p><ul>
+<li>0: Unknown</li>
+<li>1: Native SubSystem</li>
+
+<li>2: GUI SubSystem</li>
+<li>3: CUI SubSystem</li>
+<li>5: OS/2 CUI SubSystem</li>
+<li>7: POSIX CUI SubSystem</li>
+<li>9: Windows CE GUI SubSystem</li>
+<li>10: EFI</li>
+<li>11: EFI Boot Driver</li>
+<li>12: EFI Runtime Driver</li>
+<li>13: EFI ROM</li>
+
+<li>14: XBox</li>
+<li>16: Boot application</li>
+</ul>
+<p></p>
+<p>
+The <b>DllCharacteristics</b> member contains bit flags that gives the loader information about
+the DLL. It follows the following format:
+
+</p><ul>
+<li><b>Bit 0-3</b>: reserved</li>
+<li><b>Bit 4</b>: If set, DLL is relocatable</li>
+
+<li><b>Bit 5</b>: If set, force code integrity checks</li>
+<li><b>Bit 6</b>: If set, image is <b>Data Execution Prevention (DEP)</b> compatable</li>
+<li><b>Bit 7</b>: If set, image should not be isolated</li>
+<li><b>Bit 8</b>: If set, image does not use <b>Structured Exception Handling (SEH)</b></li>
+<li><b>Bit 9</b>: If set, image wont be binded</li>
+
+<li><b>Bit 10</b>: reserved</li>
+<li><b>Bit 11</b>: If set, image is a <b>Windows Driver Model (WDM)</b> driver</li>
+<li><b>Bit 12</b>: reserved</li>
+<li><b>Bit 13</b>: image is terminal server aware</li>
+</ul>
+<p></p>
+
+<p>
+<b>AddressOfEntryPoint</b> is an important one. This member contains the RVA of the entry point function of
+the image (for DLLs this can be null as DLLs dont need entry points.) This is what our bootloader uses to
+call our entry point function in our kernel.
+</p>
+
+<p>
+Thats about all there is to it. You might be interested in what those other members are - for <b>.text</b>,
+<b>.data</b>, <b>.bss</b> etc. There is also that nasty looking <b>DataDirectory</b> member that we havnt looked
+at.
+
+</p>
+<p>
+We will look at those members closly later on. For now, lets look at executing a program!
+</p>
+
+<h3>Executing a program</h3>
+
+<p>
+At this stage, <b>if all that you would like to do is execute a program</b>, all of the information has
+been provided. After loading a program, all that the loader needs to do is locate the <b>AddressOfEntryPoint</b>
+member from the optional header, and call that address. Remember that this is an RVA, meaning the loader needs
+to add this address to the <b>ImageBase</b> to obtain the linear address to the entry point function.
+
+</p>
+Here is an example:
+<blockquote><pre><div class="code">//! loadedProgram is where the image was loaded to
+IMAGE_DOS_HEADER* pImage = (IMAGE_DOS_HEADER*) loadedProgram;
+
+//! go to NT HEADERS
+IMAGE_NT_HEADERS* pHeaders = (IMAGE_NT_HEADERS*)(loadedProgram + pImage-&gt;e_lfanew);
+
+//! get image base and entry point address from optional header
+int base = pHeaders-&gt;OptionalHeader.ImageBase;
+int entryPoint = pHeaders-&gt;OptionalHeader.AddressOfEntryPoint;
+
+//! entry point function is at base+entryPoint
+void (*entryFunction) () = (entryPoint + base);
+
+//! call program entry point
+entryFunction();</div></pre></blockquote>
+<p>
+Thats all that is needed to execute a PE executable :)
+</p>
+
+<h2>Data Directories</h2>
+
+	<h3>Abstract</h3>
+
+	<p>
+	Resources, symbol tables, debugging information, import, export tables etc are accessable
+	from that nifty <b>DataDirectory</b> member of the optional header. This member is an array
+	of <b>IMAGE_DATA_DIRECTORY</b>'s that can be used to access other structures containing
+	this information. <b>IMAGE_DATA_DIRECTORY</b> has the format:
+	</p>
+<blockquote><pre><div class="code">typedef struct _IMAGE_DATA_DIRECTORY {
+  DWORD VirtualAddress;		// RVA of table
+  DWORD Size;			// size of table
+} IMAGE_DATA_DIRECTORY, *PIMAGE_DATA_DIRECTORY;</div></pre></blockquote>
+	<p>
+
+	Remember that <b>DataDirectory</b> is an <b>array</b> of <b>IMAGE_DATA_DIRECTORY</b>'s. Each entry
+in this array allows us to access the different data that we want to access.
+	</p>
+	<p>
+	Here are the index entries:
+	</p>
+	<ul>
+
+	<li>0: Export directory</li>
+	<li>1: Import directory</li>
+	<li>2: Resource directory</li>
+	<li>3: Exception directory</li>
+	<li>4: Security directory</li>
+	<li>5: Base relocation table</li>
+
+	<li>6: Debug directory</li>
+	<li>7: Description string</li>
+	<li>8: Machine value (MIPS GP)</li>
+	<li>9: TLS directory</li>
+	<li>10: Load configuation directory</li>
+	<li>14: COM+ data directory</li>
+
+	</ul>
+	<p>
+	For example, if you need to read the export table, reference <b>DataDirectory[0]</b>. If you
+	want to read a resource, reference <b>DataDirectory[2].VirtualAddress</b>:
+	</p>
+	<p>
+	Each of these sections contains their own structures that are required to parse the specific data.
+	Lets take a look at some of the more useful ones.
+	</p>
+
+	<h3>Reading the export table</h3>
+	<p>
+	The export table contains all functions exported from libraries or DLLs, including their function
+	addresses within that DLL, their names, and ordinal number. The Win32 API function <b>GetProcAddress()</b>
+	works by parsing the modules export table by ordinal number or name and returning the address from it.
+	This is one way reading the export table can be useful.
+	</p>
+	<p>
+	To parse the export table, you need to first get the export directory structure. This is done by
+	getting <b>DataDirectory[0]</b>.
+	</p>
+
+<blockquote><pre><div class="code">PIMAGE_DATA_DIRECTORY DataDirectory = &amp;OptionalHeader-&gt;DataDirectory [0];
+PIMAGE_EXPORT_DIRECTORY exportDirectory = (PIMAGE_EXPORT_DIRECTORY) (DataDirectory-&gt;VirtualAddress + ImageBase);
+</div></pre></blockquote>
+
+<p>
+Remember that <b>VirtualAddress</b> in the <b>IMAGE_DATA_DIRECTORY</b> structure is an RVA, so must be added
+to the image base. Now <b>exportDirectory</b> points to this nice structure:
+</p>
+
+<blockquote><pre><div class="code">typedef struct _IMAGE_EXPORT_DIRECTORY {
+  uint32_t Characteristics;
+  uint32_t TimeDateStamp;
+  uint16_t MajorVersion;
+  uint16_t MinorVersion;
+  uint32_t Name;
+  uint32_t Base;
+  uint32_t NumberOfFunctions;
+  uint32_t NumberOfNames;
+  uint32_t** AddressOfFunctions;
+  uint32_t** AddressOfNames;
+  uint16_t** AddressOfNameOrdinal;
+}IMAGE_EXPORT_DIRECTORY,*PIMAGE_EXPORT_DIRECTORY;</div></pre></blockquote>
+<p>
+	This one is an easy one. <b>AddressOfFunctions</b> is an RVA that points to an array of function addresses.
+The function addresses, however are also RVAs. <b>AddressOfNames</b> is a pointer to a list of function names.
+All of these addresses are RVAs however so must be added to the image base in order to properly obtain the
+function name and address.
+</p>
+<p>
+<b>AddressOfNameOrdinal</b> is an RVA to a list of ordinals. The ordinals, being just numbers representing the
+exported functions and not addresses, arent RVAs.
+
+</p>
+<p>
+To properly parse the export table must be done in a loop. For example:
+</p>
+<blockquote><pre><div class="code">PDWORD	FunctionNameAddressArray = ((DWORD)ExportDirectory-&gt;AddressOfNames) + ((PBYTE)imageBase);
+PWORD	FunctionOrdinalAddressArray = (DWORD)ExportDirectory-&gt;AddressOfNameOrdinal + (PBYTE)imageBase;
+PDWORD	FunctionAddressArray = (DWORD)ExportDirectory-&gt;AddressOfFunctions + (PBYTE)imageBase;
+
+//! search for function in exports table
+for ( i = 0; i &lt; ExportDirectory-&gt;NumberOfFunctions; i++ )
+{
+	LPSTR	FunctionName = FunctionNameAddressArray [i] + (PBYTE)imageBase;
+
+	if (strcmp (FunctionName, funct) == 0) {
+
+		WORD Ordinal = FunctionOrdinalAddressArray [i];
+		DWORD FunctionAddress = FunctionAddressArray [Ordinal];
+		return (PBYTE) (FunctionAddress + (PBYTE)imageBase);
+	}
+}</div></pre></blockquote>
+<p>
+	This can be used to impliment <b>GetProcAddress()</b> which can be useful in supporting DLLs.
+</p>
+
+	<h3>Reading the import table</h3>
+
+	<p>
+	So... reading the export table wasnt hard enough, huh? Reading the import table isnt too hard,
+	but is a little more involved then the export table. Ok, ok, whats the use for reading the
+	import table? Its not so much the reading, but the <b>writing</b>. By writing entries into
+	a programs inport table, you can allow function calls across libraries and DLLs without the
+	need of a GetProcAddress() call. Windows performs this with delayed loaded DLLs and system DLLs.
+	</p>
+	<p>
+	In order to read the import table, you need to locate the import directory structure. This is at <b>DataDirectory[1]</b>:
+
+
+</p><blockquote><pre><div class="code">PIMAGE_DATA_DIRECTORY DataDirectory = &amp;OptionalHeader-&gt;DataDirectory [1];
+PIMAGE_IMPORT_DESCRIPTOR importDirectory = (PIMAGE_IMPORT_DESCRIPTOR) (DataDirectory-&gt;VirtualAddress + ImageBase);
+</div></pre></blockquote>
+
+	<p></p>
+<p>
+It is important to note that <b>importDirectory</b> points to an <b>array</b> of descriptor entries. Each of these
+entries represents a module that was imported, such as an import DLL. Lets take a look at this structure:
+</p>
+
+
+<blockquote><pre><div class="code">typedef struct _IMAGE_IMPORT_DESCRIPTOR {
+    union {
+        uint32_t   Characteristics;		// 0 for terminating null import descriptor
+        uint32_t   OriginalFirstThunk;		// RVA to INT
+    };
+    uint32_t   TimeDateStamp;			// Time/Date of module, or other properties (see below)
+    uint32_t   ForwarderChain;			// Forwarder chain ID
+    uint32_t   Name;				// Module name
+    uint32_t   FirstThunk;			// RVA to IAT (if bound this IAT has actual addresses)
+} IMAGE_IMPORT_DESCRIPTOR;
+typedef IMAGE_IMPORT_DESCRIPTOR *PIMAGE_IMPORT_DESCRIPTOR;</div></pre></blockquote>
+
+<p>
+
+Its important to note that <b>Name, OriginalFirstThunk</b> and <b>FirstThunk</b> are RVAs. This means you will
+need to add the addresses (these are pointers) to the image base in order to properly parse the data. <b>Name</b>
+is an RVA that points to the imported module name, such as <b>kernel32.dll</b>. It is null terminated.
+</p>
+<p>
+Remember that we are working with an array of import descriptors? How can we tell how many import descriptors
+that is in this array? The array ends with a null IMAGE_IMPORT_DESCRIPTOR, so an easy way to loop through
+each entry is this:
+</p>
+
+<blockquote><pre><div class="code">IMAGE_IMPORT_DESCRIPTOR* lpImportDesc;
+while (! lpImportDesc-&gt;FirstThunk) {
+
+	//! work with lpImportDesc here
+
+	lpImportDesc++; // move to next entry
+}</div></pre></blockquote>
+<p>
+<b>TimeDateStamp</b> can be either the proper time/date or one of the following values:
+</p><ul>
+<li>0: module not bound</li>
+<li>-1: image is bound. Real time/date stamp stored</li>
+</ul>
+<p></p>
+<p>
+<b>ForwarderChain</b> is only used when supporting <b>DLL Forward Referencing</b>, which allows calls
+across DLLs to be forwarded to other DLLs. For example, some calls in Windows <b>kernel32.dll</b> are forwarded
+to other DLLs.
+
+</p>
+<p>
+<b>FirstThunk</b>
+points to the IAT, <b>OriginalFirstThunk</b> points to an array of structures representing all imported functions.
+This is the <b>Import Name Table (INT)</b>. Both of these members are RVAs.
+</p>
+<p>
+<i>Thunk?</i> right, Im sure you know another structure is coming up. Lets take a look:
+</p>
+<blockquote><pre><div class="code">typedef struct _IMAGE_THUNK_DATA {
+	union {
+		uint32_t* Function;				// address of imported function
+		uint32_t  Ordinal;				// ordinal value of function
+		PIMAGE_IMPORT_BY_NAME AddressOfData;		// RVA of imported name
+		DWORD ForwarderStringl				// RVA to forwarder string
+	} u1;
+} IMAGE_THUNK_DATA, *PIMAGE_THUNK_DATA;</div></pre></blockquote>
+
+<p>
+<b>OriginalFirstThunk</b> are RVAs that point to an array of <b>IMAGE_THUNK_DATA</b> structures.
+</p>
+<p>
+Ugh, yey, another structure. This one is a small one though:
+</p>
+<blockquote><pre><div class="code">typedef struct _IMAGE_IMPORT_BY_NAME {
+	uint16_t  Hint;		// Possible ordinal number to use
+	uint8_t   Name[1];	// Name of function, null terminated
+} IMAGE_IMPORT_BY_NAME, *PIMAGE_IMPORT_BY_NAME;</div></pre></blockquote>
+<p>
+Thats all there is to it. The first paramater can be 0, but it just hints the loader what ordinal number
+the function might be using. <b>Name</b> is an array of characters representing the name of the function.
+
+</p>
+
+<p>
+Heres the deal: The IAT is just a list of addresses representing functions. What functions? The functions
+within this IMAGE_THUNK_DATA array. Look back at that IMAGE_THUNK_DATA structure and notice that its just an
+union representing a function name. This is the <b>Import Name Table (INT)</b>.
+</p>
+<p>
+For example, lets say we want to get the current address
+of the function thats in IMAGE_THUNK_DATA[3]. Its address will be the 3rd dword in the IAT, which
+can be read using <b>IMAGE_IMPORT_DESCRIPTOR-&gt;FirstThunk</b>.
+</p>
+<p>
+So, lets try to obtain the function name and address:
+</p>
+
+<blockquote><pre><div class="code">unsigned int count=0;
+while (lpThunk-&gt;u1.Function) {
+
+	//! get the function name
+	char* lpFunctionName = (char*)((uint8_t*)imageBase + (uint32_t)lpThunk-&gt;u1.AddressOfData.Name);
+
+	//! go into the IAT to get this functions address
+	uint32_t* addr = (uint32_t*)((uint8_t*)imageBase + lpImportDesc-&gt;FirstThunk) + count;
+
+	// lpFunctionName now points to the null terminated function name
+	// addr now points to the address of this function
+
+	count++;
+	lpThunk++;
+}</div></pre></blockquote>
+
+<p></p>
+<p><b>Image binding</b></p>
+<p>
+This is where things get interesting. The IAT can be filled with the addresses of the imported functions
+either during <b>runtime</b> or <b>building</b> time. A <b>bounded image</b> is an image that has its IAT
+bounded to the functions during build time. An <b>unbounded</b> image is an image whose IAT is filled in
+by the OS loader during loading time.
+
+</p>
+<p>
+If the image is bounded, you can do the following to call a function in an external DLL:
+</p>
+<blockquote><pre><div class="code">__declspec (dllimport) void function ();
+function (); // calls myDll:function()</div></pre></blockquote>
+<p>
+If the image is not bounded, the IAT contains junk. <b>It is then the responsbility of the OS loader
+to update the IAT</b> in order for the above code to work. This can be performed by reading the export table
+of the loaded DLL module (calling GetProcAddress(), and overwriting the IAT entry of that import function. Overwriting
+the IAT can be done by following the above - when you get the functions IAT entry, just overwrite it :)
+</p>
+<p>
+This method can also be useful for installing <b>hooks</b> in DLLs and other modules.
+
+</p>
+	<h3>Supporting resources</h3>
+
+	<p><b>Introduction</b></p>
+
+	<p>
+	Have you ever wondered how the Windows kernel can display an image and work with an XML configuation file
+	without loading anything from disk? Have you ever worked with adding resources but wondered if it was
+	possible to support them in an OS? The answer is a "yes, of course!"
+	</p>
+	<p>
+	Parsing resources is a bit more complex then the other directory types, however. Like the other sections,
+	there is a base <b>IMAGE_RESOURCE_DIRECTORY</b> structure that can be obtained from the <b>DataDirectory</b>
+
+	member of the optional header:
+	</p>
+<blockquote><pre><div class="code">PIMAGE_DATA_DIRECTORY DataDirectory = &amp;OptionalHeader-&gt;DataDirectory [2];
+PIMAGE_RESOURCE_DIRECTORY resourceDirectory = (PIMAGE_RESOURCE_DIRECTORY) (DataDirectory-&gt;VirtualAddress + ImageBase);</div></pre></blockquote>
+<p>
+Notice the pattern with how to access these sections? Oh, right, onto the new structure:
+</p>
+<blockquote><pre><div class="code">typedef struct _IMAGE_RESOURCE_DIRECTORY {
+    uint32_t                       Characteristics;
+    uint32_t                       TimeDateStamp;
+    uint16_t                       MajorVersion;
+    uint16_t                       MinorVersion;
+    uint16_t                       NumberOfNamedEntries;
+    uint16_t                       NumberOfIdEntries;
+    IMAGE_RESOURCE_DIRECTORY_ENTRY DirectoryEntries[1];
+} IMAGE_RESOURCE_DIRECTORY, *PIMAGE_RESOURCE_DIRECTORY;</div></pre></blockquote>
+<p>
+This structure doesnt have much of any interesting fields, except the last three.
+</p>
+<p>
+If you have worked
+with Win32 resources, you might know that resources can be idenitified by ID or name. Two of the members
+in this structure will let us know the number of these entries, and the total amount of entries
+(NumberOfNamedEntries + NumberOfIdEntries), which is useful in looping through all of the entries.
+As you can probably guess, the entries are in the DirectoryEntries array. <b>DirectoryEntries</b>
+
+consists of an array of <b>IMAGE_RESOURCE_DIRECTORY_ENTRY</b> structures, which follow the format:
+</p>
+<blockquote><pre><div class="code">typedef struct _IMAGE_RESOURCE_DIRECTORY_ENTRY {
+    union {
+        struct {
+            DWORD NameOffset:31;
+            DWORD NameIsString:1;
+        };
+        DWORD   Name;
+        WORD    Id;
+    };
+    union {
+        DWORD   OffsetToData;
+        struct {
+            DWORD   OffsetToDirectory:31;
+            DWORD   DataIsDirectory:1;
+        };
+    };
+} IMAGE_RESOURCE_DIRECTORY_ENTRY, *PIMAGE_RESOURCE_DIRECTORY_ENTRY;</div></pre></blockquote>
+<p>
+Alright, this is an ugly structure. This structure represents a single resource, or resource directory.
+</p><p>
+	</p><p><b>Resource directory structure</b></p>
+<p>
+<i>resource or resource directory?</i> Lets stop for a moment. (*grabs a cup of coffee*) ok, it is important
+to know that resources are stored as a <b>tree</b>. This tree is structured like this:
+
+</p><ul>
+<li>Root directory</li>
+ <ul>
+  <li>Resource group 1 Directory</li>
+    <ul>
+      <li>Resource 1</li>
+      <li>Resource 2</li>
+    </ul>
+
+  <li>Resource group 2 Directory</li>
+    <ul>
+      <li>Resource 1</li>
+      <li>Resource 2</li>
+    </ul>
+  <li>Resource group 3 Directory</li>
+    <ul>
+
+      <li>Resource 1</li>
+      <li>Resource 2</li>
+    </ul>
+  <li>...etc...</li>
+ </ul>
+</ul>
+<p></p>
+<p>
+There are a number of different resource groups which let us know the type of resources are in this group.
+Here are the group IDs:
+
+</p><ul>
+<li>1 - Cursor</li>
+<li>2 - Bitmap</li>
+<li>3 - Icon</li>
+<li>4 - Menu</li>
+<li>5 - Dialog</li>
+<li>6 - String</li>
+<li>7 - Font directory</li>
+<li>8 - Font</li>
+
+<li>9 - Accelerator</li>
+<li>10 - RcData</li>
+<li>11 - Message table</li>
+<li>16 - Version</li>
+<li>17 - DlgInclude/li&gt;
+</li><li>19 - Plug and Play</li>
+<li>20 - VXD</li>
+<li>21 - Animated Cursor</li>
+<li>22 - Animated Icon</li>
+
+<li>23 - HTML</li>
+<li>24 - Manifest</li>
+</ul>
+
+In order to locate a resource, you will need to traverse this tree. The good news is that this isnt hard if
+you assume there is only 3 layers in the tree.
+<p></p>
+<p>
+First, lets look at looping through all of the entries in a resource directory:
+</p>
+
+
+<blockquote><pre><div class="code">//! get first entry in directory
+IMAGE_RESOURCE_DIRECTORY_ENTRY* lpResourceEntry = lpResourceDir-&gt;DirectoryEntries;
+
+//! loop through all entries
+int entries = lpResourceDir-&gt;NumberOfIdEntries + lpResourceDir-&gt;NumberOfNamedEntries;
+while (entries-- != 0) {
+
+	//! look for bitmap resource (id=2)
+	if (lpResourceEntry-&gt;Id == 2) {
+		//! see below
+	}
+	lpResourceEntry++;
+}</div></pre></blockquote>
+<p>
+	This is simple enough, huh? The <b>Id</b> member of <b>IMAGE_RESOURCE_DIRECTORY_ENTRY</b>
+
+	is used to store the group ID. If we were looking for a bitmap, it would be in the bitmap
+	group of the root directory, so look for the entry with ID=2.
+</p>
+<p>
+	Because IMAGE_RESOURCE_DIRECTORY_ENTRY represents both resource entries and directories,
+	how can we tell what it is? Why, the <b>DataIsDirectory</b> member of course: If this member
+	is set, its a directory. Ah, but if its a directory, how can you read the directory? Lets take
+	a look:
+</p>
+<blockquote><pre><div class="code">if (lpResourceEntry-&gt;DataIsDirectory) {
+	lpResourceEntry = lpResourceEntry-&gt;OffsetToDirectory;
+	lpResourceEntry += startOfResourceSection;
+}</div></pre></blockquote>
+<p>
+	This one isnt to bad. If the entry is a directory, the above obtains the offset to the new directory
+from the <b>OffsetToDirectory</b> and adds it to .. what? the <i>startOfResourceSection</i>!? Thats right...
+this is an offset, but not an RVA. I know ... <i>Why Microsoft, Why!?</i>
+
+</p>
+<p>
+	The start of the resource section is actually the address of the first member of the IMAGE_RESOURCE_DIRECTORY_ENTRY array.
+So by adding this address to the offset obtained from <b>OffsetToDirectory</b> you can obtain the pointer to the
+<b>IMAGE_RESOURCE_DIRECTORY</b> structure for this directory. Yes, then the whole process of reading those directory
+entries begins :)
+</p>
+<p>
+	If you are in the process of parsing the directory for your specific resource, just loop through
+all of the resource entries in the directory. If the resourceEntry ID field matches that of the resource
+ID you are trying to find (program specific ID here), then you have found the resource data.
+</p>
+<p>
+The resource data is stored in a ... zomg! structure! It can be obtained from the <b>OffsetToData</b> member
+of the directory entry structure. Simular to the <b>OffsetToDirectory</b> member, this too is an offset
+from the start of the resource section.
+
+</p>
+<p>
+Once you obtained the pointer, you can extract the resource data. Lets take a look at that structure:
+</p>
+
+<blockquote><pre><div class="code">typedef struct _IMAGE_RESOURCE_DATA_ENTRY {
+	uint32_t   OffsetToData;
+	uint32_t   Size;
+	uint32_t   CodePage;
+	uint32_t   Reserved;
+} IMAGE_RESOURCE_DATA_ENTRY, *PIMAGE_RESOURCE_DATA_ENTRY;</div></pre></blockquote>
+<p>
+Thats it! <b>OffsetToData</b> is an RVA to the real resource data, and <b>Size</b> is the size
+of that data, in bytes. For example, if we were looking for a bitmap resource, <b>OffsetToData</b>
+
+would be the RVA pointing to the bitmaps <b>BITMAPINFOHEADER</b> structure, which can be handled by
+any bitmap loader.
+</p>
+
+	<h1>Conclusion</h1> 
+ 	<p>
+	Thats all for this chapter. There are some planned updates to including covering additional
+	sections (debug data and COMDATS) as well.
+	</p><p>
+	There is no demo for this chapter - it is primarily released for anyone that is interested
+	in the internal workings of the PE executable file format and working with it. For the main series,
+	we might only be loading and executing the program, so all of the other information is provided
+	for completeness only. All code provided in text for demenstration has been tested (slightly modified)
+	to work.
+	</p>
+	<p>
+
+	In the upcoming chapters, we will be using the PE executable file format and building
+	a loader for supporting user mode programs. After that, on to multitasking!
+	</p>
+	<p>
+	Until next time,
+	</p><p>
+	~Mike<br>
+	<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2/">Neptune Operating System</a></i>
+
+	<br><br>
+
+	<i>Questions or comments? Feel free to <a href="mailto:neon6000@aol.com">Contact me</a>.</i>
+
+	<br><br>
+	Would you like to contribute and help improve the articles? If so, please <a href="mailto:neon6000@aol.com">let me know!</a>
+
+<br><br> 
+<table width="100%" border="0"> 
+<tbody><tr> 
+<td><p align="left"> 
+
+<a class="anchor" href="OSDev23.html"> 
+<img src="images/left.jpg" border="0"></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev23.html"> 
+<font size="4">Chapter 23</font> 
+</a> 
+ 
+</p></td> 
+<td> 
+<p align="center"> 
+<font size="4"><a class="anchor" href="OSDevIndex.html">Home</a></font> 
+</p> 
+</td> 
+</tr> 
+</tbody></table> 
+ 
+ 
+
+</p></td></tr></tbody></table></body></html>Ytext/htmlUUTF-8_1http://www.brokenthorn.com/Resources/OSDevPE.htmlP¤Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl?+Ø ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl?+á; ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔO8CÿØÿà JFIF  ` `  ÿá Exif  II*          ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  x" ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ÷ú(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
++ŒƒÄšÄöñK›Þ±ä9ÆF¿Roëß±ÿ Àwÿ ã”×Ñ\‡öþ±ýûüþ9Göþ±ýûüþ9@}Èoëß±ÿ Àwÿ ã”oëß±ÿ Àwÿ ã”×Ñ\‡öþ±ýûüþ9Göþ±ýûüþ9@}Èoëß±ÿ Àwÿ ã”oëß±ÿ Àwÿ ã”×Ñ\‡öþ±ýûüþ9Göþ±ýûüþ9@}Èoëß±ÿ Àwÿ ã”oëß±ÿ Àwÿ ã”×Ñ\‡öþ±ýûüþ9Göþ±ýûüþ9@}QÕ¦’ÛF¾¸…¶É¼ŽŒà…$kžþßÖ?¿cÿ €ïÿ Ç*¦¥­ê“iw‘HÖ{VÛ‚§8;èwÄ6V·iÏ5´29»Ž2Ï$¯?/=½«>gŸO¾Õ§´”CÛ(…v°!ƒ‘ÀÁã­ß'Xÿ Ÿëüþ;G“¬Ïõþ¿ÿ ¡iýz•¡j·×š“EpÄüŽe‰Ú a`Ü
+wã0ì*	¯$¶ñôfëìvÒÌžmÎä"%Ú¹`TgžHíŽõ¹äëóýcÿ €oÿ Çhòuùþ±ÿ À7ÿ ã´‹q¬Þ"ÁŒÞDó™13X.v“¹– ÏlVtz¼ÚšiÒ]ßîZúô«¸7MÜç9Î9Åu~N±ÿ ?Ö?øÿ üv'Xÿ Ÿëüþ;BÞàö±ÎG¯j†¦ÜÞbDí*7”M¹UTîÀROÌ9Àõ­Ê“k:³GöäÄ Mòú2 ø
+Òòuùþ±ÿ À7ÿ ã´y:Çüÿ Xÿ àÿ ñÚœ³é²Ë«|‰I—›äR|É#Ú:õ=:
+Þðÿ ÙäÒYmVÆ*5ŒŠç;z·Ê ob[òuùþ±ÿ À7ÿ ã´y:Çüÿ Xÿ àÿ ñÚ:X®ç'
+}ŸAµ
+U¾Ñew+³F›·mÀÏõ=ûV†“«_>§«±»aš A>VQŸ0’@=Á>•¹äëóýcÿ €oÿ Çhòuùþ±ÿ À7ÿ ã´Ø¹§Ä‚ãä(²±¾ë6ÐzzñRÇ©ÙÍp°G6dft´õLníÛ"¢òuùþ±ÿ À7ÿ ã´y:Çüÿ Xÿ àÿ ñÚ Ð¢³ücþ¬ðÿ øíU¿“W²Ó®n¾×bþDM&ß²8Ý´Œù¾ÔµEs¿ÚÇüüXÿ à+ÿ ñÊ?´5ùø±ÿ ÀWÿ ã”ÑQ\ïö†±ÿ ??ø
+ÿ ürícþ~,ðÿ øå tTW;ý¡¬ÏÅþ¿ÿ £ûCXÿ Ÿ‹üþ9@Îÿ hkóñcÿ €¯ÿ Ç(þÐÖ?çâÇÿ _ÿ ŽPEEs¿ÚÇüüXÿ à+ÿ ñÊ‚ïVÖ-lç¸ó¬[ÊŸoÙœg8ÿ Y@MŸäëóýcÿ €oÿ Çhòuùþ±ÿ À7ÿ ã´¡Egù:Çüÿ Xÿ àÿ ñÚ<cþ¬ðÿ øí hQYþN±ÿ ?Ö?øÿ üv'Xÿ Ÿëüþ;@V“¬Ïõþ¿ÿ £ÉÖ?çúÇÿ  ßÿ ŽÐ…Ÿäëóýcÿ €oÿ Çhòuùþ±ÿ À7ÿ ã´¡Egù:Çüÿ Xÿ àÿ ñÚ<cþ¬ðÿ øí hQYþN±ÿ ?Ö?øÿ üv'Xÿ Ÿëüþ;@V¡s«Ø›oô›ó¥òÿ ãÑÆß‘›?ë?ÙÇãQÿ hkóñcÿ €¯ÿ Ç(¢¢¹ßícþ~,ðÿ øåÚÇüüXÿ à+ÿ ñÊ è¨®wûCXÿ Ÿ‹üþ9Gö†±ÿ ??ø
+ÿ ür€:*+þÐÖ?çâÇÿ _ÿ ŽQý¡¬ÏÅþ¿ÿ  ŠŠç´5ùø±ÿ ÀWÿ ã”hkóñcÿ €¯ÿ Ç(¢¢¹ßícþ~,ðÿ øåÚÇüüXÿ à+ÿ ñÊ è¨®wûCXÿ Ÿ‹üþ9Gö†±ÿ ??ø
+ÿ ür€:*+þÐÖ?çâÇÿ _ÿ ŽQý¡¬ÏÅþ¿ÿ  ŠŠç´5ùø±ÿ ÀWÿ ã”hkóñcÿ €¯ÿ Ç(¢¢¹ßícþ~,ðÿ øåÚÇüüXÿ à+ÿ ñÊ è¨®fmOXËýõ‰ß,qÿ Ç³ñ¹Âçýglæµ¼cþ¬ðÿ øí hQYþN±ÿ ?Ö?øÿ üv'Xÿ Ÿëüþ;@V“¬Ïõþ¿ÿ £ÉÖ?çúÇÿ  ßÿ ŽÐ…Ÿäëóýcÿ €oÿ Çhòuùþ±ÿ À7ÿ ã´¡Egù:Çüÿ Xÿ àÿ ñÚ<cþ¬ðÿ øí hQTíãÔÉ¹¹¶•1ÀŠÝçê]¿•\ Š( Š( Š( Š( 8°ÿ u·ýrOä*ÅW°ÿ u·ýrOä*Å QE QE QE QE QE QE QE ^ÿ þA×?õÉÿ ‘«^ÿ þA×?õÉÿ ‘ G¬gW»±žâ+u„˜àŠDóŸ™¤ÙÎã­sã…û4ðD‹Í„ÉŸ¦qT¦Ñ’ð´—r³Lñ¤nÑ.ÅÂ¾ñ€rG>æ€)váï4ÈcŽ=“…ûFàIF!¸ö(ÙÎjÅ†°÷:¤0Œ[ÈÚ°ØÛ_=<Œv§.jŽòG$èÍp×9V+##§ÌN=M,Óí¾Êöðˆe· ‰QT<œCsœóBäCe«ÉtÐÜÉugoopì ·“‰]AÆwnÆsÎž fŸ jrj–Âio,är¹h R#ŸâùÏòá¡B®n®RÝ&­¸*P09ã+¸óŒãš’×K¹Ó­-AÊ(Â-ÌJê£ÛnÃù“@¡uxš«ÀžzÈÌòÆ_qŒ ÃÖ³íu»ÝFål ŽÞ¸÷ý¥Ü4ˆ»[n¤äó×ëWåÓ'¹x'žù’æá$¶ˆ ÚØÈ!÷úu¤M
+Þ‡ì³O±r0gpÇ-»p äóÓéŠ=Š“kwPiO3ÇMÏÙî$Ï`u“h9Æ1ÆxÍlXÌ·6qJ²Ç(eÌŒü­î=>ª´Å·²6Ö÷3ÂÅË¼Ëµ˜õ'r‘ÏÒ¢·ÓîìbŽÚÆæÝ-	mÙÜ“É%ƒÉ$ô öñ¬r'Ÿköµ¾û:Â[æ)æÎÜç8ç5>Ÿ«Iu}v’ÞÙªÁ,‰öuSæ…SÄïéÿ «gG€Û¼I6½ÏÚIÈÎíá±Ó¦EDt51]D/n–¦vx‡—€\äàíÏëG@{•-õË‰,¯æ‘#Yb·ûUºí 4eI]Ù=r9Æ)%Ö/ì}¤[Hf´’x^4e‘we,r9ë‘VäðöžŒPð¼-ÕP:°ïÇ$cŠEÐ!1È&º¹šn¯#(1¡!B¨éÉñ@.—)É®LšuµÂjZkùÓ¤o(C²T“»÷xÅI5Ü÷ÞÔ¦œFO‘pªñ‚E€`	8{š¼ºPÛ$·W3yVH÷ìÀ •FG?Z¯c‡…µ8!gòÅ¼ì ‘òåXà{ñGqv2ï/E­í´O"Å‹“#¡!›< 9N99ê8¨škØ¤½-»­´Q¶–X¾{ÿ ‘V®m…Òùo+ˆHH—dÏ$Œö©5{‰æq¸ÎÈ§¡ mÇâ:ÒèWR‹§Š5e“k4Üÿ yHü95Ÿx×M 7Óª¢¶ø8ÚN~R7AÏ¿µI‚ªÈ¯4²î… RøÊ#`xœž>¹|‚ói&p‚0ÒÈPIÇÊrjº‹§õäSmQ¢½¸FhåŽ'œ4Q/ï#XòC7=1ÐrG^•`ê(»‹C0HÂ´®@ÄjyŒäñÎ $ TÍlÌD¶Ûƒ!Q¿9ÇçLšÉ&w-$%
+%ŒcÐ28ã‚8¤ˆ×¡.„"YLâßÍ]»CžÝs€x'Í|‹ÌÅ%»˜Ø³¢d†Úq¹‡ëŽ¾¼TMi;jBE`¶Âu¸Û¿9p9ùvädó÷±Ôã'‰¤³Y!1‰?|g¸Ê¹$ñGñÈ¡l„êÐy"TI<¯9Ší!WqS“žpTôÏ¶i5	LšV¤ÄñDêÊøÏÜÈ<ØŠöd&)c2JD±´lIÃ31=:åÏéK«éÚœßÅ,NÌ;#ÛÇà¢.£;Úi·W…/.ê¡ ÍbÅâ	Ööé.bˆ[Å ‘Ü_ËW+×ÜãéZrZ_\¤Ð]][µ´¨ÈË»#à‚8bä~•¾³•²í)>lrýáÕh:Ö€)Ç­_É¤#yvçR’y!D
+Û>L“ÆsÑ}z‘V¦Öxôõ±Ù¾ùK«Ê¤¬j£,H{c"ž<=bgN†áA‘–9Â²í¹Ž1×·Ò•txíãŠ)fˆÃ+IˆT4[ŽJ¯ÛÉ Ð"”úãFöQ¦§¦l›Ìó.HÌy]¸ o<úšèP“’ÁŽ:¯Cô¬…ðúG2Îš…âÎßÍ^Ip älÇðŽÕpE¨‰Áû]±€ºm›yïoÆ}öþ‹»s&‘-ïÚ,e•]ÁÇ™6üß9íÓWÆ§?öf©s¶=ö2 ÁÁ23ÍOýöRéÛåò”†‘»†ÝéŽ¾Õö2l¼Œ]Üy7{Ì‘|›Aq‚AÛŸÖûÒ/ZúÔJ×–—$ã?f\8ÎÌÜþUÖ³–­%­ÌöðÅöa*4®–ÜF9<ô*Ù^ÛB‘[jÂñ›˜CàÀ
+~¹©"°"äÝO.û‡‡ÉsíLN@$yõ4ß–Ú˜öÚõÅÄöQÉuaj'´Žsæ¡%Ù‰Wçžõpêïý¸-ðŸc.m÷àîó¶îÆzc}iðèqÛIÛÞ\Äamþ]‡z)$g*yç¶)¿ðŽéû>æ.<ß;í[WÎÝ»wÞÇáJ:Uµ‹øcžòO³=¤7mnÑª2º®ý¡·n žG‰­ÎÉ©?Ú¬·ÚyÛ-‚0„Î	ùú~oû!/qs$Fssä3(Mäç<($Î	Å<hª©wÞ\y7FBñ|˜úvç¿­ Óñ0¥Ôî/î,Qæ¶¸…eWó­”€®b—(~fÉ¯zÓ‰CÊˆz3 qQjºlV—v3ÄÎI–6RF>XeºuÇ}­.ÖO:
+¸;<“»›·JoÈKÌ§k<÷6(â5Š{q$ƒò±,~Ÿ(-µü³ÛÜ9TWóU-×áJgÔüã=:{ép=¯ÙËÉ³ÉXrÈ
+ÅÎ:äÔ²Ø[Ï#4¨6Ha`
+`àúÖëñßB#zÂÂ96¯ÚQo·¢¬¼‚O} «\`wÍ2âûÈ³í¶†ap"•Êá#1Á²W¹ü*qaC,1æ(ÄŠ‘áDn — þ~¦£:nw»¸2Wó0™Cü8þ#Ú€.[î–8ðé!p0ÉÂ¶{ŽOg‹ë†¶ûxò¾ÉŸõ[O˜S8Ý»8Ïñc8ÎjËGxDW1l æÃ¹‰îrGéHÖ\6o³ïßöbALçw¦q»œgíŽ(ê.¯&‡V{4–ÂHã•Ì˜d¿Þè¤äñŒ¢>ò(ïY qo0ˆˆ®x«Ÿ¼{Å^X•g–PNéJ–¸P£€¦=²<wKby|ÖÇc¸7Ù…ý~ Êbúá­¾Þ<¯²gýVÓæÎ7nÎ3üXÇN3š}ÅôÖÚ…ý¼ˆ¢8a-žò·•?Ó§ Ô†Á`Í/Ù÷oû>FÌçw¦q»œgíŽ)n¬!¼Šê9Kq´±S‚¥@ À~¦—A­ÆÉxé,$1 žyÁÊï%S äsìEN%c}qØÖ2™rj¼šUœË/É$ƒk¨.£hQ´ãŒ 1ïS5»µãÝ}¦Pî 2áv±€O÷àŠ¢E¼ŸìÖRÜeG—³–èuSŸÀš©.¦†Ù-§·u‚8X8mÊÈTç° ö«‰b’+©¢t}¸ò¢(A»Jtö‰:Îº™’4%q‘±‹2=M!ý¢g²O³Moqs+‰‘NÆÀ$ð	ì¤uëŠY.dœY7å]÷H…ð R8sóR¶ŸÛ>ÖMÞÅ`¢uRH$à 3ÀJ‚ªB°Ï,"‘£
+‚T¤`Å V›R‘Ý^kkY“E3Kó hÊŒ)ÊõÎiÓ^Ë¤öé5±(Ñ’@ÁKwqÄô<
+´õ[¤SÍ‡y¤31r,rFiòZ$¬ìÌÛã“<pÈ ~êhn¿åßþ¾íÿ ôjWW\¥×ü»ÿ ×Ý¿þJêè ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ª××‘éöRÝJ®Éî`ƒ'f¡¹.mf·¹*?B1CP—\µŽæêÝƒî¶„ÌÌ Ã( 9ë‚?:³ý´òVhÅÆÀæãÌP@<®r:ŠÂ]úK#šXs!,	ÃFv‚pƒƒV!Ñ®aÖ¼ö›}°¸{„À*Ì¤c^O\}þ˜ãŠ¡¦ú•¼7’[Ìþ_—™¤r$Ž¤ûSÍý˜´ûYº€[ùld:ãïtëYzŽ‘su«¥ì/"XÊÇ!8vVcƒÀù¸<àŽ”ÇÒoþË(I%šïíEÌ‹· l¸t ô-îbO§Á¥ØFN»fê#SAy *<Ñš¼ºµË[.µdnnh…¿Î©f{Šd~Ôá°¼´F³•nØ1iercÃ’ Ê’Üc©9ëVåðõÔ—Óºo³<’J¬®#:<lÉÆ¿Óq@öúx»¾û%¶³i;ˆÌ…¢·Ü g$K×šŽkXâ7
+5›i^Ý•eŽ;RYI!{ÉØ‘ŸO­néºuü:ŒW7QÙ¢Åf-‡’ìKAÏ*08éÎ)—ú5ÍÓê(¾O‘vÑ>YÈ ¡\‚1Ð€yÏáÞ€3™·ûAñäîÙæyCnïLù˜ÏµKs ÝZÛ™›R€®@ÿ lu ui@ïëVot+ÉuI¯m§D&Lªnc
+rJ0CÁíWfÒ¤oC¦ÄÊ1Û#
+ÊO ð= b6—;#ø‚ÁY,¦,ÁÏï;)Ï¤,~O™¯X/ž3èqæ»ûÎzŽ•§4wPÊÞI	}5Ë`œêÁ{uäU	ü;¨¾™šÎ…VÔÂ@ãU|“»
+>~Ã§½ FšJÉtm“^°k€H1,9pG^<ÌÓí´'¼F{]nÎuS´´Vû€>œIQÚé×SMm§ÊÃj·n„r)!Á üÊyÏÊ[=r;ìhºeÍŒ’Iu w1¤@«‚
+®qÀq×ßë@·tV¦a7ˆ,á]Ò!ƒæQî¾f{ÌSÆŽíd/W¶’2®–ŒÙç“®xÅY»Ðoî¯%wJ3ÌUÌÎv£ÆÊ F	õ5¿d“Ges¬k* R#rËÇHÊŽ€÷98ôÉeÒ?´Åú|£.Ófw`ç¦3Ç­UhŠÙZ]}¸º“ËT_2œí%¿{Ð;õ®ž2x¼.tÖhüónÑníÉÛ8çÒ¨]3ÉûèJ…N~BNÝÊ>½¨êc*+I¥º}¨¢´ïn²µ˜ØÎ¹ÈâR{H­_øEï?è%þþ9O·Ð¯"ÔÅÁuTrO½ndmÈÙù<²6Œädçµt”t¹ÌÂ-yÿ A(?ðÿ ñÊ©ªxrê"öfÔ!uŽb¢Ø‚@RqçÙÖ~µÉ¡êÆŒîöÒ*ªŒ’Jœ ( òuùþ±ÿ À7ÿ ã´y:Çüÿ Xÿ àÿ ñÚÐ¢€3ücþ¬ðÿ øíN±ÿ ?Ö?øÿ üv´( ÿ 'Xÿ Ÿëüþ;G“¬Ïõþ¿ÿ ­
+(?ÉÖ?çúÇÿ  ßÿ ŽÑäëóýcÿ €oÿ ÇkBŠ Ïòuùþ±ÿ À7ÿ ã´y:Çüÿ Xÿ àÿ ñÚÐ¢€3ücþ¬ðÿ øíF±ÿ ?Ö?øÿ üv´( ÿ #Xÿ Ÿëüþ;G“¬Ïõþ¿ÿ ­
+(?ÉÖ?çúÇÿ  ßÿ ŽÕ{»VòÎ{Y/ìÂÍFÅlÛ ƒÞûÖÅ…ý‹¨ÿ ÐF×ÿ ÿ ŽQý‹¨ÿ ÐF×ÿ ÿ ŽVí…ý‹¨ÿ ÐF×ÿ ÿ ŽQý‹¨ÿ ÐF×ÿ ÿ ŽVí…ý‹¨ÿ ÐF×ÿ ÿ ŽQý‹¨ÿ ÐF×ÿ ÿ ŽVí…ý‹¨ÿ ÐF×ÿ ÿ ŽQý‹¨ÿ ÐF×ÿ ÿ ŽVí…ý‹¨ÿ ÐF×ÿ ÿ ŽT7ýÍ´°>¥lD(H´làŒÏJèè ÿ 'Xÿ Ÿëüþ;G“¬Ïõþ¿ÿ ­
+(?ÉÖ?çúÇÿ  ßÿ ŽÑäëóýcÿ €oÿ ÇkBŠ Ïòuùþ±ÿ À7ÿ ã´y:Çüÿ Xÿ àÿ ñÚÐ¢€3ücþ¬ðÿ øíN±ÿ ?Ö?øÿ üv´( ÿ 'Xÿ Ÿëüþ;G“¬Ïõþ¿ÿ ­
+(?ÉÖ?çúÇÿ  ßÿ ŽÑäëóýcÿ €oÿ ÇkBŠ Ïò5ùþ±ÿ À7ÿ ã´y:Çüÿ Xÿ àÿ ñÚÐ¢€1o4½JôÀdÔ-†O1qfÜ¬¼þóÑ3ûQÿ  ¯þ7ÿ ­Ú(ûQÿ  ¯þ7ÿ £ûQÿ  ¯þ7ÿ ­Ú(ûQÿ  ¯þ7ÿ £ûQÿ  ¯þ7ÿ ­Ú(ûQÿ  ¯þ7ÿ £ûQÿ  ¯þ7ÿ ­Ú(ûQÿ  ¯þ7ÿ £ûQÿ  ¯þ7ÿ ­Ú(ûQÿ  ¯þ7ÿ £ûQÿ  ¯þ7ÿ ­Ú(ûQÿ  ¯þ7ÿ £ûQÿ  ¯þ7ÿ ­Ú(ûQÿ  ¯þ7ÿ £ûQÿ  ¯þ7ÿ ­Ú(ûQÿ  ¯þ7ÿ £ûQÿ  ¯þ7ÿ ­Ú(ûQÿ  ¯þ7ÿ £ûQÿ  ¯þ7ÿ ­Ú(ž“BÔ$Ù»Q¶ù$I-ª°aÿ -=Ehù:Çüÿ Xÿ àÿ ñÚÐ¢€3ücþ¬ðÿ øíN±ÿ ?Ö?øÿ üv´( ÿ 'Xÿ Ÿëüþ;G“¬Ïõþ¿ÿ ­
+(?ÉÖ?çúÇÿ  ßÿ ŽÑäëóýcÿ €oÿ ÇkBŠ Ïòuùþ±ÿ À7ÿ ã´y:Çüÿ Xÿ àÿ ñÚÐ¢€(Á¤%{»Wº¥³#¡2~UzŠ( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ª——ÖÖ1¸” f
+¼I'Í[¬½nÉï4æHbWœ:èÔžO°ý({ÝBÛMd»—b3„S´žOÐ{dÚµ•µÓÛK>Ù’;.Æ8AÔä~jrÁõí!	¾1p^@Âm`Oê+ûUš7šân¥¶¸ŽLH1¸ª¢wï·>Ù¥ÜvZž¥k|Î°;ïUVHš3´ô8`	u«½«C´¾‚êInV`†ãÿ Hò‹î\ð¦>6à÷ç5Ut'7±Ë5¢²µìï)m§tLh<ò2AÛëÚ›%lu=ê	®b¶h„­´Í 8',A8ýr7>©.™iÙ‰x-6ÆG”Y%Œ³d€1³ó©§Ð/d³ÄÈ»{ù%3eIT;öž½9y4ì(®z[	äÐ¬áKŠDi¬ƒ®$QÕAÎ<òyÇ5ZûK¹žIÌzyß*F-$ÞƒìXê:ñƒÏÉœô£¨IéQG4r†1º¸V*ÛNpGQõ®z÷Fž[­Bå`;OÛ9anâ¹?/CŸ\T'FžK«Xtå	%ç˜åæDI (cŒŽ8aÚt:1|ã!wgaÇçÓ>ÝjZâF‡©9"h\
+FŸ: ¸,A a0xÇô©¯´K”¹¬íE¸YmcQ‡;1e$È<¯#’)ÒÞ_A`ˆ÷àHá$lå›àö5U5»	^$ŠY%2(uA#àdŒœ)ÛÈ#œcšÅÅè±3#Gr²3¡\ ÚÀ‘¸zŽÆ³£Òî4íZ&´KÖ·*4‘4$³ofmûùç9ù}x¡ØÛ¸½†Þh`‘ÛÍœ‘ª3Ž§€pG'Š!¾‚iü„fùb]¯)ÚI9ƒÅR¼Ó…Æ»§ÞhÜD’‘€Êž6õç®qéX'CÔþÏj>Î„EoËíq&×bTÀ ò@8ë@ÎÞ K˜d¸–Ý2ÄºàñžŸÊ±FŸyÿ ´¶jÚâ±6åÝŸ/†`>QÉÀ"ªG¦]$ZÁ´Ò…¢Ü¬B([Ë!±Ã| •¿ztï4k"FÒ(‘Á*¤òØëÞ¥®;NÐæ¶Ômî$ÓËEÏ°?“½•6œ. ÁÎ¦x9©4Û=NÇPkÆ°,ï,Ê¦ÑÜÈ¸#o$,rÙ<™ä­¢©G=Û\*Ig²2Îžh8N?ÚçŽØ«´ QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QEAup¶¶“\8%"Fv© gŠ žŠÊ¶×lîÖÑ£ÞÒ;©`Í˜ÜžÍK&³¦Ãiö¶¾·6ûÂyŠá†ãÛŽô¡EP:¥ªù†IáHÐ¨4©µ·ŒséëŒö©–îÙ®ÚÕn"7
+74AÆð=HëÜPš+6çZ±µšxáðÄfhTüÛ@'|•,:”Ð¼©uØ×2þñwþ÷<~4vŠÍ]oLi €_ÀÒOŸ,,€îÁÇQÇ^=è¹Ö¬mfž¸C<1š?6Ð	ãß¥ hÒÕõ[ y…Ü#Ì&UýÞzçƒNŸP¶¶°{×•>Î˜¬#¶|ö¡èRåŒ¾ µkAs²M…À3ì+ÿ ‡ãÅhÃwm<²EÄRIÃ¢8%¸(Å_ívâg‡Ï‹Íwºo•}Hì)‘ßÚM	ž+¨ ÛL‹ +ŸLôÏ#ó tVlšÞ—Fím²Y<´a  ·q‘Óÿ ®=jÂßZ;Lî0®@|¿÷½:´jŠÍ›ZÓ`ŠId¾·	„r$µ@@ï×ò>•bËk—hà¸†W@1 ò	Ç­ Z¢³®µ›K˜ížâ6¸’EŒB®¥Án„®sŠpÔ­yOM½£Pò&X‚'¹uç‘@èª‰¨ØÉÜ%í»@‡ •J©÷9Àª³ëºt/,Fê9%HLÅf\gŽÄàgœô JZ«õ´Ð¤«4xv2ã;ðý}¨’öÖ)š9.!IŒ (þ,z{Ð–¨¬èµ­2[4»[ûqní´HòôçûQu¬éÖJMÅìà‚àœœv÷ès@4Uw»¶†Ø\Éq@@"Vp§=*¼zÆŸ=Ø´Šò)'dG*}CÇ?NhBŠ¬×–«÷®"¼ò¹q÷ÿ »õö¨'Ö,­n#ŠY‘CïÌ…Ô"ÆCðy¡EUûu¡ž(~Õ›*î<Á¹Ç¨ÅG&«§EŸ2úÕ0v¶éT`äŒuõò4zŠ­ut–¶æfP@ûÊ::±¿­EkªXÞ¬­mu«	*å[îã×ÛŽ½(õ[í–Û‚ý¦˜üÜyƒî{éïÒ‘µ5 k¸Î»’3 ÜÃÔò(Õ½ÌP‰­æŽhÏGƒøŠ©m¬Y\Am'ŸMr3rº«·8àgŸÂ€4hªÏ{h—kj÷P­ÃŒ¬M G°ëØÕXõ½:{¦·†ê)6DfyE(ŠH< Ó¢©JÁm–é¯m…»«)•vèqØÓ-µ(n´³¨E»ÉÚÄd¨ÈRGRqÛ©8 
+*ÔlüÈãk¨YH¡‰ c<œÓÖ¤žöÖÔqs Œƒ#…ã_¨üèÍOûJÃlöËlE0ù«„ÏLóÆidÔl¢‰&’ò‰×r;H 0ãsÈä~tnŠ¦5YX^[•„)óW	ž›¹ãñ¥:…—ÙÖäÝÁä>vÉæ­Œç8=å@èªñÝÛJ±çÄ ˜Ê¸;ñ×µ_RÔ³-ü÷´žhÇÞ1lùy gs^Ù 
++/ûfÚ;‘à6RlbáÐI d1àš™µ+d™¢–Xâ*ë/*ÌF@9Ï±€/QUç¹‚ÙÏ,q)ãs°QÓ=ýüª4Ô¬$ÎËÛfÂy§lªpŸÞëÓÞ€.QU?´l¾ÉöÏ¶[ý—8ó¼ÅÙ×{8ëMmNÁ]ïmÕ¬eP9Á÷Áü¨í]A,ò@“FòÇñ«‚Ëž™©³Ü¤aþµÂ™G<žäg§A“í@hªßYÜJb†æ	d
+ªHà÷ÀíÍ8ÞZ‹±jnadEæøúu 4U5]:=Åï­SiÃn•FHÁçÔÈÓ-µ›‹x'ûDq-ÃˆJê¥È8ãžQ@4Uqun×<FaÖ=ãpèzuî?1UbÖôÉ ’d¿·òâ}Ží  ©ý=hJŠ„ÏƒÏ2 ‡nÿ 3pÛ·®sÓ
+êV2J¥å»JùÙ•K63œóÐþTrŠ¦u%šHMÝ¸–5,èe]È$‘ž2ÏUµÔ.'ŠÖU”B´ˆÁ”îÏBµ _¢±íuë;Ù¤Žº¤¢þdxcÏ nÉzsÛ<Õ‹]bÊî;vY•$wÇŒ¢B9þû Ð¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š(*¦¥Ýé×Vñ•,NŠ[ $Í\¢€NÎç%wá{‰®E<Inaùäþ÷ž;©Ø3øÕÉô{Ë¨ï¤“ìñOsäí²,ç–Ú=:qÇZèh q´›ñ¬ME«I¸0¤m¼ÆüÛx Ž9ô§A£]E­	ÞmÖÂáî	 *Ì¤/'®>ÿ Lq]‡©i—Ww2Ba)qfÖÇs(~b ädûcÞ¡—E¼
+âÚhá?cŽÝv±S•lž@àc€zŠè¨¤5e¢^Ú_Et<£‰¤c\;®¨ÌÀ– ©ëŒç¨«:–™uqws$&—mlw1R‡æ ðFO¶=ërŠ`ŽbëÃ÷2Mo-´ÑÄmà…Tã,„ú©Áààò:UØ´¹£ðôö;‡*KË>àòz…^2»[4PõÐŽç=y¢]NNÇˆ£A$õI7Ý1K¤h·6ˆóOæGoM¼råBÛ»k¡¢‹ÏË£]Io¨Ú“s)e$îÜH;YqÈãÏNÔËîööœ[G-Ù…|¤rÈ$–Ú	$g·a]- çî4›¶½šê	?kŽâ4g*XöHð=*­¿‡¯"Šâ¸Þ´Ð@ÆAœçæ0GcÍ]Uç9q ÜH…ahTHaU$º7ÝéÓ¶J³§é×vú¬·L#‚	T—…'iAœ–”mïœuãÒ¶{RÑqyÜš=ùº
+‚Õ­Åø»ó]ÛÌºãn3Øô¤ÿ „~g¸f–Hö1ºÁRK/šFã¨ÍtÌBòÈÁQ³1ìSYÃYSö+¯2àŸ&;¨-÷°rµ.–ú™pè¨©$’FóÂÐ”WqpØ×oÞãïvô«—ºeíÕÄò*À¿h²6Î‡÷móGËóŸoéSvÜ­¯•Ä¯rËÊ}àr@sß}3 ñ<&\ý’³}™n¹\Çvç9Ï_ni½AhCc¦È5Ãò·ÙaEvÝ(7v¤ã#hê;š¸Ú|ç_[ÈH†?}‰Kyß.P®|ÀôúÒ¶¹
+Ä¦K{)¸Æ ¸r»€88Áç8çœsˆÄQ‰¡_±\yl%óX•ÌF3†Î:ñíŒö’ 6¢4ë;A$[-÷£*\<~b‘ò±*¹ãŸ—¡õ¦[ørê-&êhMÄ¾AVÉÁòÕ8'*}zÖîŸ¥f—Q+*?@YOê¤Öª^ë–öÂðÎì‘¬¤Æ ŒTu#œ€1î=ðlÃqú•µíå”K,r‡W‘Ì€ê¢@7¨½ê–“£Ýé×q»´.†7ÿ xÄ¨óÆ2>o¼É[:Ô	c-Ä‘I†A‘HÈ¬¬qŒ’Ûz~÷ëÅP¸ñ\o§Ks§ÛË9W{áJFÄã†Éÿ €ätæ„’÷C¸¸¼¹’9"H¾ljÄån  7N˜Þ¤ƒG–9ôÙ¤13@&ipIÌ’rJñÓ9ëÚ®ßÞµŸÙˆŒ²ˆÂ*‚[å', é×š¨šÔ³xvMUlFÎ±SœwÎz~GƒÅ.ƒZ³2ÓÃW¶æ{•h³H@6˜ÏÌd‘Çª÷©äðýØ,"Î·È@`,‡Õ‘°@Àû¾¼ÔÑx‡Èü3yþJÍ!Ž0U‰íÎp1“Ô{âÓëÅËÍoq–å‘2©páHÁ Ž½ûm
+ã&Ò¥oÃ§DÊ1Û#
+ÊO ð=O§YOh×qÊ#h¥åFV9!ŽH#cêsíPÃ®Ã%ÂBö×11Ÿìì\.M»€8cÔzgßËífk[«Ëhí´¦áff]§ƒŒŒçõü9¡¾ —Bü#wŸgX¼Ø2ìû²Ùû.1·§ÞïéRjÚåýÔ™t’Ùš"±½Äˆ®7.Õ9çæ9"¬ÇâŠ"Éop.chãs6üà¯ÍÀàýì*Ëê[´K›è†Š9d£•uÎT€{ŽMÁj7F²¹³µ’+™~ð”_0Éå®y ·â:`v¬ˆ<9}5kV[¨Ñ$³n‹o÷F>oQ’¸9­Kmz)D[¡˜#:ÂÓ…X”òõÝÔã8Æ{Ôw~%±±½{Yƒ‰ dbÍŒ…
+p'¶@uô*kþ§<ª.BÁ#FQ¼÷S_½„kÉÉ>ÞôÇÐ5 Â²A‹%¶F…‹e`Àœ¨ÂñŒs×½[^qywÖsFÑ¼QÅÌvpO]ÛqÆzŽ†Ÿ?ˆcå­ín&™by5UÌ[IS»,;‚8ÎpqKd¹^P†xïE-Ð•Ýã–l«@¹±®Ê?‡×š³k¥\Cáy4×0‰Þ)(NÀ[8íœséS>¤ñè0j…y&m«¸eŠŽáëëùÔc^ˆÌ![[§c+Â¥Bá3•oAœž=óNÛ OfVmàÅzB$­Ê¶O0¹ÏÇZ¿¨iò]ê³‚›aŠd;ºåÀ{¯?‰¬ ´¶ºpëÂo²)Qß °'ìæ„ñ«´DÁr¶ó	w,Ë`€’~öqÆG4=w¦Æ{øróm›E4qÉkm
+­Î„çª‘Žr#¥ZƒCž?±³”&%¸ß¹÷ÒzŠ1×°ëZ:œwÌÀA<2Y6L %8a‚GcïÅgÚë7sHÆxL1µéµv<nÎH“¯qÇ¿P>©‡™ü#×HÖ.¯nZÒÞØIÚî„“ž8äQÒ¬¦‹pÒC4¦ ßo7rF¤•Q°¨
+qÉÎp;Òiþ#[›Xh_{K.6s…'<ñÐdfº
+ ç4ëÒîþxPÐºØ¬ñ² _ælƒÎÝÜp:f´õ+I¯ô‡¶™Âä’BäO¿jÑ¢€1oô™nï/'_+÷ÖÕ7Ä“Ï9•gÜh­,“Bñ-Ãü¹ÄÌ¦<"«evà•èzŠê¨¡hv£d÷obT§î.VgÝÜ Gù"±§ðÍÔöpÂ'Š6CpÅ”žK¸eíÏLþµÕQ@àÒug ~þ[•šQö‚»Ô(Þ‘©\àt^Ýy¨-¼9u7K#BÏ%œ¶èw³`´ŽÃ$Œã¾§ŠêsE ¹Î[éº–-ÄÖ‰ÍFf‘^BF_òçJÓÔ,å»{Œ£È¸Y_9XqùÖÞ `iÚ$Ö#Kù¢ÿ EŠT—i?1rsÈïHÚ5Ñ¸hÃAöv½†bO˜9Û·íŒç§jß¢—[ÎÇ¢ÝÛMÌÞI’æy
+HåU–N‡!N`võªƒÃWëg^l`˜	£Ž@«´¹o”´mëè:k®¢˜–:{Z__\1FûC¡R>öóÇ®:ÏM&úáq¶“Ê¸–hÕäeÜ$ëŸ”í#±ç ž•Ñö¤ <Œhô™“Ã3iÁã3Iƒ<„äœzàg…S“@¸ªñÊ»ãiÆcbG«Þºj(ëp9OÃš•ýÃ±¹Œâv•çr
+àíC6œG$gèuôË;¸uû»¤·ŒÜù{V- ŽIQÍkRÐÁ]ày_4_.¢÷g“÷î:uäV}¯†¯mL(Ó†ˆ˜šP’ÚÈxÆc$ŽýW½uÔP´¨QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE°¤ð¼R¨du*Ê{ƒÔVpÑTEýºïÌƒ"‰Mè¤`¯ÝÁÄ	÷¢Š }¾‘om%«FÒfÙd“ÅðX·¾F{uª¿ðYR,Æ1ÊJê	aœ¯PNxÇ¾h¢€&·Ðmmã…Û÷S‰ÁXãL°`„P1Ï¦}é±"I–X®n"•e’PêTŸœå†
+‘ŽlûÑE %®Ž,çI"º›sÍ(8_5Šã ½9<Ô·z=µä—>æûDK®F RH#Ž¹4Q@'‡­¢´Hc‘Ñ’a2Kq#…@§QUÿ á¶Í]ÞÇÁÝ2«¯ïâÙ9_|qŽ ÍPµÕœwMndgD¢UÚzçÛš¯•:\ºpšfÕ£ŠåŒ`?žMPI¢ÚÍæ	Œ$ #v0’¤c¾O_jiÑ!’ÖiçšIÙÌåC‡*8 øw4Q@:<c.ùw¡uÔc~Ý¸éÓ—šTWsÉ+K4fX¼pèsêÉ<cñ¢Š ŠëÃÖW¥LÛÉ$K¬ÒH8 ‚y=r=ªÄzTiRiêH…Ñ‘Šª!ù³“…AçÒŠ(ôh6Í?²	¼ÃaLõÆqžÕÇ†m.šO2{Ÿ-¦iÖ5*HÀ‚ÀíÎyÈÉ8#ð¢Š sønÖa?Ún'¸’fG/(C´  `mÛÐž4[ˆBCq5¹òš0Óz±Î	ßäÑE \—L†]14ögòP »ä ŽÞÂ™sG(y7Gq%ÀÉÜà‚:täÑEÐ¨þµkug¹DæÝ¶²åÓ$àå}Ol{ÔÚ«yÎßñ/‡ÍX ówðùû‹‚z–ìõ( -3F¶ÒwýŸà˜ãR í•POãšQ£@6|ò|·Mv9|çŽ94Q@áð®Ÿ°L¡·DñÆåöôÉ*Hÿ €‘ZÐÁä+2I7ÈÏ™;rsì;
+( QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE ÿÙZimage/jpeg_6http://www.brokenthorn.com/Resources/images/PEload.jpgOŠbplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_6http://www.brokenthorn.com/Resources/images/PEload.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl?+è¼ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Sat, 27 Oct 2007 05:25:21 GMTVApache_Mon, 12 Apr 2021 10:16:29 GMT_max-age=2592000_Sat, 13 Mar 2021 10:16:29 GMTU14403_Upgrade, Keep-Alive_Ä
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDEwOjE2OjI5IEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDEwOjE2OjI5IEdNVKEfVTE0NDAzoSFfEBNVcGdyYWRlLCBLZWVwLUFsaXZloSNfEBQiMzg0My00M2Q3MmIxODliMjQwIqElVWJ5dGVzoSdfEB1TYXQsIDI3IE9jdCAyMDA3IDA1OjI1OjIxIEdNVAAIACMAMAA4AEMASABPAFcAZQBqAHkAhACJAJcApQCnALIAtAC3ALkAzgDQANsA3QDkAOYBBgEIARoBHAE8AT4BRAFGAVwBXgF1AXcBfQF/AAAAAAAAAgEAAAAAAAAAKAAAAAAAAAAAAAAAAAAAAZ8=_"3843-43d72b189b240"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí&+6?EHQZ\^emx‡‰‹‘“•—™›Ÿ¡£²´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÝåðþ /:CHM[fi~ž¥Å×÷ýÛòý"/4HL`             ~              nÔ !"OÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      ) 1;    Â        ‚     €{    È        €€           Ø       è       ð        „‚(     }=     Ui          õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  ) " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ÷Òq\ï‹|[eáM4\N¾uÔ¹[[Ul4Ì=û(ÈËvÈêHñw‹¬|%¦‹€eº—+mj­†™‡òQ‘–í‘Ô”Ú%Ö¡©KâzQ%üƒ…Æ…Q’œ¼’I$šãÆc#‡™ÍˆÄÆ’Óq.ü?¨ø†9õÝgPhu–Ä°:‹læUSœ¦:Œƒó’r–ÿ /tûxí5Þúî!¶K•Ô<7Ð”Bœc88ÎH p-XY_üBÕÂÊWµÐíŸwŠ9r9Ø™±È=Â‚	çjŸbÓtÛ=NƒO°·ö°.Ô9¹$žI$’I$’I$šÃ.Ž!§R³ßdc„]e'¹óùºÔ5^\x:ëhÛX ä"‘´g#wI&Ÿ¬Kæ\ÙÁ{<öúD’(ºžÝ’(Ï?/_NÇœ66ŸYñÏàñU¢ÝZ²ÛkË‹{œ|®:ˆäÇUÉ8=T’Gp|žÚâC5Æ“ªÛ47Ð.h$$ŒvÎä‚ ò+—Ft«,GÄŽ|E)S©í¨÷ÏM°Ñ¬íô……tõŒ<–Ü¬§Á¿‹9Îã’IÉ$œÖxg†|Qsàk¿²]4—óò‚ÍjÇ’Ê:‘œîQÉå†C{\)soöÒC4¨xåI2®§AAë^½
+Ð­h•±©Äœô®3Ç>‡ÅV«wlËm¬Û/ú=ÆßË“”É8=T’GRgÚŠÑÅIY—(©+3æéµQcowe­Û47–ÙŽh%É uÇ±#‚ ž	ÑÓ>üGŸN†m?Z“H´ŠÉõàhÁ$ó)
+OÞ#¨Ï89{âOü–ÿ Ü?ÿ JÞ½ÄtË†ÂBŒ¥ËÔä£‡Œ±ÿÙ_4http://www.brokenthorn.com/Resources/images/left.jpgO‚bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_4http://www.brokenthorn.com/Resources/images/left.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl?+ð$ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Fri, 24 Jul 2009 23:29:22 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1540_Upgrade, Keep-Alive_À
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDEwOjEzOjE0IEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDEwOjEzOjE0IEdNVKEfVDE1NDChIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QEyI2MDQtNDZmN2JmOTViMTg4MCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyMiBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCyALQAtwC5AM4A0ADbAN0A5ADmAQYBCAEaARwBPAE+AUMBRQFbAV0BcwF1AXsBfQAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGd_"604-46f7bf95b1880"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$)4=CFOXZ\ckv…‡‰‹‘“•—™›Ÿ¡°²´¶¸º¼¾ÀÂÄÆÈÊÌÎÛãîü-8AFKYdg|œ£ÃÕõúÔêõû ',@DX             ~              f            1   <   N   d   ‚   ‘   ¨  ­É  ­Ó  ­Ù  ®  ®  ®  ®  ®2  ¸å  ¸î  ¹)  Áä  Áí  þ\  þf  þ˜ H Q ?˜ ?£ ?Ü Hj Hs N{ N²             #             W8

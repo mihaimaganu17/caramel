@@ -1,0 +1,560 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameOB›<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"><!-- saved from url=(0056)http://www.gamedev.net/reference/articles/article290.asp --><html><head><title>Operating Systems Development Series</title>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><link href="Files/reference.css" type="text/css" rel="stylesheet">
+<meta content="MSHTML 6.00.6000.16441" name="GENERATOR"></head>
+<body text="#000000" vlink="#666699" alink="#000000" link="#666699" bgcolor="#ffffff" leftmargin="0" background="Files/watermark.gif" topmargin="0" marginheight="0" marginwidth="0">
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+ 
+        <div id="ad_main"> 
+ 
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+//-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+ 
+     </td> 
+  </tr> 
+</tbody></table> 
+
+<table cellspacing="0" cellpadding="3" width="100%" border="0">
+  <tbody>
+  <tr>
+    <td class="tblhdr">Operating Systems Development Series</td>
+</tr>
+  <tr>
+
+    <td align="middle" colspan="2"></td></tr></tbody></table>
+<table cellspacing="0" cellpadding="5" width="100%" border="0">
+  <tbody>
+  <tr>
+    <td>
+
+
+<!-- Title -->
+
+      <center><span class="title">Operating Systems Development - Preface</span> 
+
+<br><span class="author">by Mike, 2009, Updated 2010</span></center>
+
+      <p>This series is intended to demonstrate and teach operating system development from
+	the ground up.</p>
+
+<script src="http://www.gmodules.com/ig/ifr?url=http://www.google.com/ig/modules/translatemypage.xml&amp;up_source_language=en&amp;synd=open&amp;w=160&amp;h=60&amp;title=&amp;lang=en&amp;country=ALL&amp;border=%23ffffff%7C3px%2C1px+solid+%23999999&amp;output=js"></script>
+
+
+<h1>Introduction</h1> 	
+<p>
+Welcome!</p><p>
+</p><p>
+This is a series of chapters, tutorials, and articles about computers and operating systems. The series focuses
+on a new direction in developing an operating system from scratch during this process, while describing architecture,
+and concepts that are in system-level programming.
+</p><p>
+The goal of this series is to provide the most comprehensive guide in operating systems and computer systems, while attempting
+to cover every bit of it (pun intended).
+</p>
+<p>
+Before moving on with the series, however, I feel that we should cover our chosen languages, and what is required for our
+readers to know, along with an overview of important concepts in the languages, and how to work with them. We will also
+cover concepts that are only used in embedded platforms and system-level software.
+</p>
+<p>
+This series uses C and x86 Assembly Language. It is very important to have a good understanding of both of these languages
+before moving on. This chapter includes a review of both of these languages.
+</p>
+
+<h1>If you have never programmmed before...</h1>
+
+<p>
+We would first like to welcome you to the world of programming and computer science.
+Computer scientists and software engineers use programming methods to build complex software
+systems. If you have never programmed before, you will be learning a bit of all three right
+from the start. This tends to make learning the first programming language difficult. However,
+it becomes easier to learn other programming languages over time.
+</p>
+<p>
+It is more recommended to start with a simpler language, such as Python or Visual Basic, and build from there.
+Then move on to Java or C++. Java is eaiser then C++ but it shares a lot of its syntax, so if you pick up Java first,
+moving to C++ would be a lot easier. In addition, by learning C++ you are also learning a
+a large subset of C.
+</p>
+<p>
+We recommend the following sites:
+</p><ul>
+	<li><a href="http://www.cprogramming.com">cprogramming.com</a></li>
+	<li><a href="http://www.cplusplus.com">cplusplus.com</a></li>
+	<li><a href="https://www.codecademy.com/">codecademy.com</a></li>
+</ul>
+<p></p>
+<p>
+Finally, YouTube has a lot of really good videos and lectures on software engineering,
+computer science, and programming.
+</p>
+<ul>
+<li><a href="https://www.youtube.com/watch?v=lJnvq0A_7WQ">Introduction to Programming</a></li>
+<li><a href="https://www.youtube.com/watch?v=4AK3VcljN_w">The Great Debate: Which Programming Language Should You Learn First?</a></li>
+</ul>
+<p>
+<b><i>Additional links</i></b>
+</p>
+<p>
+</p><ul>
+<li><a href="https://www.vodien.com/blog/education/beginners-resources-to-learn-programming-languages.php">Beginner's Resources to Learn Programming Languages</a></li>
+<li><a href="https://www.titlemax.com/articles/title-pros-tinkering-guide/">Title Pro's Tinkering Guide</a></li>
+<li><a href="https://www.onlinecollegeplan.com/computer-programming-languages/">A History of computer programming languages</a></li>
+<li><a href="http://ithare.com/a-beginners-guide-to-programming-languages/">A beginners guide to programming languages</a></li>
+
+
+</ul>
+<p></p>
+
+<h1>Overview of C</h1>
+
+<p>
+It is assumed that you already know how to program in C. This is a quick overview of some of the more important parts
+of the language, and also how they will work for us.
+</p>
+
+<h2>How to use C in kernel land</h2>
+
+<h3>16 bit and 32 bit C</h3>
+<p>
+In the beginning of programming your system you will find out that there is nothing at all to help you. At power on,
+the system is also operating in 16 bit <b>real mode</b> which 32 bit compilers do not support. This is the first
+important thing: If you want to create a 16 bit real mode OS, you <b>must</b> use a 16 bit C compiler. If, however,
+you decide that you would like to create a 32 bit OS, you <b>must</b> use a 32 bit C compiler. 16 bit C code is
+not compatible with 32 bit C code.
+</p>
+<p>
+In the series, we will be creating a 32 bit operating system. Because of this, we will be using a 32 bit C compiler.
+</p>
+<h3>C and executable formats</h3>
+<p>
+A problem with C is that it does not support the ability to output <b>flat binary programs</b>. A flat binary program
+can basically be defined as a program where the <b>entry point routine</b> (such as main() ) is always at the first
+byte of the program file. Wait, what? Why would we want this?
+</p>
+<p>
+This goes back to the good old days of DOS COM programming. DOS COM programs were flat binary - they had no well-defined
+entry point nor <b>symbolic names</b> at all. To execute the program, all that needed to be done was to "jump" to the first
+byte of the program. Flat binary programs have no special internal format, so there was no standard. Its just a bunch
+of 1's and 0's. When the PC is powered on, the system BIOS ROM takes control. When it is ready to start an OS, it has no
+idea how to do it. Because of this, it runs another program - the <b>Boot Loader</b> to load an OS. The BIOS does not
+at all know what internal format this program file is or what it does. Because of this, it treats the Boot Loader as
+a <b>flat binary program</b>. It loads whatever is on the <b>Boot Sector</b> of the <b>Boot Disk</b> and "jumps" to the
+first byte of that program file.
+</p>
+<p>
+Because of this, the first part of the boot loader, also called the <b>Boot Code</b> or <b>Stage 1</b> cannot be in C.
+This is because all C compilers output a program file that has a special internal format - they can be library files,
+object files, or executable files. There is only one language that natively supports this - assembly language.
+</p>
+
+<h3>How to use C in a boot loader</h3>
+
+<p>
+While it is true that the first part of the boot loader must be in assembly language, it is possible to use C in a boot
+loader. There are different ways of doing this. One way is used in both Windows and our own in-house operating system,
+Neptune. We combine an assembly stub program and the C program in a single file. The assembly stub program sets up
+the system and calls our C program. Because both of these programs are combined into a single file, Stage 1 only needs
+to load a single file - which in turn loads both our stub program and C program.
+</p>
+<p>
+This is one method - there are others. Most real boot loaders use C, including GRUB, Neptunes boot loader, Microsoft's
+NTLDR and Boot Manager. Because we are using 32 bit C, there are also ways that will allow us to mix 16 bit code
+with our 32 bit C code.
+</p>
+<p>
+Doing this can be fairly complicated and tricky to implement. Because of this, we stick with just using assembly
+language in the series boot loader. We might cover an advanced tutorial later that can describe methods of using
+C later on however if the reader demand is great enough.
+</p>
+<h3>Calling a C kernel</h3>
+<p>
+When the boot loader is ready, it loads and executes our C kernel by calling its entry point routine. Because the C
+program follows a specific internal format, the boot loader must know how to parse the file and locate the entry
+point routine to call it. In the series, we cover how to do this a little later. This allows us to use C for the
+kernel and other libraries that we build.
+</p>
+
+
+<h2>Pointers</h2>
+
+<h3>Introduction</h3>
+
+<p>
+Because you are reading this, I assume that you are already good with pointers. In system software, they are used everywhere.
+Because of this, it is very important to master pointers.
+</p>
+<p>
+A pointer is simply a variable that holds the address of something. To define a pointer, we use the * operator:
+
+      </p><blockquote><pre><div class="code">char* pointer;</div></pre></blockquote>
+
+Remember that a pointer stores an "address"? We do not set the above pointer to anything, so what "address" does
+it refer to? The above code is an example of a <b>wild pointer</b>. A wild pointer is a pointer that can point
+to anything. <b>Remember that C does not initialize anything for you.</b> Because of this, the above pointer
+can point to anything. Another variable, address 0, some other piece of data, your own code, <i>a hardware address</i>.
+
+<h3>The Physical Address Space (PAS)</h3>
+
+The Physical Address Space (PAS) defines all of the "Addresses" that you can use. These addresses can refer to anything
+that is inside of the PAS. This includes physical memory (RAM), hardware devices, or even nothingness. This is very
+different then in applications programming in a protected mode OS, like Windows, where all "addresses" are memory.
+<p></p>
+<p>
+Here is an example. In applications programming, the following would cause a segmentation fault error and crash your program:
+
+      </p><blockquote><pre><div class="code">char* pointer = 0;
+*pointer = 0;</div></pre></blockquote>
+This creates a pointer and points it to memory address 0, which you do not "own". Because of this, the system does not allow you to
+write to it.
+<p></p>
+<p>
+Now, lets try that same exact code again in our future C kernel ... no crash! Instead of crashing, it overwrites the first
+byte of the <b>Interrupt Vector Table (IVT)</b>.
+</p>
+From this, we can make a few important differences:
+<ul>
+<li>The system will not crash if you use null pointers</li>
+<li>Pointers can point to any "address" in the PAS, which may or may not be memory</li>
+</ul>
+<p>
+If you attempt to read from a memory address that does not exist, you will get garbage (whatever was on the system
+data bus at that time.) An attempt to write to a memory address that does not exist does nothing. Writing to a non existent
+memory address and immediately reading it back may or may not give you the same result just "written"...It depends if
+the data "written" is still on the data bus or not.
+</p>
+<p>
+Things get more interesting here. ROM devices are mapped into the same PAS. This means that it is possible for you to
+read or write certain parts of ROM devices using pointers. A good example of a ROM device is the system BIOS. Because ROM
+devices are read only, writing to a ROM device is the same effect as writing to a non existent memory location. You can
+read from ROM devices, however.
+</p>
+<p>
+Other devices may also be mapped into the PAS. This depends on your system configuration. This means reading or writing
+different parts of the PAS may yeild different types of results.
+</p>
+<p>
+As you can tell, pointers play a much bigger role in systems programming then they did in the applications programming
+world. It may be easier to think of pointers not as a "variable that points to a memory location" but rather a "variable
+that points to an address in the PAS" as it may or may not be RAM.
+</p>
+
+<h3>Dynamic Memory Allocation</h3>
+
+<p>In the application programming world, you would normally call <b>malloc()</b> and <b>free()</b> or <b>new</b> and <b>delete</b>
+to allocate a block of memory from the heap. This is different in the system programming world. To allocate memory, we do this:
+
+      </p><blockquote><pre><div class="code">char* pointer = (char*)0x5000;</div></pre></blockquote>
+
+That is it. Cool, huh? Because we have control over everything, we can just point a pointer to some address in the PAS (would have
+to be RAM) and say "theres our new buffer of 1024 bytes" or something like that.
+<p></p>
+<p>
+The important thing here is that there is no dynamic memory allocation. Dynamic memory allocation in C and C++ are <b>system services</b>
+and require an OS to be running. But, wait! Aren't we developing our own OS? That is the problem :) We will need to write our own
+memory management services and routines in order to be able to provide a malloc() and free() or new and delete.
+</p>
+<p>
+Until then, the only way to "allocate" a buffer is to use some unused location in the address space.
+</p>
+
+<h2>Inline Assembly</h2>
+<p>
+There are some things that C cannot natively do. We will be needing to use assembly language for system services
+and talking to hardware devices.
+</p>
+<p>
+Most compilers provide a keyword that allows inline assembly. For example, Microsoft Visual C++ uses _asm:
+</p>
+      <blockquote><pre><div class="code">_asm cli ; disable interrupts</div></pre></blockquote>
+We can also have blocks of assembly code:
+
+      <blockquote><pre><div class="code">_asm {
+	cli
+	hlt
+}</div></pre></blockquote>
+
+<h2>Standard Library and the Run Time Library (RTL)</h2>
+<p>
+You can use external libraries - if and only if those routines do not use system services.
+Anything like printf(), scanf(), memory routines, or, virtually everything but the bare minimum routines can be used.
+About 90% of it will be needed to be rewritten for your own OS, so it is best to write your own.
+</p>
+<p>
+The RTL is the set of services and routines that your application program uses at run time. These, by their nature,
+require an OS to already be running and to support them. Because of this, you will need to develop your own RTL.
+</p>
+<p>
+<b>The startup RTL code is responsible for calling C++ constructors and destructors</b>. If you are wanting to use C++,
+you must develop the RTL code to support it. This uses compiler extensions.
+</p>
+<p>
+In the series, we develop both an RTL that supports C and C++ features as well as a basic standard library as needed.
+</p>
+
+<h2>Fixing Errors</h2>
+
+<h3>Debugging</h3>
+
+<p>
+Because there is no printf() or any way to use a debugger, what are you going to do if something is not working?
+The series uses (and explains) how to use the Bochs Debugger, which is a debugger that comes with the Bochs
+emulator. This can be used to run your OS as well as for aiding in fixing most of the more common errors that you
+may run into.
+</p>
+<p>
+The only other way is to develop your own routines that will allow you to output information. At the most this might
+be able to tell you how far the software gets to before crashing.
+</p>
+
+<h1>Until next time</h1>  
+<p> 
+	That is all that there is for this chapter :) In the next chapter, we begin the adventure into the world
+	of operating systems by looking at what they are, as well as some tools that we will be using throughout
+	the series.
+	</p><p>
+
+	Until next time,
+	</p><p>
+	~Mike<br>
+	<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2/">Neptune Operating System</a></i>
+
+	<br><br>
+	<i>Questions or comments? Feel free to <a href="mailto:neon6000@aol.com">Contact me</a>.</i>
+
+	<br><br>
+	Would you like to contribute and help improve the articles? If so, please <a href="mailto:neon6000@aol.com">let me know!</a>
+
+<br><br>
+<table width="100%" border="0">
+<tbody><tr>
+<td>
+</td>
+<td>
+<p align="center">
+<font size="4"><a class="anchor" href="OSDevIndex.html">Home</a></font>
+</p>
+</td>
+<td><p align="right">
+<a class="anchor" href="OSDev1.html"><font size="4">Chapter 1</font></a>
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev1.html"><img src="images/right.jpg" border="0"></a>
+</p></td>
+
+</tr>
+</tbody></table>
+
+
+
+
+</p></td></tr></tbody></table></body></html>Ytext/htmlUUTF-8_0http://www.brokenthorn.com/Resources/OSDev0.htmlP£Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþk–¡.¾ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþk–¡:¬ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔOdÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      )       Â                     È                     Ø       è       ð          (       =                 õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  % " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? eÕíçuKCR¸’ÖêÙÊZÚFJ›&S‘Ø6íÀdðI¦ à¯>¥/ö&¶-b1”|anÔÿ µÆHöÈèÁ[ã>©'öÞˆ«µÓ -Úáoö°8cØ {à#0x‚×ky–º…«äVX$RGÔ`ŽG\Ž ŠñëU«…­Ï-`ÿ Ëœêaê^Z¦{ÖáŒçŠ+„ðWŒßPŸû\Û±ù¢Ý¨þ!þß#ñ^
+W«
+‘œy¢zPœf®ŽÞkˆm­äžâdŠÔ¼’Hvª($“ÐÞ¼7VÕm¼Mã6Ö4ËakeˆÚà‚­wâuÎ FìNpªž/ñœž1»û£<:NS”k¶‡aÙsÈSþñç2mÍþ©¨C¡hP—¼¶HXTpYˆûª23ß$–â¼Ü]gWýž’½÷<üMgUû:h»©üC«Ùèº,mQ[Í[…b¿fÚFX¸åœsë€l
++×¼!àë/éf¶ýõÔ¸k«¶Pf8þ;Tp9êI$®¼.4)(^çM?³®yÅ=×Áwö÷:Qhíµ¥²ŽM¹Ùè§xã.ë¾ð…‡„´Ãkl|Û™6µÍÓ(3ÇÂ£«Ðdõ$’Q[Ó„T¤Ò*Š›i=QVnÿÙZimage/jpeg_5http://www.brokenthorn.com/Resources/images/right.jpgO0bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_5http://www.brokenthorn.com/Resources/images/right.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþk–¡BF ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpeg_timeout=2, max=98_Fri, 24 Jul 2009 23:29:24 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1380ZKeep-Alive_”
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDlppbWFnZS9qcGVnoRBfEBF0aW1lb3V0PTIsIG1heD05OKESWlVzZXItQWdlbnShFFZBcGFjaGWhFl8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRhfEA9tYXgtYWdlPTI1OTIwMDChGl8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoRxUMTM4MKEeWktlZXAtQWxpdmWhIF8QEyI1NjQtNDZmN2JmOTc5OWQwMCKhIlVieXRlc6EkXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyNCBHTVQACAAhAC4AOQA+AEUATQBbAGAAbwB6AH8AjQCbAJ0AqACqAL4AwADLAM0A1ADWAPYA+AEKAQwBLAEuATMBNQFAAUIBWAFaAWABYgAAAAAAAAIBAAAAAAAAACUAAAAAAAAAAAAAAAAAAAGC_"564-46f7bf9799d00"ZUser-AgentUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë#(3<BENWY[bjuƒ…‡‰‹‘“•—™›«­¯±³µ·¹»½¿ÁÃÅÇÔßíôü
+)27<JUi‰°ÂâçòŠ «±¶ÌÐÝâöú             z                  1 < N d ‚ ‘ ¨CGCQCWCŠC‹CC˜C®NaNjN¥W`Wi“Ø“â”œÄœÍ¢5¢@¢x                           ª¬

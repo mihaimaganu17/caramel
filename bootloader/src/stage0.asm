@@ -27,7 +27,7 @@ entry:
     mov     cr0, eax
 
     ; Transition to 320bit mode by setting CS to a protected mode selector
-    jmp     0x0008: pm_entry
+    jmp     0x0008:pm_entry
 
 [bits 32]
 
@@ -40,8 +40,12 @@ pm_entry:
     mov     gs, ax
     mov     ss, ax
 
-    cli
-    hlt
+    ; Set up a basic stack
+    mov esp, 0x7c00
+
+    ; Jump into Rust! (entry point is a defined variable during build)
+    push dword bootloader_size
+    call entry_point
 
 ; --------------------------------------------------------------------
 
@@ -56,3 +60,10 @@ pm_gdt_base:
 pm_gdt:
     dw      (pm_gdt - pm_gdt_base) - 1
     dd      pm_gdt_base
+
+times 510-($-$$) db 0
+dw 0xaa55
+
+incbin "build/caramel.flat"
+
+bootloader_size: equ ($-$$)

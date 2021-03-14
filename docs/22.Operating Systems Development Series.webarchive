@@ -1,0 +1,1651 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameOÞý<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+		<title>Operating Systems Development Series</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+		<link href="Files/reference.css" type="text/css" rel="stylesheet">
+		<meta content="MSHTML 6.00.6000.16441" name="GENERATOR">
+		<style type="text/css">
+			body
+			{
+				background-image: url(OSDevVga_files/watermark.htm);
+				background-color: #FFFFFF;
+				A:link: color: #666699  /* link="#666699" 	*/
+				A:visited color: 000000 /* alink="#000000"	*/
+				A:active color: 666699 	/* vlink="#666699"  */
+				margin-right: 0px;
+				margin-left: 0px;
+				margin-top: 0px;
+				margin-bottom: 0px;
+				text: #000000			/* text="#000000"	*/
+			}
+			.special
+			{
+				font-weight: 4;
+			}
+			.center
+			{
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+ 
+        <div id="ad_main"> 
+ 
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+//-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+ 
+     </td> 
+  </tr> 
+</tbody></table> 
+
+		<table border="0" cellpadding="3" cellspacing="0" width="100%">
+			<tbody>
+				<tr>
+					<td class="tblhdr">Operating Systems Development Series</td>
+				</tr>
+				<tr>
+					<td colspan="2" align="center"></td>
+				</tr>
+			</tbody>
+		</table>
+		<table border="0" cellpadding="5" cellspacing="0" width="100%">
+			<tbody>
+				<tr>
+					<td>
+						<p class="center"><span class="title">Operating Systems Development - FileSystems and the VFS</span>
+						<br>
+						<span class="author">by Mike, 2010</span></p>
+						<p>This series is intended to demonstrate and teach operating system development from
+						the ground up.</p>
+
+						<h1>Introduction</h1>
+
+						<p>
+						Welcome to the 22'th chapter in a never-ending series for operating system development!
+						This is more then chapter 22 but also year 2 for the OS Development Series.
+						</p>
+						<p>
+						This is yet another filesystem related tutorial (Dont worry, its the last one ;) ).
+						The first one was needed so we can load our main bootloader program from the bootcode,
+						The second one was for our main boot program so it can load our kernel. Now we need one
+						more for our kernel so our kernel can load programs and execute them. There is a difference
+						between this chapter and the other two, however - this one will be in C instead of assembly language. :)
+						</p>
+						<p>
+						To spice things up, however, and introduce something new, we will also be looking into <b>Virtual FileSystems (VFS)</b>.
+						This will allow us to interface with any filesystem driver and different disk devices in the same way. It can be used
+						for both local disk drives, but can also be used to interface with any network filesystem.
+						</p>
+						<p>
+						<i>Ready?</i>
+						</p>
+
+						<h1>File Systems</h1>
+
+						<h2>Abstract</h2>
+
+						<h3>File System</h3>
+						<p>
+							A <b>File System</b> defines a logical way to read and write information. In this way, it can be coinsidered
+							a <b>specification</b>. Most PC file systems are based off of the desktop concept of files and folders.
+						</p>
+						<p>
+							There are alot of different kinds of file systems. Some are widley use (Like FAT12, FAT16, FAT32, NTFS, ext (Linux), HFS (Used in older MACs); other filesystems are only used by specific companies for in house use (Like the GFS - Google File System).
+							Some filesystems are used in networking only (NFS). You can also develop and design your own file system implimentation.
+						</p>
+						<p>
+							File Systems are used for data storage and organizing data. They help provide a straightforward way to access files and directories
+							on removal media (floppies, flash drives, CDs, DVDs), local drives (hard disk drives), and network clients.
+							File Systems can also exist as an in-memory image. For example, you can load a file that containes a "foot print"
+							of a special type of file system in it.
+						</p>
+						<h3>Files and Folders</h3>
+						<p>
+							A <b>file</b> is a group of data that represents something to a program or to the user. This data can be anything we want it to be. It all depends on how we interprate the data.
+							For example, a <b>text file</b> containes text information. A file can also be an image of something.
+							A <b>folder</b> is a logical group of files. It is also known as a <b>directory</b>.
+						</p>
+						<p>
+						Directories provide us a way to manage a large amount of files.
+						Directories typically form a <b>tree</b> structure. This is known as a <b>directory tree</b>. There is only one
+						directory that is the parent of all directories and files: the <b>Root Directory</b>. A <b>File Path</b> is the location
+						of a file in the directory tree. For example, the file <b>a:\myfile.txt</b>, myfile.txt is the filename. It is in the root
+						directory at the device known as "a:". <b>a:\mydir\myfile.txt</b> is a file, myfile.txt, located in the subdirectory, mydir,
+						that is, in turn, located in the root directory on device "a:".
+						</p>
+
+						<p>
+						<b>File and Folder Naming</b>
+						</p>
+						<p>
+						The name of a folder or file is a string representing that file or folder, usually by its contents.
+						File Systems impliment file naming and folder naming differently, and each has their own constraints.
+						For example, FAT12 stores filenames and folder names in a directory entry as an array of 11 bytes (8 for filename, 3 for extension. This is also known as the <b>8.3 naming convention</b>)
+						This limits file names and folder names to 11 characters. On the other hand, NTFS is limited to 255 characters with <b>Long File Name (LFN)</b> support. NTFS, for another example,
+						stores file names along with file attributes in a <b>Master File Table</b>.
+						</p>
+						<p>
+						Most filesystems file names are not case sensitive. However, some filesystems may store filenames differently internally. For example,
+						you may have found out that you can have an 8.3 lowercase file name for a file on the floppy disk, but be able to load the file from your OS
+						by using an all uppercase file name. Windows displays the LFN of the file name, while FAT12's 8.3 file entry only containes its 8.3 all-uppercase
+						file name. This is what makes it possible.
+						</p>
+
+						<h2>File Types</h2>
+
+						<h3>Symbolic link's</h3>
+						<p>
+Symbolic links are a way to provide shorten paths. For example: a:/folder/link.lnk points to a:/otherfolder/subfolder/subsubfolder/yet another folder/link.txt. 
+Now you can access the text file easily. Symbolic links are also very often used to make folder organized. Like the Windows Start Menu. Contains symblic links to your programs. 
+A symbolic link is not very hard to implement. You find the node given (which is the link). It seems to be a link, so you get the real path and read that file instead. 
+						</p>
+						<p>
+Windows Shortcuts are a type of symbolic link.
+						</p>
+
+						<h3>Pipes</h3>
+						<p>
+A type of <b>InterProcess Communication (IPC)</b> is called a pipe. A pipe is a <b>virtual file</b>, usually between two or more processes. The best example may be stdout, stdin and stderror on Unix. 
+They are handled as normal files, but the data written to stdout show up onto the screen (or in stdout.txt). 
+						</p>
+
+						<h2>Special File Types</h2>
+
+						<p>
+						</p><h3>Metafiles</h3>
+						<p></p>
+						<p>
+						Some filesystems also impliment special files and folders specifically for filesystem use. Typically you cannot have two files or folders with the same
+						name (nor a filename sharing the same name as a folder) in the same directory. Because of this, naming a file or folder with one of these hidden files
+						may also not be possible depending on implimentation.
+						</p>
+						<p>
+						For example, NTFS provides several metafiles for filesystem use. These files are located on the root directory of the system drive (typically C:).
+						$MFT,$MFTMirr, and $LogFile are a few of these files. While they do not ever show up even when view hidden and system files are checked, watch what
+						happens when you create a file with one of the above names there. You can create those files anywhere else, but you will get a "file already exists"
+						error when creating one on the root directory do to the metafiles.
+						</p>
+						<p>
+						</p><h3>Device Files</h3>
+						<p></p>
+						<p>
+						Unix-like systems, DOS (and, in turn, Windows) has <b>Device Files</b> which are special "files" that represent a device.
+						For example, NUL (null device), CLOCK$, PRN (printer), etc. Here is the list of device files:
+
+						</p><ul>
+							<li>CON</li>
+							<li>PRN</li>
+							<li>AUX</li>
+							<li>CLOCK$</li>
+							<li>NUL</li>
+							<li>COM0, COM1, ... COM9</li>
+							<li>LPT0, LPT1, ... LPT9</li>
+						</ul>
+						Because these names have special meaning in DOS and Windows, you cannot name a file or folder
+						any of the above names.
+
+						<p></p>
+						<p>
+						</p><h3>. and ..</h3>
+						<p></p>
+						<p>
+						. and .. are special files some file systems impliment. '.' is the file name of a file that containes
+						file information that referrs to the current directory. '..' is the file name of a file that containes information
+						that referrs to the parent directory of that file. For example, if there is a file located at <b>c:\mydir\file.txt</b>,
+						and <b>c:\mydir</b> was the current directory, the pathname <b>..</b> will refer to C: while the pathname <b>.</b> will refer
+						to c:\mydir.
+						</p>
+
+
+						<h2>File System Types</h2>
+
+						<h3>Flat File Systems</h3>
+						<p>
+						A <b>Flat File System</b> is a filesystem that does not support subdirectories.
+						Instead, all of the files are in the same (root) directory. Many early computer systems
+						used flat file systems. Modern operating systems typically impliment more advanced hierarchical
+						file systems. While small and easy to impliment, flat file systems are hard to orginize.
+						</p>
+
+						<h3>Hierarchical File Systems</h3>
+						<p>
+						This type of file systems supports subdirectories. Most modern file systems (including FAT12,FAT16,
+						FAT32,etx,NTFS) fit into this categary. (The first version of FAT12 was a flat file system. Later versions
+						support subdirectories however.)
+						</p>
+
+						<h3>Journaling File Systems</h3>
+						<p>
+						This type of file system uses a "journal" of file system changes. This is a log
+						of changes the system intends to make to files or directories prior to completeing
+						the steps. This insures that, if a crash occures during a filesystem operation (like
+						writing a file), the journal can be read to undo the changes made to repair the filesystem.
+						</p>
+
+						<h2>File System Drivers</h2>
+						<p>
+							While a <b>file system</b> defines a specification for reading and writing "files" and "directories", a <b>file system driver</b>
+							containes the implimentation of a specific type of file system. A good example of a file system driver is <b>ntfs.sys</b> which containes
+							Microsoft's implimentation of the NTFS File System. File system drivers are also sometimes implemented as minidrivers inside of larger software.
+							Bootloaders are a good example. Because boot loaders have to be able to load files from disk without a separate driver program, they contain
+							several filesystem minidrivers for different types of filesystems inside of the bootloader itself. If you developed the bootloader in the
+							series, you have already experienced the FAT12 file system and developed a FAT12 minidriver for our bootloader.
+						</p>
+
+						<h1>Virtual FileSystem (VFS)</h1>
+
+						<h2>Abstract</h2>
+
+							<p>
+							A <b>Virtual File System (VFS)</b> is an abstraction layer ontop of specific filesystem implimentations.
+							The software accesses storage devices through a VFS. This allows the software to read or write to different
+							storage devices without any knowledge of the device or filesystem that is being used. It also allows the same
+							code to work with any number of installed filesystems or devices.
+							</p>
+							<p>
+							The basic idea is to allow a single system interface to work with any filesystem in a uniform way. Windows,
+							Linux, and Mac OS all support VFS in different ways.
+							</p>
+
+							<h2>Implimentation</h2>
+
+							<p>
+							There are different ways to impliment a VFS.
+							</p>
+
+							<h3>Mount Point List</h3>
+
+							<p>
+							A <b>mount point list</b> is a list of mounted file systems and where they are mounted.
+							For example, if a file needs to be read from, the OS typically calls the VFS ReadFile() function
+							which searches through the list of mounted file systems to locate the device and file system the
+							file is in. It then passes the read request to that file system's ReadFile() function.
+							</p>
+
+							<h3>Node Graph</h3>
+
+							<p>
+							A <b>Node Graph</b> contains a graph of nodes that represent files
+							of different types: files, folders, mount points, etc. Each file node
+							structure typically containes function pointers to file system-specific routines
+							for reading and writing files.
+							</p>
+							For example, we can create a FILE structure like this:
+
+<div class="code"><blockquote><pre>typedef struct _FILE {
+
+	char        name[32];    //filename
+	uint32_t    flags;       //flags
+	uint32_t    fileLength;  //length of file
+	read_funct  read;        //function pointers to read,write,open,close file
+	write_funct write;
+	open_funct  open;
+	close_funct close;
+
+}FILE, *PFILE;
+</pre></blockquote></div>
+							<p>
+							Notice the function pointers are stored in this FILE structure. Lets say we want to read a file,
+							so we call fopen(), which, eventually, calls our VFS OpenFile() function. All the VFS file operation
+							routines ever need to do is pass control to that specific FILE's function pointers:
+							</p>
+<div class="code"><blockquote><pre>void VfsOpenFile (PFILE file, const char* filename) {
+
+	if (file)
+		file-&gt;open (filename);
+
+}
+</pre></blockquote></div>
+							<p>
+							This allows the filesystem-defined routine to be called.
+							</p>
+
+							<h3>DOS and Windows</h3>
+							<p>
+							DOS and Windows assigns a letter from 'a' through 'z' to represent a mounted file system.
+							Windows keeps a symbolic link between a drive letter and its Object Manager name.
+							For example, the drive letter c: (symbolc link name \\GLOBAL??\C:) may be mapped
+							to the Object name \Device\HardDiskVolume1 device object. A File System can register
+							themself to own a device object. If a file system is found to own the object, the rest
+							of the file path name ("myfile.txt" in this example) is passed to that filesystem's FileOpen() function.
+							</p>
+							<p>
+							<b>Drive letter assignment</b>
+							</p>
+							<p>
+							Windows supports assigning drive letters to devices and partitions representing mounted file systems. (During boot,
+							if no filesystem driver registers to own a device object, Windows uses its RAW minidriver for the devices.) Drive letters
+							can also refer to network shared drives, virtual disk images, or a symbolic link to another location in the local or a network
+							client. However, they are limited to 26 devices do to only 26 letters that can be used from 'a' to 'z'.
+							</p>
+
+						<h2>Interface</h2>
+							<p>
+							For simplicity, we will be using drive letter assignment along with a mount point list in our VFS implimentation. Our implimentation
+							needs to be simple because we do not have device management nor I/O management in the OS presented in the series.
+							</p>
+							<p>
+							I personally recommend developing the VFS first prior to the filesystem driver. This way the interface and framework of the VFS
+							will have already been completed.
+							</p>
+							<h3>FILE</h3>
+							<p>
+							Anyone that has used C is already famalier with the infamous FILE* data type. FILE* is an <b>Abstract Data Type (ADT)</b>
+							that represents a pointer to a file object. ISO C defines that C implimentations must define a FILE type, however does not
+							define what is inside of the structure. That is, while FILE* is ISO C, the structure contents is implimentation-defined.
+							</p>
+							<p>
+							We can define a file structure that will represent the current state of a file any way we want.
+							So lessee... a file has a name and a size, so thats two members already. We need a way to flag if
+							its the <b>End of File (EOF)</b>, and file-specific flags, so thats two more members. We also need
+							a way to keep track of a files current position (its cluster and the clusters offset), and now we have
+							something like this:
+							</p>
+							<p>
+</p><div class="code"><blockquote><pre>typedef struct _FILE {
+
+	char        name[32];
+	uint32_t    flags;
+	uint32_t    fileLength;
+	uint32_t    id;
+	uint32_t    eof;
+	uint32_t    position;
+	uint32_t    currentCluster;
+	uint32_t    device;
+
+}FILE, *PFILE;
+</pre></blockquote></div>
+							That was easy, huh? <b>id</b> can be used for idenitification
+							purposes if you like. <b>device</b> represents the device the file
+							resides on.
+							<p></p>
+
+							<h3>Types of files</h3>
+							<p>
+							There are alot of different types of files that we have talked about: files, directories,
+							symbolic links, etc. For simplicity, we will only focus on files and directories. These will
+							be used in the <b>flags</b> member of our FILE structure above to represent the type of file.
+							</p>
+<div class="code"><blockquote><pre>#define FS_FILE       0
+#define FS_DIRECTORY  1
+#define FS_INVALID    2
+</pre></blockquote></div>
+
+
+						<h2>Operations</h2>
+
+						<p>
+							There are some typical operations we can perform on a file:
+							</p><ul>
+								<li>Open</li>
+								<li>Close</li>
+								<li>Read</li>
+								<li>Write</li>
+								<li>Mount</li>
+								<li>Unmount</li>
+							</ul>
+
+							Open and Close operations perform opening and closing a file object (file or directory,
+							whatever the file type is), while reading and writing operations perform reading and writing
+							the file type. All of these are exposed to the programmer through the standard C file I/O functions.
+						<p></p>
+						<p>
+							For our VFS, they are exposed through a <b>Volume Manager</b> located in fsys.h:
+						</p>
+<div class="code"><blockquote><pre>extern FILE volOpenFile (const char* fname);
+extern void volReadFile (PFILE file, unsigned char* Buffer, unsigned int Length);
+extern void volCloseFile (PFILE file);
+extern void volRegisterFileSystem (PFILESYSTEM, unsigned int deviceID);
+extern void volUnregisterFileSystem (PFILESYSTEM);
+extern void volUnregisterFileSystemByID (unsigned int deviceID);
+</pre></blockquote></div>
+						<p>
+							For example, lets say we call the C fopen() routine. That will call our volOpenFile() routine
+							which returns a FILE object. We passed a path to the file, like "a:\myfile.txt". The Volume Manager
+							indixes into the mount point list and verifies that a file system has registered for the device ID
+							that represents 'a'. If it has, it calls that filesystem drivers FileOpen() method passing "myfile.txt".
+							Dont worry if it sounds complicated. It can be; but the design of how its implemented in the demo is very easy.
+						</p>
+						<h2>Volume Manager Implimentation</h2>
+
+						<h3>File System Abstraction</h3>
+						<p>
+						The first thing we need is a way to abstract filesystem-specific information.
+						This includes the name of the filesystem and the operations that can be performed
+						on files. This is done using function pointers.
+						</p>
+<div class="code"><blockquote><pre>typedef struct _FILE_SYSTEM {
+
+	char Name [8];
+	FILE               (*Directory)  (const char* DirectoryName);
+	void	           (*Mount)      ();
+	void               (*Read)       (PFILE file, unsigned char* Buffer, unsigned int Length);
+	void	           (*Close)      (PFILE);
+	FILE               (*Open)       (const char* FileName);
+
+}FILESYSTEM, *PFILESYSTEM;
+</pre></blockquote></div>
+						<h3>Implimentation</h3>
+						<p>
+						The Volume Manager impliments our VFS in the demo. Its in the files fsys.h and fsys.cpp.
+						Remember that we will be using drive letter assignment to represent devices? Because there are 26 possible
+						devices, it is helpful to make a constant, <b>DEVICE_MAX</b>. Because each device can only have one mountable
+						file system, we store them in a list (like a mount point list).
+						</p>
+<div class="code"><blockquote><pre>#define DEVICE_MAX 26
+
+//! File system list
+PFILESYSTEM _FileSystems[DEVICE_MAX];
+</pre></blockquote></div>
+						<p>
+						Here is how it works. Because we are storing the filesystems
+						as a list of pointers, if a pointer is valid, the filesystem
+						has been registered there. Each element in the array represent
+						the drive letter that it refers to. So 'a' is ar _FileSystems[0],
+						'b' is at _FileSystems[1], etc. It is the filesystems responsibility
+						to manage the disk that they are writing on.
+						</p>
+						<p>
+						Using this method provides a very basic but easy way of accessing
+						devices. For example volOpenFile() only needs to check the first character
+						of the path (the drive letter) and do a lookup into the list to see if
+						a filesystem is registered for that device. If it is, it can call that filesystem's
+						open() method and pass the filename to the driver. We default to using 'a', however
+						if the input path contains an ':' then we use the first character for the device instead.
+						This allows us to call volOpenFile in two ways: passing a string like <b>"myfile.txt"</b>
+						and <b>"a:myfile.txt"</b>, where "a" is the device the file is in. Cool, huh?
+						</p>
+<div class="code"><blockquote><pre>FILE volOpenFile (const char* fname) {
+
+	if (fname) {
+
+		//! default to device 'a'
+		unsigned char device = 'a';
+
+		//! filename
+		char* filename = (char*) fname;
+
+		//! in all cases, if fname[1]==':' then the first character must be device letter
+		if (fname[1]==':') {
+
+			device = fname[0];
+			filename += 2; //strip it from pathname
+		}
+
+		//! call filesystem
+		if (_FileSystems [device - 'a']) {
+
+			//! set volume specific information and return file
+			FILE file = _FileSystems[device - 'a']-&gt;Open (filename);
+			file.deviceID = device;
+			return file;
+		}
+	}
+
+	FILE file;
+	file.flags = FS_INVALID;
+	return file;
+}</pre></blockquote></div>
+						<p>
+						All of the other file operation routines are basically the same.
+						Knowing how our VFS is storing filesystems, you can probably guess how
+						volRegisterFileSystem() family of routines work. All they basically do
+						is store a pointer to the filesystem in the list or clear it.
+						</p>
+<div class="code"><blockquote><pre>void volRegisterFileSystem (PFILESYSTEM fsys, unsigned int deviceID) {
+
+	if (deviceID &lt; DEVICE_MAX)
+		if (fsys)
+			_FileSystems[ deviceID ] = fsys;
+}</pre></blockquote></div>
+						<p>
+						Alright then! So we initialize the filesystem driver,
+						which calls VolRegisterFileSystem() to register itself.
+						We call fopen(), which calls VolOpenFile(), which in turn
+						calls our filesystem's open() method. Everything is now in
+						place but we are missing something... something very important...
+						the filesystem driver itself!
+						</p>
+						<p>
+						Right, I suppose we should go into it .. again...
+						</p>
+
+						<h1>FAT12 - Take Three</h1>
+
+						<p>
+						</p><h2>Introduction</h2>
+						<p></p>
+						<p>
+						We have looked at and implemented FAT12 two times in the past
+						throughout the series. Because of this, I do not plan on covering
+						FAT12 in great detail again. However, this will be a review of FAT12
+						along with the C driver code and how it works.
+						</p>
+						<p>
+						If needed, please reference <a href="http://www.brokenthorn.com/Resources/OSDev11.html">Chapter 11</a> while
+						reading.
+						</p>
+						<h2>Boot Sector</h2>
+
+						<p>
+						Remember that alot of important filesystem information is stored in the boot sector
+						along with our boot strap program? More specifically, it is located in the <b>Bios Paramater
+						Block (PBP)</b> located in the boot sector.
+						</p>
+						<p>
+						When we mount our filesystem, we will need to read from the BPB and store this information
+						for later use. To do this, we can create a structure that matches the boot sector:
+						</p>
+<div class="code"><blockquote><pre>typedef struct _BOOT_SECTOR {
+
+	uint8_t			Ignore[3];		//first 3 bytes are ignored (our jmp instruction)
+	BIOSPARAMATERBLOCK	Bpb;			//BPB structure
+	BIOSPARAMATERBLOCKEXT	BpbExt;			//extended BPB info
+	uint8_t			Filler[448];		//needed to make struct 512 bytes
+
+}BOOTSECTOR, *PBOOTSECTOR;
+</pre></blockquote></div>
+						<p>
+						A good example of what the boot sector looks like is to think about
+						what our Stage 1 Bootloader program looks like in memory. The very first
+						instruction in Stage1 (Please see <a href="http://www.brokenthorn.com/Resources/OSDev4.html">Chapter 4's demo</a>, Stage1.asm)
+						was <b>jmp loader</b>. This is a three byte instruction, so the first 3 bytes in the above structure is the <b>Operation Code (OPCode)</b>
+						of our jmp instruction.
+						</p>
+						<p>
+						Also remember from <a href="http://www.brokenthorn.com/Resources/OSDev4.html">Chapter 4</a> that we have covered
+						the OEM Paramater Block (aka, Bios Paramater Block (BPB). The BPB is located right after our 3 byte jump instruction.
+						Because of this, the BIOSPARAMATERBLOCK is next in this structure. I also provide the BIOSPARAMATERBLOCKEXT structure
+						which is an extension to the BPB for some other file systems, such as FAT32.
+						</p>
+						<p>
+						The last 448 bytes of the bootsector contain the rest of our boot sectors program code. Because its not important to us
+						right now, we just treat it as padding in the <b>Filler</b> member. This insures the BOOTSECTOR structure is exactally
+						the same size as our on-disk boot sector (512 bytes).
+						</p>
+						<p>
+						BIOSPARAMATERBLOCK is a structure that defines the format for a BPB. It is the same structure that is in the boot sector
+						and has been covered in more depth in <a href="http://www.brokenthorn.com/Resources/OSDev5.html">Chapter 5</a>.
+						</p>
+<div class="code"><blockquote><pre>typedef struct _BIOS_PARAMATER_BLOCK {
+
+	uint8_t			OEMName[8];
+	uint16_t		BytesPerSector;
+	uint8_t			SectorsPerCluster;
+	uint16_t		ReservedSectors;
+	uint8_t			NumberOfFats;
+	uint16_t		NumDirEntries;
+	uint16_t		NumSectors;
+	uint8_t			Media;
+	uint16_t		SectorsPerFat;
+	uint16_t		SectorsPerTrack;
+	uint16_t		HeadsPerCyl;
+	uint32_t		HiddenSectors;
+	uint32_t		LongSectors;
+
+}BIOSPARAMATERBLOCK, *PBIOSPARAMATERBLOCK;
+</pre></blockquote></div>
+						<p>
+						The above structure should look familier :) If not, please
+						read its description in <a href="http://www.brokenthorn.com/Resources/OSDev5.html">Chapter 5</a>
+						</p>
+						<p>
+						BIOSPARAMATERBLOCKEXT, however, may be new. While we have already covered the BPB in depth and used
+						it in the past for FAT12 parsing, FAT12 bootsectors do not rely on the BPB extended members. FAT32,
+						however, does.
+						</p>
+<div class="code"><blockquote><pre>typedef struct _BIOS_PARAMATER_BLOCK_EXT {
+
+	uint32_t			SectorsPerFat32;   //sectors per FAT
+	uint16_t			Flags;             //flags
+	uint16_t			Version;           //version
+	uint32_t			RootCluster;       //starting root directory
+	uint16_t			InfoCluster;
+	uint16_t			BackupBoot;        //location of bootsector copy
+	uint16_t			Reserved[6];
+
+}BIOSPARAMATERBLOCKEXT, *PBIOSPARAMATERBLOCKEXT;
+</pre></blockquote></div>
+						<p>
+						Thats everything :) There is nothing special here-everything
+						has already been covered in detail in previous chapters. These
+						structures provide the filesystem driver an easy way of referencing
+						data in the BPB for later filesystem use. All we need to do is read
+						in the bootsector, and accessing the data through a PBOOTSECTOR. :)
+						</p>
+						<p>
+						We read the sector using our floppy disk driver that we developed in
+						the previous chapter.
+						</p>
+<div class="code"><blockquote><pre>	//! Boot sector info
+	PBOOTSECTOR bootsector;
+
+	//! read boot sector
+	bootsector = (PBOOTSECTOR) flpydsk_read_sector (0);
+</pre></blockquote></div>
+						<p>
+						That is all that is needed :) All of our important information
+						is now in <b>bootsector.bpb</b>. All thats needed is mounting
+						the filesystem...
+						</p>
+
+						<h2>Mounting the filesystem</h2>
+
+						<p>
+						Now that we have our BPB information in memory,
+						we need to prepare the filesystem for use. We start
+						this by first deciding what information we need.
+						</p>
+						<p>
+						Okay.. let see, we will need to total number of sectors
+						on disk. We will also need to know the total number of
+						directory entries. Other helpful information can be for
+						use with the <b>File Allocation Table (FAT)</b> and the Root
+						Directory:
+						</p>
+<div class="code"><blockquote><pre>typedef struct _MOUNT_INFO {
+
+	uint32_t numSectors;
+	uint32_t fatOffset;
+	uint32_t numRootEntries;
+	uint32_t rootOffset;
+	uint32_t rootSize;
+	uint32_t fatSize;
+	uint32_t fatEntrySize;
+
+}MOUNT_INFO, *PMOUNT_INFO;
+</pre></blockquote></div>
+						<p>
+						Okay... Remember that we already have the bootsector stored
+						in our BOOTSECTOR structure? Knowing this, we can simply copy
+						over some of the information from the BPB to our MOUNT_INFO structure.
+						</p>
+						<p>
+						Alright.. Lets locate the location of the first FAT and root directory
+						in a FAT12 formatted disk:
+						</p>
+						<p>
+						</p><table border="2" width="85%"> 
+							<tbody><tr bgcolor="#CCCCCC"> 
+								<td>Boot Sector</td> 
+								<td>Extra Reserved Sectors</td> 
+								<td bgcolor="#aaaaaa">File Allocation Table 1</td> 
+								<td>File Allocation Table 2</td> 
+								<td bgcolor="#aaaaaa">Root Directory (FAT12/FAT16 Only)</td> 
+								<td>Data Region containng files and directories.</td> 
+							</tr> 
+						</tbody></table>
+						<p></p>
+						<p>
+						Notice that there are two FATs. The first FAT is right
+						after the boot sector on disk. Because of this, we set
+						<b>fatOffset</b> in MOUNT_INFO to 1. Also note that
+						the Root Directory is right after both FATs. Knowing this,
+						we can come up with a simple calculation to find the starting
+						sector of the root directory. <b>(NumberOfFATs * sectorsPerFAT) + 1</b>.
+						We need to add 1 for the bootsector.
+						</p>
+						<p>
+						We now have the location of the first FAT and root directory.
+						To find the size of the root directory, all we need is the number
+						of entries in the root directory and the size of each entry.
+						Each directory entry in FAT12 is a specific structure format
+						that is 32 bytes in size. So all we have to do is <b>bootsector-&gt;Bpb.NumDirEntries * 32</b>.
+						This is the number of bytes the directory takes up. We divide it by the bytes per sector
+						to convert it to a sector count.
+						</p>
+
+<div class="code"><blockquote><pre>	//! store mount info
+	_MountInfo.numSectors     = bootsector-&gt;Bpb.NumSectors;
+	_MountInfo.fatOffset      = 1;
+	_MountInfo.fatSize        = bootsector-&gt;Bpb.SectorsPerFat;
+	_MountInfo.fatEntrySize   = 8;
+	_MountInfo.numRootEntries = bootsector-&gt;Bpb.NumDirEntries;
+	_MountInfo.rootOffset     = (bootsector-&gt;Bpb.NumberOfFats * bootsector-&gt;Bpb.SectorsPerFat) + 1;
+	_MountInfo.rootSize       = ( bootsector-&gt;Bpb.NumDirEntries * 32 ) / bootsector-&gt;Bpb.BytesPerSector;
+</pre></blockquote></div>
+						<p>
+						That is all that there is to it. We have our FAT12 driver
+						initialized. Easy, huh? We have the important filesystem
+						information in MOUNT_INFO so all thats needed is to parse
+						the directories and load a file. :)
+						</p>
+
+						<h2>Directory parsing</h2>
+
+						<h3>Format</h3>
+						<p>
+						A directory in FAT12 is composed of 32 byte structures
+						that provide information about a file or subdirectory.
+						Each directory entry has the following format:
+						</p>
+<div class="code"><blockquote><pre>typedef struct _DIRECTORY {
+
+	uint8_t   Filename[8];           //filename
+	uint8_t   Ext[3];                //extension (8.3 filename format)
+	uint8_t   Attrib;                //file attributes
+	uint8_t   Reserved;
+	uint8_t   TimeCreatedMs;         //creation time
+	uint16_t  TimeCreated;
+	uint16_t  DateCreated;           //creation date
+	uint16_t  DateLastAccessed;
+	uint16_t  FirstClusterHiBytes;
+	uint16_t  LastModTime;           //last modification date/time
+	uint16_t  LastModDate;
+	uint16_t  FirstCluster;          //first cluster of file data
+	uint32_t  FileSize;              //size in bytes
+
+}DIRECTORY, *PDIRECTORY;
+</pre></blockquote></div>
+						<p>
+						That is all that there is to it :) This is a directory entry - the information
+						stored in our DIRECTORY structure can be a subdirectory or a file. <b>Filename</b>
+						and <b>Ext</b> containes the file or directories 8.3 format name.
+						</p>
+						<p>
+						<b>Attrib</b> containes the attributes of a file or directory. It has the following
+						values for reference:
+						</p>
+
+
+
+						<ul>
+							<li>Read only: 1</li>
+							<li>Hidden: 2</li>
+							<li>System: 4</li>
+							<li>Volume Lable: 8</li>
+							<li>Subdirectory: 0x10</li>
+							<li>Archive: 0x20</li>
+							<li>Device: 0x60</li>
+						</ul>
+						<p>
+						Please note that we will not be using this in the series as it is not needed.
+						However, you can provide support for working and setting file attributes
+						in your own system if you like.
+						</p>
+						<p>
+						All <b>date</b> members in this structure follow a specific bit format:
+						</p>
+						<ul>
+							<li><b>Bits 0-4</b>: Day (0-31)</li>
+							<li><b>Bits 5-8</b>: Month (0-12)</li>
+							<li><b>Bits 9-15</b>: Year</li>
+						</ul>
+
+						All <b>time</b> members in this structure follow a specific bit format:
+						<p></p>
+						<ul>
+							<li><b>Bits 0-4</b>: Second</li>
+							<li><b>Bits 5-10</b>: Minute</li>
+							<li><b>Bits 11-15</b>: Hour</li>
+						</ul>
+						<p>
+						Because we have no need in modifying or retrieving file or directory date or time
+						information we are not using them in the series. However, I encourage our readers
+						to add the functionality themselves later on it they like.
+						</p>
+						<p>
+						Remember that, for a FAT12 formatted floppy disk, a cluster is the same size as
+						a sector (512 bytes). Because of this, the <b>FirstCluster</b> field in DIRECTORY
+						also points to the first sector of a file. Thus, by reading this sector, you
+						effectively read the first 512 bytes of the file.
+						</p>
+						<p>
+						Now lets parse our directory and find our file...
+						</p>
+
+						<h3>Parsing</h3>
+						<p>
+						Remember that a directory containes a list of directory entry structures.
+						Knowing this, parsing the directory to find a file or directory becomes
+						very easy.
+						</p>
+						<p>
+						We begin with loading the root directory. Remember that we retrived
+						the root directory sector from the BPB when we mounted the filesystem and
+						stored it into <b>_MountInfo.rootOffset</b>. Thus, all we need to do is
+						to load the sector, and use a <b>DIRECTORY*</b> to access the directory
+						entries.
+						</p>
+						<p>
+						Then we loop and compare filenames to find a match. We convert the input filename
+						to its DOS 8.3 filename format using ToDosFileName(). For example, turning the input
+						filename of "Myfile.txt" to the FAT12 internal format "MYFILE  TXT".
+						</p>
+						<p>
+						We read in a sector and compare each entry in the sector. You will also notice
+						that we turn the filenames into C strings so we can use a simple strcmp() call to
+						test if filenames match. When we found a match, we fill out our FILE structure
+						and return it.
+						</p>
+						<p>
+						Lets take a look:
+						</p>
+
+<div class="code"><blockquote><pre>FILE fsysFatDirectory (const char* DirectoryName) {
+
+	FILE file;
+	unsigned char* buf;
+	PDIRECTORY directory;
+
+	//! get 8.3 directory name
+	char DosFileName[11];
+	ToDosFileName (DirectoryName, DosFileName, 11);
+	DosFileName[11]=0;</pre></blockquote></div>
+
+	<p>
+	<b>DirectoryName</b> contains the directory or file name we are wanting to find.
+	We convert the input filename, like "myfile.txt" into its DOS 8.3 filesystem format "MYFILE TXT" and store it in DosFileName.
+	</p>
+
+<div class="code"><blockquote><pre>	for (int sector=0; sector&lt;14; sector++) {
+
+		//! read in sector
+		buf = (unsigned char*) flpydsk_read_sector ( _MountInfo.rootOffset + sector );
+
+		//! get directory info
+		directory = (PDIRECTORY) buf;</pre></blockquote></div>
+
+	<p>
+	We are reading from the root directory. The root cluster is stored in _MountInfo, which containes
+	information obtained from the <b>Bios Paramater Block (BPB)</b> when the file system was mounted.
+	<b>_MountInfo.rootOffset</b> contains the first cluster of the root directory. The root directory
+	contains, at most, 224 DIRECTORY entries. A DIRECTORY entry is 32 bytes, 224*32=7168 bytes,
+	7168 bytes / 512 bytes (512 bytes in a cluster) = 14. This means the root directory consists of 14 clusters.
+	</p>
+	<p>
+	Knowing this, rather then loading the entire directory at once, we can load it sector by sector and parse each part of
+	the directory.
+	</p>
+
+<div class="code"><blockquote><pre>		//! 16 entries per sector
+		for (int i=0; i&lt;16; i++) {
+
+			//! get current filename
+			char name[11];
+			memcpy (name, directory-&gt;Filename, 11);
+			name[11]=0;
+
+			//! find a match?
+			if (strcmp (DosFileName, name) == 0) {</pre></blockquote></div>
+
+	<p>
+		Knowing that a DIRECTORY entry is 32 bytes, 512 bytes per cluster / 32 bytes = 16. This means
+		there are 16 DIRECTORY entries in one sector. So, we loop through each entry and compare filenames
+		to locate the file or directory that we are looking for. If they match, we can create a new <b>FILE</b>
+		object and return it. <b>file.currentCluster</b> will contain the first cluster of the file for reading
+		later, <b>file.fileLength</b> contains the size of the file, in bytes. <b>directory-&gt;Attrib</b> contains
+		the files attributes. We set it based on its DIRECTORY entry attribute.
+	</p>
+
+<div class="code"><blockquote><pre>				//! found it, set up file info
+				strcpy (file.name, DirectoryName);
+				file.id             = 0;
+				file.currentCluster = directory-&gt;FirstCluster;
+				file.eof            = 0;
+				file.fileLength     = directory-&gt;FileSize;
+
+				//! set file type
+				if (directory-&gt;Attrib == 0x10)
+					file.flags = FS_DIRECTORY;
+				else
+					file.flags = FS_FILE;
+
+
+				//! return file
+				return file;
+			}</pre></blockquote></div>
+
+	<p>
+		Almost there... If we have not found the file or directory yet, we just move onto
+		the next DIRECTORY entry. If we never find the file, we set FS_INVALID and return.
+	</p>
+
+<div class="code"><blockquote><pre>			//! go to next directory
+			directory++;
+		}
+	}
+
+	//! unable to find file
+	file.flags = FS_INVALID;
+	return file;
+}</pre></blockquote></div>
+						<p>
+						Thats it! The above routine works for directories
+						and files in FAT12. By calling it, it will search the
+						root directory for any folder or file name and return
+						its information.
+						</p>
+						<h3>SubDirectories</h3>
+						<p>
+						While the old version of FAT12 was flat, new versions of this file system
+						supports subdirectories. This allows us to be able to use directories and
+						manage a lot of files more easily. For example, it would be a good idea
+						in a large OS to separate OS-specific files in a <b>system</b> directory,
+						or a <b>user</b> directory containing user profiles.
+						</p>
+						<p>
+						A subdirectory is just an ordinary file with the DIRECTORY flag set. Because of
+						this, we first need to know how to read files so lets look at that now.
+						</p>
+
+						<h2>File Reading</h2>
+
+						<h3>Format</h3>
+						<p>
+						Okay, so we can now parse directories and locate files. We now need a way
+						to read the file's contents. Remember that, technically, we can already
+						read the first 512 bytes of any file by just the <b>FirstCluster</b> field
+						in the directory entry structure for that file. To read more then one cluster,
+						we have to parse the <b>File Allocation Table (FAT)</b>.
+						</p>
+						<p>
+						Recall that  FAT consists of a number of entries containing cluster numbers.
+						The size of these entries depends on the filesystem. FAT12 has 12 bits per entry,
+						FAT16 has 16 bits, FAT32 has 32 bits per entry.
+						</p>
+						<p>
+						Think of the FAT as - not as a linked list, but rather a table of entries that
+						represent the whole physical disk. The first cluster of the disk is represented
+						by the first entry of the FAT. The second cluster is represented by the second
+						entry, and so on. This means there is a one to one relationship between a cluster
+						and a FAT entry. This makes reading and writing files in FAT12 easy.
+						</p>
+
+						<h3>Reading a file</h3>
+
+						<p>
+						To read a file, we just read the current cluster of the file.
+						We try to locate its next cluster on disk by parsing the FAT
+						table. After we find the next cluster, update the "current cluster"
+						for the next file read.
+						</p>
+						<p>
+						The cluster to read was set when the file is opened. On the first
+						call to this routine, <b>file-&gt;currentCluster</b> is the same as
+						<b>DIRECTORY-&gt;FirstCluster</b>.
+						</p>
+						<p>
+						This cluster is an offset into the data area on disk. Lets recall the format
+						of a FAT12 formatted disk and locate our FAT and data area:
+						</p>
+
+						<p>
+						</p><table border="2" width="85%"> 
+							<tbody><tr bgcolor="#CCCCCC"> 
+								<td>Boot Sector</td> 
+								<td>Extra Reserved Sectors</td> 
+								<td bgcolor="#aaaaaa">File Allocation Table 1</td> 
+								<td>File Allocation Table 2</td> 
+								<td>Root Directory (FAT12/FAT16 Only)</td> 
+								<td bgcolor="#aaaaaa">Data Region containng files and directories.</td> 
+							</tr> 
+						</tbody></table>
+						<p></p>
+						<p>
+						Remember that each FAT takes 9 sectors. Because there are two FATs, 9+9=18. We have also concluded
+						that our root directory is 14 sectors in the previous section. 18+14=32. This is the amount of sectors
+						both FATs and the root directory take up. So far our equation is <b>32 + file-&gt;currentCluster</b>.
+						We need to subtract 1 and we have <b>32 + (file-&gt;currentCluster - 1)</b>. This is the sector to read in
+						and containes the file data.
+						</p>
+
+<div class="code"><blockquote><pre>void fsysFatRead(PFILE file, unsigned char* Buffer, unsigned int Length) {
+
+	if (file) {
+
+		//! starting physical sector
+		unsigned int physSector = 32 + (file-&gt;currentCluster - 1);
+
+		//! read in sector
+		unsigned char* sector = (unsigned char*) flpydsk_read_sector ( physSector );
+
+		//! copy block of memory
+		memcpy (Buffer, sector, 512);
+</pre></blockquote></div>
+
+						<p>
+						To read in the next cluster we have to parse the FAT tables. Because a FAT table is 9 sectors, rather
+						then reading all 9 sectors we determin what sector we need to read.
+						</p>
+						<p>
+						We first get a byte offset into where the next cluster will be in. To do this,
+						we multiply the cluster value by the size of a cluster. This gets stored in <b>FAT_Offset</b>.
+						The size of a FAT32 cluster is 4 bytes, so we would mutiply by 4 is we are using FAT32. We would
+						multiply by 2 if we were using FAT16 as that uses 2 bytes per cluster entry. Thats all fine of course,
+						but what about FAT12? FAT12 uses 12 bits per cluster entry. Thats 8 bits (for the 1st byte) and 4
+						bits (for the 2nd byte. 4 bits is half of 8 bits, so its 0.5) so its 1.5 bits per cluster entry.
+						</p>
+						<p>
+						After this, just divide this byte offset by the size of a sector to obtain the sector of the FAT
+						to read in. The remander is the offset in this sector, which is the cluster to read from the FAT.
+						This is in <b>entryOffset</b>.
+						</p>
+						<p>
+						<b>FAT</b> is defined as <b>uint8_t FAT [SECTOR_SIZE*2]</b>. Notice that we read 2 sectors
+						of our FAT into memory instead of one. Why do this? Knowing a sector size is 512 bytes,
+						512 bytes * 8 = 4096 bits per sector. 4096 bites / 12 bits (for a FAT entry) and we have
+						341.3333..etc. This means that an entry will sit between the 1st and 2nd sector. This will
+						cause problems when loading files. Because of this, we have to load an additional sector
+						so the last cluster value of the 1st sector will not be corrupt.
+						</p>
+
+<div class="code"><blockquote><pre>		unsigned int FAT_Offset = file-&gt;currentCluster + (file-&gt;currentCluster / 2); //multiply by 1.5
+		unsigned int FAT_Sector = 1 + (FAT_Offset / SECTOR_SIZE);
+		unsigned int entryOffset = FAT_Offset % SECTOR_SIZE;
+
+		//! read 1st FAT sector
+		sector = (unsigned char*) flpydsk_read_sector ( FAT_Sector );
+		memcpy (FAT, sector, 512);
+
+		//! read 2nd FAT sector
+		sector = (unsigned char*) flpydsk_read_sector ( FAT_Sector + 1 );
+		memcpy (FAT + SECTOR_SIZE, sector, 512);
+</pre></blockquote></div>
+
+						<p>
+						After the FAT sector has been read, we read
+						in the cluster number.
+						</p>
+						<p>
+						Now we run into a problem. If we read an 8 bit value,
+						we will not be able to read the whole 12 bits of a cluster
+						value. So, we read 16 bits instead using an uint16_t. Of course,
+						now we have the problem of having to much bits of our 12 bit
+						value.
+						</p>
+						<p>
+						Lets take a look closer. Lets say this is our FAT. We will
+						separate our FAT into bytes but mark out the 12 bit entries.
+						(This is taken from <a href="http://www.brokenthorn.com/Resources/OSDev6.html">Chapter 6</a>)
+						</p>
+<div class="code"><blockquote><pre>               Note: Binary numbers seperated in bytes.
+	       Each 12 bit FAT cluster entry is displayed.
+
+                                   |                           |
+   01011101       0111010   01110101  00111101  0011101  0111010  0011110 0011110
+   |                |              |              |            |               |
+   |                |1st cluster   |              |3rd cluster-|               |
+   |-0 cluster  ----|              |2nd cluster---|            |4th cluster----|
+</pre></blockquote></div>
+							<p>
+							<b>Notice all even clusters accopy all of the first byte, but part of the second. Also notice that all odd clusters occopy a part of their first byte, but all of the second!</b>
+							</p>
+							<p>
+							With this in mind, this means if the cluster is even, <b>Mask out the top 4 bits, as it belongs to the next cluster.</b>
+							If the cluster is odd, <b>shift it down 4 bits (to discard the bits used by the first cluster.)</b>
+							</p>
+							<p>
+							Now that we have all of that out of the way, lets finish off this function:
+							</p>
+<div class="code"><blockquote><pre>		//! read entry for next cluster
+		uint16_t nextCluster = *( uint16_t*) &amp;FAT [entryOffset];
+
+		//! test if entry is odd or even
+		if( file-&gt;currentCluster &amp; 0x0001 )
+			nextCluster &gt;&gt;= 4;      //grab high 12 bits
+		else
+			nextCluster &amp;= 0x0FFF;   //grab low 12 bits
+
+		//! test for end of file
+		if ( nextCluster &gt;= 0xff8) {
+
+			file-&gt;eof = 1;
+			return;
+		}
+
+		//! test for file corruption
+		if ( nextCluster == 0 ) {
+
+			file-&gt;eof = 1;
+			return;
+		}
+
+		//! set next cluster
+		file-&gt;currentCluster = nextCluster;
+	}
+}
+</pre></blockquote></div>
+
+				<h3>Writing a file</h3>
+
+				[To be completed in the chapter update!]
+
+				<h2>SubDirectories</h2>
+
+				<p>
+				A <b>SubDirectory</b> is a file with the DIRECTORY attribute set. To read from
+				a subdirectory, all we need to do is locate the FAT12 file on disk with that directory
+				name and read it in the same way as with other files using the FAT.
+				</p>
+				<p>
+				After the file is loaded, from the first byte to the last is just an array
+				of DIRECTORY entries. Parse the DIRECTORY entries the same way that we did
+				with the root directory to read this directory :-) These will be the files and folders
+				inside of the directory.
+				</p>
+				<p>
+				Lets take a look:
+				</p>
+
+<div class="code"><blockquote><pre>FILE fsysFatOpenSubDir (FILE kFile,
+			const char* filename) {
+
+	FILE file;
+
+	//! get 8.3 directory name
+	char DosFileName[11];
+	ToDosFileName (filename, DosFileName, 11);
+	DosFileName[11]=0;</pre></blockquote></div>
+
+	<p>
+	<b>filename</b> contains the file or directory that we want to find. <b>kFile</b>
+	is the subdirectory that we want to parse. We convert the input filename, like "myfile.txt"
+	into its DOS 8.3 filesystem format "MYFILE  TXT" and store it in <b>DosFileName</b>.
+	</p>
+
+<div class="code"><blockquote><pre>	//! read directory
+	while (! kFile.eof ) {
+
+		//! read directory
+		unsigned char buf[512];
+		fsysFatRead (&amp;file, buf, 512);
+
+		//! set directort
+		PDIRECTORY pkDir = (PDIRECTORY) buf;</pre></blockquote></div>
+	<p>
+		<b>file</b> is our subdirectory that we want to parse. Remember that it is just
+		an ordinary file in FAT12, so we read in a sector of the file. The file consists of
+		an array of DIRECTORY entries. To make the DIRECTORY members easy to access,
+		we use <b>pkDir</b> to point to the sector contents. Now, we search through the directory...
+	</p>
+
+<div class="code"><blockquote><pre>		//! 16 entries in buffer
+		for (unsigned int i = 0; i &lt; 16; i++) {
+
+			//! get current filename
+			char name[11];
+			memcpy (name, pkDir-&gt;Filename, 11);
+			name[11]=0;
+
+			//! match?
+			if (strcmp (name, DosFileName) == 0) {</pre></blockquote></div>
+
+	<p>
+		Each DIRECTORY entry is 32 bytes. A sector (also cluster in FAT12) is 512 bytes.
+		512 bytes / 32 bytes = 16 DIRECTORY entries per sector. So, we loop through all 16
+		entries to compare names. Once we find a filename matching the one we are searching,
+		we have found the file.
+	</p>
+
+<div class="code"><blockquote><pre>				//! found it, set up file info
+				strcpy (file.name, filename);
+				file.id             = 0;
+				file.currentCluster = pkDir-&gt;FirstCluster;
+				file.fileLength     = pkDir-&gt;FileSize;
+				file.eof            = 0;
+
+				//! set file type
+				if (pkDir-&gt;Attrib == 0x10)
+					file.flags = FS_DIRECTORY;
+				else
+					file.flags = FS_FILE;
+
+				//! return file
+				return file;
+			}</pre></blockquote></div>
+
+			<p>
+			When we have found the file, we fill in our FILE structure - first file cluster
+			(so we can read it later on), file size (so we know when EOF is) and its attribute
+			(file or directory).
+			</p>
+			<p>
+			If the file has not been found, we just move onto the next entry. This loop will
+			continue until the end of the file. If no file is found, we set FS_INVALID and return.
+			</p>
+
+<div class="code"><blockquote><pre>			//! go to next entry
+			pkDir++;
+		}
+	}
+
+	//! unable to find file
+	file.flags = FS_INVALID;
+	return file;
+}</pre></blockquote></div>
+						<p>
+						Notice the simularities between this routine and our
+						<b>FsysFatDirectory</b> routine.
+						</p>
+
+						<h1>Demo</h1>
+
+							<center>
+								<img src="images/demo22.png">
+								<br><i>Viewing a file in our OS</i>
+								<br><a href="Demos/demo22.zip">DEMO DOWNLOAD</a>
+							</center>
+							<p>
+							This chapters demo puts everything we covered and
+							impliments a VFS and FAT12 minidriver. It is capable
+							of supporting multiple filesystems, disk devices,
+							subdirectory support, and loading and displaying files.
+							</p>
+							<p>
+							The demo is also capable of displaying large files and impliments a "press a key to continue"
+							feature for multi-cluster files.
+							</p>
+							<p>
+							This demo impliments the <b>strchr()</b> ISO C routine in our CRT <b>string.c</b>
+							to help with text parsing. It also upgrades our <b>read</b> command so it is capable
+							of locating and displaying files instead of raw sectors.
+							</p>
+							<p>
+							The Volume Manager is very simplistic in this demo, implimented in <b>fsys.cpp</b>.
+							It manages the registring and unregistring of file systems, and file system abstraction.
+							You can call <b>volOpenFile()</b> to open a file. It defaults to opening <b>a:file.txt</b>
+							but it will also work if you call it to open any file on any directory.
+							</p>
+							<p>
+							Not all file systems support subdirectories. Because of this, we leave subdirectory support
+							to the file system drivers. Instead, the volume manager only handles the drive letter part
+							of a path name. For example, if you call <b>volOpenFile ("a:\folder\file.txt")</b>, volOpenFile
+							will pass <b>"\folder\file.txt"</b> to the file system registered on device 'a'. The file system
+							driver is responsible for parsing the directory path name and opening subdirectories and files.
+							</p>
+							<p>
+							In the case of our FAT12 minidriver, this special routine is <b>fsysFatOpen()</b> which is responsible
+							for parsing the direcory path (like "\folder\folder\file.txt") and calls its other file system routines
+							for parsing and reading files and directories.
+							</p>
+							<p>
+							Thats it :-) This is possibly our last chapter covering FAT12. Because of this I do plan for an update
+							covering writing files and directories on disk a little later.
+							</p>
+
+						<h1>Conclusion</h1>
+
+						<p>
+							This was a fun chapter, huh? We are now able to load files from disk. I know, I know, "About time!" :)
+							We are almost now ready to make the big leap into multitasking and executing programs. Before going
+							multitasking, however, we should cover Loaders. A Loader is responsible for loading and executing
+							a program, and mapping it into an address space. We also need to cover heap management and stack management
+							in address spaces.
+						</p>
+						<p>
+							Because I plan to update the memory management chapter heavily, I might move heap and stack management in
+							a chapter following the memory management chapter. In any case, I will be sure to keep you updated on changes.
+						</p>
+						<p>
+							This does, however, mean that it is almost time for us to dive into multitasking. Afterwords? User mode!
+						</p>
+	<p>
+		Until next time,
+	</p><p>
+	~Mike<br>
+	<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2/">Neptune Operating System</a></i>
+
+	<br><br>
+	<i>Questions or comments? Feel free to <a href="mailto:neon6000@aol.com">Contact me</a>.</i>
+
+	<br><br>
+	Would you like to contribute and help improve the articles? If so, please <a href="mailto:neon6000@aol.com">let me know!</a>
+
+						<br>
+						<br>
+						</p><table border="0" width="100%">
+							<tbody>	
+								<tr>
+									<td>
+										<p class="center">
+</p><table width="100%" border="0"> 
+<tbody><tr> 
+<td><p align="left"> 
+<a class="anchor" href="OSDev21.html"> 
+<img src="images/left.jpg" border="0"></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev21.html"> 
+<font size="4">Chapter 21</font> 
+</a> 
+ 
+</p></td> 
+<td> 
+<p align="center"> 
+<font size="4"><a class="anchor" href="OSDevIndex.html">Home</a></font> 
+</p> 
+</td> 
+
+<td><p align="right"> 
+<a class="anchor" href="OSDev23.html"><font size="4">Chapter 23</font></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev23.html"><img src="images/right.jpg" border="0"></a> 
+
+</p></td> 
+</tr> 
+</tbody></table> 
+										<p></p>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<p>
+<!--
+			<a href="http://validator.w3.org/check?uri=referer">
+				<img
+					src="http://www.w3.org/Icons/valid-xhtml10-blue"
+					alt="Valid XHTML 1.0 Strict" height="31" width="88" 
+				/>
+			</a>
+-->		</p>
+	
+
+</body></html>Ytext/htmlUUTF-8_1http://www.brokenthorn.com/Resources/OSDev22.htmlP¥#Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl-ÚÙ{ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl-Úâ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔON‹‰PNG
+
+   IHDR  ‹  Ý   ú·¤7   sRGB ®Îé   gAMA  ±üa    cHRM  z&  €„  ú   €è  u0  ê`  :˜  pœºQ<  N	IDATx^íÝwpG¢çyiÞÎE\Üwìûóþ¹¸{±{qs±ñ6âivŒFÒÈQ‘ÑÐ $á è=)Q¢è)‰”h%zïIÞw7)Îèif4#\V'P,–ïF•¾ˆÔ¨®®Ìúduý2«Ÿ¹íõŸý§eÛžùçÿãûÿñGÿáùñ?ýèG?þñ?ýøÙÞgÿÃžyæ™ÿùÙÞÿéŸž}öŸž·ô#í7? €ÀÓ(ðÃ½Oc³i³‚"§Þh‡™í½·; ø^[ú—gžùÇß~øÛßŸýÛ·û¶û»Æ†oÿŸÿýà3™[Z_øã…	µ©«jÒ>hHÿ¨)óãæÌm-Ù;ÚDÉÝÓQ°7T¼¯£¤"ì¿ˆõ) € ŒL¢m.%gk»±dÐ¢—ŒšÒ74¥,­™:ÿÚ¯~{î™¬­mïÌ¼:+ÿ®HèùkêdY°¡^¤µ(2­e`‹´6™âO”ííbƒ%°pk+x*´Äü¸9cK“´µ¬ÕÊúF­¬ë+ikdY°¶~Á*­Ì_Q7i±¤,®ž•vãÉ—Ÿÿ‰¬§,½'ŠÈiYôœ³jmbÍi›mP_ÙÒšñA3
+¤‹‚@¢ÄI“‚@"Ò66Ê¢QÚŸÅüV‹ÞµõZ†FÓWËÓþN]Zc.%5ZþŠRXœO–”¬{sÒnÌœMhqK[ôdH›Z¿úÝÒÑT–áýÄ	tc“Þnn  ÚAOA !ÚÙ“2L–înýôLÏÑKûÊÅGåÂƒ£zD9r¾çÈ9QºœÕJé¶¦ëµËÆ²äÜ´®¬}SeG_©èØ$KyÇÆòöe¢´‰²aÛ†½­ZÙÝº~wKÞÆ†´5õÚ´8:'^º£åÓÓ1·¤dS}JöÝy·E¡<'åúã„W¹mZ^îî›F¦ËÆl~â,=™ò@ aÑÑ(p(ÝÑ²çhwòºÎiË"KÂc‹Â£Bïå†ÞË½­•?diå­ŒŽß¤w¼™ÖñjJûK³[~“\»­¢µdK£ÜrîËw¶¥®i™³¢eæ²æKš§—4M]¬•)‹¢¥H”ÆIó'ä6ŒËj“Q7!³ºdC]ÎêZ9c.ÝÖ|øËÚªe»*?,ÏY_ž¹º<}EÙü¥e–•¥,erÉþäâý³÷Í*Ü7#oRöî	éŸL-¨*»µxU­žÐ"žgL?C§\KÅ[¿ÐµêîòÍ7?Üy­hå‰”â#ék®§n¸+SY»Â¾Å0u6NšûãY¿ÎÎ(ÀY	
+èoµáÆ0øò\OÊÚHþ–HáÇ‘…›Â)kÂsV†g.Ï(M[J*	%‡&-
+M,Ëïx?§ýíŒö7SZ=£öé—+…¤Æú½­©«š3×5/\×œ¶º)uESò²¦¹¥MsJg7ÎeqãÌÅ3Š§6LÍ¯Ÿœ]?!£nLê½ñ©×—oŒ¾œ¼¢N´¤jé®>=¸éóªÕå•¥;+o«,ü¸"KEîå9›Ës6•gm(Ï\W–¶º,uùþ9%{§æo—±fBnÅç¡¾„ŽN mºf_ù­›×ïßm©½ßÑÔÐÕÔøàÞ¶Ëj½ýÑ®K—šµøäã+ÛO&´x1\›v÷¿Î(À³3›B á*ðåÙîËÂEGmdoŠ,Xž·*<gyxæÒðô%¡i%¡©Å¡)‹B“
+Cãó:Ædw¼›ÙþÛÔÖWgÖþbÌÙÃGÅúÚzýžÖ¹K›³Öj%}UÓü)Ë“K›æ–4Î)nœ½¸qö¢ÆY…3§ç7LË­Ÿ’]?1£nlê½÷f]Y½©?¡ÏvW~tpÓáƒ›¿¨ZSYµlweÉöÊ¢O*
+>*ÏÛR‘óAEöå7•gl([°¦,eÅþ¹¥{§~2~á²ß'‹–ˆW åUnÛ„ÖÞ#VUuû›¡Ö¦–¦ÆöÖ–Î®ÈÃ¿þõo½½½¿ùîÚµÛ·u¼ýÇÍÚÕdÑ::&¡H<@ V‘Ð“‡E6çnŽ¤¯Ï[žµLds8©8<¹(<!?4.74:»C”÷2;ÞNïø]ZûoRÚ^›U÷ü¸s_‹ÈêÖïnU"²¹9cUÓ‚â#OóJç”4Í^Ü4kQÓŒÂ¦éùÓr§æ6&e7LÉj˜´°AÌ¡ÇÍ¯þãìkk65,X^/ŠhIEöÆkª¬=Pµ|_e±ˆç+D6go.ÏÜPž¾.Ì+£Ù¼tÿì’}3ïZ°mBöò·SEKDB÷…tÊuëZKèòòÛ‘p[}Mãí[µ×¯Þ¿z¡úþ†n,H;8qò¾¤¤Š·þPBBÇz ±> €À 	|y¶g|QxþZ‘µÏbê<µ$šÍ¡±9á?f…ÞÉý>­ãw:Þšßñ›ÔŽ7S;ÞHn{}vý‹Îq¬SOèÅÍ©+Zæ/oNYÚ´bK»{™Ù0>£~ü‚šÑs¯¯ÙÜØŸÐ=å×U-ÛSµl¯ˆçÆ+Õb~ÍæµeóWïO—µK÷ÏZ¼Æ"±¼þÔ•}Ó
+ö$åo›”»âÝ4Ñ»„N»¡--¬ï—ÑË+úúîú×j/ž½sùìÒ%ŸO˜¸-'ç³’’£ïŽY,gÏ²ô½S,:‡¾×ú—õ•ú¿Ä±Dã’øn_¸÷g±œÍMâáâ·¸-–ÈM¾ùH”ø6ëþ¨cW¾¹V÷­u±¼H¼•½ÿómâ¶XGœ¶÷•îh•æU§zbm’û~ÅÝªX›¡¯/Ú#väÔÍG.Ïjy`dojëˆßòÀë‹º?6î“Å±+Åaz¸dEÜuè|Oéöã
+U§ºÅr¹;¦»äjb¡¸«¿ïºõÇ~Ô$—‹ýZ_Þá¹\o†~#îÝä<-GÎöŒ-ˆÌ]Ù9wUdÖ²È´’È”Ebê›~?+çÐ[´`•"JH”7’ÛGÍixqâ…/Žë	Ý6cqKÊ²–äe-óJ›}$tã„Œ†ñiµ£ç]_ûa“LhÑ’òô5Ubê\²£²h«ˆaù#âYÌ›ËæŠx.Þ7½H_¾/)ooRÞv‘Ðï¥‰–¤äU›çÐÚÛÄòªSkŸÓ²&ô•ó÷n\­Ý²éÈÂÌË–Z±âôûã‹	ÝÕšdB‹"rB?É&*¡EÞˆM­ÚÛ&¶,~È=9öïÒ³<Ö¨pj¼X.6«oMÜŽoâ´ý¸³pÇ9Vƒ±ñXÇîûw«be—ëË/ÝÞš¶V¤o£ìGyÛXäj+÷´‰…â·<0ä
+ý	m~ˆû­UX—ÈŽ3-×foêËTÙ*QD6‹RøQ³¸}èü±/Ömn?¬õX.V“}'n‹MEóþ| ¾§NË›•Û‘¥ 0¼Žœéy?O\Ùîœ½<2£4’´82©02./<:;üÞÂÐÛ¡ß¦…Þœ¯ókÉZy]éö×µ„¾øå‰¾çãú]mÓ‰lnI^Ú2·¤ÅOBÓh-¡o¬ÓúLOù‚•…[µ×žó?¯:?éyËÊæ,Ù?S›=ËŸýSrö'åîMÊÝ>)gå{i¢%©y÷EÑ^ŠÖ¯r‹?´¥%5Ú`U½˜CwF¯rß½«Í¡/GzûÇÇæ§íK]x`Ý{E|™·åJúº›©kªÓÅkÏú§¿7hS[9‡Ð§˜‰Jh™Ê"Ä¹[üÖÓÚóì?¸$´1õå4Î³%ÖÒ6ÏêâØ¸xHBöË³m~V0µßiwÔ90Œ-”#$‰)pòÐõYôMõS¢C^¹M‘¸‡/–åÆíËÇn¨xâš–Ï°O—€LèiK"ÓK;£èÈÄÂˆ6Î¿›þ}zè­´ÐóC¯¥„^I½œzUéö×çö%´ÜY™Ðs–´Ì]Ò2'šÐ35O/lž–ß””Û<9§iRvÓ„¬¦ñ›Æej×ÀÅïñ™ãÓkÇ$ßX¿¥9m¹öR´h‰HèŠ¼£oÞþ°"ksEÆúÇ‘<»øñíÉYû'-Ü?9{_RÎŽI9«	­}c‰žÐâÔüšù¥Ú ˆkeå·»;ÛÚ››««ëo\¯ÕæÐ—k×o=VºâË¥«ÎŽ[úõâã¿Y|húê¯Çf˜·ê–ñ;zä™¥êtÏé[äžõk¢·År}ñ§XGüYôI‹¸-~›në[èûâ´è¦Ž]ýFü)~k‰hØ¾éOQ‘vrì¯ÝØ§Û2ee²I¦ÆëÍ(Ý©L­ŠårÛMíø²S.¿Wík7n_îŽX.ë•7îÑ¡äRcÛL˜zóäQE_BÈ¯óQÜ÷ËÔ*—ÝÑñ­=.&û]ß_ÛÕôê¤ƒéOÓî(r`{M¶Y{‰¤ÿxÐ*Ï¾0ö]ßà¯¿ûLÛ4>5d]Æ"'îžÕ¬|’ž®|¢µâÚòÛYáÉ‹#I%‘¤âÈäE‘	á±yÑ„Î
+ÿ>3üVFxTZøµùáWRÃ¿N	¿œ‰~uNã/‰™k_BïnK*j™]¢…ô“	Ýœ”×<9·yRNó„ìæñYÍãj×ÀEB[Ø8.½nLòM-¡W5ˆ-)K^R‘½I¾m»B{Û¶ø`Õ=˜û.zOÍ)›’µ²Hè…û¦dí˜˜µêÝÚ:¿FL˜-	]X+Â_«`mcYùÝ£GïþºúæÍšê;õ×/×Ü¸\³iÏé…·fo9;uýWËÜXsìÞûË¾þÅoÓ“
+Oê_ñ˜¹IKYyJga™¦ú™(}–' ñç†Ê¸±Wèlh¿M·Å½¦s‡<³ËmóÛºâ±¦4žËŒá§ß–+È‚íðÂ”ÐâÔ©·\žFõ„¶nJä™¾w"nÅŸÆ„•Êt´­Wî¾ŽTµbÚZéù9Ë6¸ì—îì¾;:¾ìSù§¾ûr¨‘óa³ØYq0è]oZÍxä­lwD‘ÃxŠ”¹uG<ûBîŽì;kêëOã¡kZM<P–yVÇ
+#gü.3<¾(2iqDäô$‘Ð…á±ùá÷sÃïæ„ÿþíÂð™‘×Ò#¯,ÿz~ä×©á—SC/Ïmz^Kèn)°awûäÂ–™Å-³J´œÖæÐ‹›§5O+lN*hžRÐ<9¯eb^Ëøœ–qYÑ„Îj»°ylFýèä[ë·´ˆh‰-)›[\‘¹®"kcEÖ¦Š…EB—‹>Ï_¡‡tùÌüòé9åIYåS2EÙ?eáÎ‰W½;_´DKèüùRtßwŠ‰Äž_\'Â_Ä³hå±cÍz?ÛXYq³ªêægGn}q¿«ìBÃîK-ËÝ-?ßP°ïÊš£·'¬9ûÿ=?~bîâ_ÇEä´žÐâFÞG­â\|àŒöÊ™(b‰<5‹r5ñ§\¨ß°.”+ëeçíŒ¿±*,~‹Ûúr½
+clï5­`| hªl¡ûÖÄd3öì¾Xýgñ§ø-n›dÝ”XGßwã9Õå¹ÜÓ%›ç¿xî—Þ*?»ãÔãò±ËvwèsÚ#‚mÏªv`è¿HY±_â†{Ë­½#{Aï;'OœÃŠuÖ”=vö$°&OÀÑsÞÊŒˆ7‹M\$â¹sbQdBQdladt~ä½¼ÈÛ¹‘ßfGÞÌŠ¼–ÙùrFä¥´ÈK"/¥†_šÛüË‰WŽœì‘û»qoÇäÂÖÅâ3WZÑº¸E¼wlú¢–©E-I…-“Z&å·NÈk—«å÷Øì–±Y-c3F§ÜYÿqkæ:íÕ(Ñ’²Ù‹ÊÓWWdmÐBzá‘Öåæ9tÅŒÜŠiYåIåS2Ê&gìœ±úTÑ’Eõ©…µò¥èþ„Î¯I+Ñ&ÐÚLc“ø£O¿Ô~ÐùÓ•ËÍû÷^ýðZëúsu—Ûžjè:u¿kæ–³+ŽÜúé2ÿíµÙSNfmi—eá}—ÅQ–ïÕ¦È²èwéKäÂGµl;pV;›‹år#Æ"7xüš6Ã·õ»ô*L+ï5ý©ß%·¹é`§Ó
+ÆfÈ6/Þ¡ÍÅCôÛ²Í¶›2µÁ³åN{äŽ)7›¿µ]fž‘ÈØ~c§øß/£ŒŸÝq’n«µæ‰·]À=CH?‰ˆ¼+»ªu¢1û[0mÍœ¶+ËmŠA¡ËØÎ4”Û{·h[›¼Ëi@c=	Êq­q/LwéãBqÛXµi@&î•c_
+#Aàèù‡odt¾Ÿß9¾¨s¢HèEuŽ+ê]ùcAäüÈïò"oæt¾–ÝùÊÂÎ—2:_Hï|aAøWs[~>ñê‘¯ûzÓþÐ¤¢öé%m3—´ÍZÒ&2x–¸]Ò6½¸uÚâÖ©‹Z§µN*hPÐ:>_Ëï±ymcsZÆd6¾Ÿzwý'm™ZDH‹–”Í*,O[Y‘¹¶2k}¥Hè…_‡®˜_*gÒû÷ï*gdUNË¬˜š^>%}×ø´5ï¤ˆ–ˆ,–!-¦ÑzA©xZ‹gm*¼¥uLzåÔ”Í[·®«	…Ûî»ßùáåö›­/·=úüvdüú¯s*/ÿ×5jòÊy«odmÿâd´lÑBK=³·Ö&rÉµzíÔ£ß%o|¢[µ³Iý·ú:âO±Ü´¦üSOã½ÆJM°6Éve§-X·&6(3XÜI#~ËZÄrSuîûî´²Ÿå¶˜ÒD6oÿ×=¶€.Ý÷ËØ*§ÚM\ÆÕô.–†±Óõþ•Ý;Îº*¶G‹hêÁsÚ tó§ž=bí»Ã—´÷(¬Ø¿Åm±5qÛi¹¬bm¥öVJ¹&Å(`÷³dx»ðÍëéïæuŽ)ì¿¨Ëô¢¯üóÍ¼Î×sº^Éî|1«ë…ÌÎçD~9·õg"¡O=›ÊÂµO[Ò>sIû¬RíÃÐ³Jµ¨Ž†tÛÔâ¶)‹Ú&µN,l_ å÷Ø‚¶1¹­c²šÞŸwÃö-¡7´ˆ–”ÍÌ+_°¬"cuåÂu"¤õÆT¦¯¨\°´2åñ›Åª¦gTNK+Ÿ¼`÷øÔµïÌ-I_Ú$ŠiùR´ö½Üâ‘Ðb­µ¶´ŠÙ7{{»(ÓJ¾3{Ã¢ÅÛ4÷l½ÙºíJÛÇZvÝl-)óiùÏ½1gbÁaíŸŽÞÞ!Šé¾“”žÙ[Û_ÖN1â®]Çµ×¡Åï­_v‰³ðþÓ=ò!Ïkç/ù§ø­YÎ?|œú†M‰…rkâ·qc¥ÖôåDÿv.Þ×bµxOÇÚÚYL¶M¶A,m“Åm±ÜôXYéñëÑ„îo­l¹–Ð×9mJßw¹ú¾;µÜs¹¦Ü©Ó·ÿäè²Ü}¿ŒëgwtŸÍŸwJU¹×¢]Lã~FÓjÖcÉ¶/ôÝQáÀ°{²y;:DãÅ'nÈÀö·í»åZ*Ë^¥r#NËÏ)AÇaÀCxŽ]üæ•Èíz¿ kl‘}Bÿ¦ ëõüî—s»_Ìî~>³ë:>§õ§¯=Ó—8›*ÄEòŽ©K:f,í˜µ´CKèeÚ™¥3J;Dr'•´O.nŸ¸¸cÂ"íÞ±ícòÛGg7¿ŸV½iWÇÂMm¢ˆ–”MÏ.O]R‘¾²2óñÅíÊŒUU+*Ó–VÍ/9R¨ÇvÕÔ•“SwKYûÎ\Ñ™Ðb&-.t?Nhñ"´–ÿýñœ³£=gg(wwX”¹k/Úþh÷ÝÈæKM«¾ªÿàjÇý××~ùvÚÓv¥l¼%VÈÞê+Ûû&Ä2³õræÎŸäí]'{®GgÒâlU²?$®ˆŽ÷åŸâ·6c¨Œ˜¶ ÿùIô
+³øm\Ažåãm¹dsÿ<^ÿS¶á‹è·aè<xA;ý•y o¬ûTkƒø-VvªN¶V¶ÜsSbßåàÀ¸ïN-÷³ÜSîš±8IZ—ë•:í—±Už»#·/1%¬©;ÄQ¡ÖÕ¬]iêGSû•:0¬¶bOõãMì¸<ºLÅ©ïÄŽëGŽñNËÅfåú»ûžbþÖDà)8véÑKºÞÊîz'¿ë}‡„~³¨ûõÂî—ó»_Èéþef÷ÏtþtNÛs¯;ó°ïìT™PJ*M_Ö1s™–ÁîelQÇh‘Ð9-ï§ßß´+$¯Öˆ–”M[Xž¼¸"mieÆÊÆ‹·DWe®ªÌ\Y™±¼*­´jAñÔÂÉybyÓé¦Î¯œ”¼gìÜµoÏ-ÉX¡%´(âýbZ,h±u1uî‹ç=y{Ãûµ2wÍùWÆýëËeyitÎ¤¢CiUgïj•).‹Èi‘ë@ †Ràø•G/Îïµ°ûwy]ït½WÔý^a÷»EÝïu¿]Ôý»¢îßõŒ*ìyµ ç×y=¿ÊîùEf÷ÿ˜ßõœLè³ßÈ¦~p°S$ô”ÒðÔå¡éËC3V„fDoˆ2mYhê²PÒ²ðä¥áIKÃ–„Ç‡Ç.
+.èÛú~ÆýM{"9âšÙG¢%eS3Êç”§GCz¹VÒ—U¦/­Ôâ¹¤jþ¢)ùæå˜³ðÀŒ´SS+'ÍÛ3vÎÚwæˆ–d®nEKèÂZKBG¯o‹†ŠlÖã¹¨,’³£qÞÚ3–—EvÖŽ¹Ž^ŒQÍm@ †LàøÕ?=Ÿy%#òfvços;Ÿ×ù‡¼N‘Ö¢¼•ßõ›ü®Qù]¯æuý:·û…ìè:­ë¹ÔÎ›ÕòÜÄ«ÇÎ?’íüðÓ®ñ%¡I¥SD‹TÖ‹–Í¡¤¥¡)KC“–†&–†Ç—h	=F$taèý¼ÖÑïoÞ×waL´d_RÚþYÙeó
+ËR‹Ëç/)_°¤|~‰VRW¤U&TÎË­šU53£jÚ‚Ê))åçî3gµHèódB‹9³xõYüW}¯C÷Í¡·¶‰	tÞÎÇ³gÏNEN¯E!¤‡ì(¤"@ «À¡‹ß¼¹°åÅÔæWÒš_Ïh}#³E”Q-£2[^Ëhy5£ååŒ¶—2Ú^Ho~AÛÏç·ÿ”öçæ´<7½öÕÙWŽ]èKè»’–µMXÒ:©´uÊÒ6Q’ÄïRQZ'‹…KZ'.÷¶/i·¸mìâ¶1‹ÚF¶ŽÎkš”sY_BºðpÇ¼¢S3vÌÈÞ9;oçœ‚s
+wÎ.Ø5;×¬¼]3söÌÌÞ3#sÏ´Œ=IöLNÝ3qÞ®qs?=gÍä\ÑñnðÇ	­¿SLOh9‡Î5\âöLh=¤uµ¡¼¸A] € #\`uUç®£]o¦ß~~æ•æ\aöµg_}aöÕg_åW³nürÖ_Ìºùó™·~6ýÆO§ÝxnÚ­ç¦\uîÕŸ‹/ÑŠH½â=á•eá¤¥õã×L(®°X”š	‹D©PT;¾°v\aíXQ
+êÆÔŽÉ«W7:·vRáý;:Š¶ö½³duEäó/k6Î)Z5aÁÚÉék&e¬žœ¹zRÆÚhY71}ý„ëÇ§n—²~lòúÑó6Œž»ösÖ$åüTl'¬'´ø—2ÌW¹å;ÅDÑ^ŠÞÑÞ—Ó{µ‹ÞúŒ¹ ú§íõm¹“ß8Æm.`yGÕSúNš ƒ'µ­}UED\a6—+:.ÊeQõ•KŽ÷—ÏO?X)>Êø‰xVôIÛÚí}øY÷‡ŸuiåÓþr°ëCQt}p S+UT>.öGmíÈú¨M¼-í«ÊboÉ©+¶‡2Wih9‡~"¡Å{¹µ¯+‰~ó™xË˜ö©è›nílùá+ÛòÄûòEã¢ß[BA @`Ø˜¿&ú‘hùÕ%K4tû¢wusÆêfñý "ƒE¾ÛX'´ød´øÖÏ”¥5¢È€Rû'4´ïèÖŠ–Üë£Åé__0|½öœ‰R@ "1å?­}yvß2âTÄ¿S¥}g´ˆð5íŸßúYX›œßÿb$4C
+@ âÜ„ž—]›¼¤.yImWø@ Hsè¢ºéó.kŸ¶"¡ì	ªF @À(@Bsµ @ Hh{…Q$ € Ã!¡÷íÚ lG*Û6e¦lWÒ0@`ˆbKhqZw9³ïJl Èzõb2’uÇŠhÚ¸K]î[¶¶3±~öËT£S†¾a~Ï: € ºÀ`%tb‰Ýãd€#ëÆãÞ û¦kâ´5zhœ©lZ?õ›LŸXç¸Æ•3ïø¦§¶	møÊ™´ûDßvþí¾ÐÿtÓ%¡M³:Ø.Ñw\:ÂÈåûƒ}D²}@ )0 „v™®É»¬“Ñø¦§~ÒËZ£Ÿ>vÊ~ãcý§—±Æöøqð³ŽÏ=rj†|¸{ÃüTÁ: € C ðÔ$´Ë4×)rüð%<¡mÛé'}mÇ.q;l‡Mþ‡~ÐX@`ü&´éo›qçç~º\=v™znÖ4Ë××w¹6à¾M§vÆ-“À„ö9tðƒÆ: € C CB[3lÚ6¤ã»ï²©¸Úiárd8Í¡Mã§—!†à˜£
+@ ?Jh™²ÈÊôÛ¦%Æ?¦ªî©cœÄërªÑÏÎ[bÜk]>·æ2×·…²Ò—è»é³vÛõÝ;"î=©I¬Œ  ‡€ß„ŽcÓ<ÄÿL×i®lüÄªööÛZ¶† Œ(:˜oýte=ŽËñµ$t|n<
+:˜„‚®¥
+@ §Z€„&¡@ PQ€„V±WžêAG Hˆ 	MB#€   ¢€}B÷òƒ  € 
+Ø'´ñc²ÜF @ !cÇ„ž=s<@ †^à›Í	ýÌ3{( €  0Ä$4ã@ T ¡Uì•!¦Q €€‚$4	  €€Š$´Š½¢àPŽ&!€ ± 	MB#€   ¢ 	­b¯ñ0ê@  ¡Ih@ T ¡Uì‡r4	@`ˆHh@ Hh{eˆ‡iT‡     	MB#€   ¢ 	­b¯(8”£I € C,@B“Ð € ¨(@B«Ø+C<L£:@ Hh@ Hh{EÁ¡MB bš„F @@E¿	½Çð3Äƒ§êôÑEh €@|%´ÌBY«ñvÛß¦L	¼m7 >F…    €wB[SGOëÀ÷Ç¶m6„ü  €À°ˆ'¡õ7^ú6M²åŸÖÉ·u¹¾šÓ„Øöj¶ËUwŸ1©¯fÝ¾í~9µÓxiÁgÕÃæèaG@ O þ„öTSˆšbÏ6Ì\®Z[ÃÞå’»Ï¤4f³)°M£S¸ïûàõ[F 9ƒ•Ð2>!jŒ@§éµŸ„¶jk‡ù	i—Ôw¿<àÔ?•Žœc‹=E ˆ@ð	í’¸žóf§Dô™”~æñ¶“iz ÇE ð#OB›&Ç²ëUbŸsè„'´ÏxvºHî'õIh?Çë € DÀ;¡m¯H[ãM‘„öÏ>Úöõiz ÇE ð#à+¡õ0³}Øø~+?Émšs7î4°]nÊÇÏ.ºMûåÙNÛK~ú€u@ °
+øMhì@ @`(Hh¿‹u( êB PS€„&¡@ PQ€„V±WÔÍÑ*@ ¡ ¡Ih@ TP"¡}~MØPŽ\RW¢ö+QÛIÈN)¸‘Dù$j;
+¨&Ñ#ª»‡÷ÎªžÐÖ<éýáþA©w›üô”ÿb]?QgŠDmÇe_p8Á:ÛöŽg¿Äz”ú<ž=ë5mÇe}Ÿ5Ÿ×1=dðžw15ƒ•¥ÚöÛBÜÚtž›,¦V;Uš¨3~B¶ãr*ÇY'Á:;«.‡b¬G©±
+Ž‡¸O<!Ä„Žéô¡Ÿ/Œ'ÓÓ'JLõÆqZt™ëXï²Ý/Ÿ;b{>õ?g29ø<ÑÇ½ý8v*Žá”Ó^ŒLçêñ±<
+¡ð•Ðú%,—I†õ	?Ó‡uNcB‰é*œmûÝ³ÙøÛÆ˜æÖõ‡ Ý+µMhÛ ö<Yû|Îú˜Ã§˜ñÐr:¤m{Ç¶ëÝŸ§¦íÇô2]¸ò¹wÃõx‚§6U  ¼Úe*fJ©ÄšzfžËtÊxqi¿Kƒ]N‹¶3¿G¢ç³vÛ“2ÎþåÃÙóø´Vjû¼ó|žÊ'…q5Žÿ]Ïš"à7¡†Ã.#ñïû	1¦„Ži8ïrõÕi}ž»nbÜB¬;å4ÃÃÙ½_Õ9Ö„¶F¬íDÜ}5÷91ÇCbŸ§l¸ü&´SOKBÇ
+äÿÆ9ºñük-Yßéì¹Mk—%ðŒìY»iœ›Ð¶þ~ú×xHûYßZ‘çŽø96Ô?üìë (ALèO+‡÷™b€>ž	í²}SHãìòtlgÏ`sYÁ³m>‡#êxHÔ©“í 01'´íIÁö?Àr¹Ôì~Þq?åY[åÞxŸû«¯æ¯ý¯é91ŠÃßçÉÝ¥pö“žÎƒ”Ðžõº\ÌŒ›:Ï»!8«R‰ðNhýí>Ð`Þ8]4sÚ¬ÞqÃøXÛåÆ…¦õ=H_ßç™Ôº}§®¸˜±GâØšlª“¤1~œN¯¶&¦ãDß}Ï®´<—ª}>â±M/#—Ïªõ=rwv9>ÝgÓÑk»÷þ5=wFÂñSß±2Á
+øJè`›8,kxlK–„ïÎ	'eƒ 0d$tßë9d½BE € x'´éÒ™Ó5L(@ @ $4sh@ TðNèØ € ø ¡U7ùì<VC ÆÞ	mû:´QÄöí²ÃõåêX÷ËeýX7ÓQëÆµ.Ÿ&rÚ)Ïö˜ëþº`ÊOUù/±®ïË¬‰ #\À;¡1ƒ>ŸjuTçƒ.1µÄå„«o'Ö:m3¦íX3É=ÞLçy »4f€í4î¾Ñ0¾ö;5f Ô[ëFb]ß³XÐbNhyÞ÷#¨ÔÉËc|•O÷˜ôßª˜@¦•ŸÎ¼vÚNvýW—gŸ±ŽiâXßKXˆ-¡­§Ë˜®Fê+ÛNÊ­›2®ošåÈ–˜Îvû±NbÚ#¹ñ8êuß5?>OK;Ï1ë~Ù°ç Éç£ÜûÅvè`íÛcÌÚéþGœt@ Ÿ1$´ÓyÓçr§3)hm·f{f7L]¶Ÿ¶ÍT§Q‚S,Ý}ÇÂÌ3äl§i¯m[Ö…N™7ðãÍå¹á~øYïuLø|² à$CBËD±n(¦3¦í´ÆvÊè47ÕW–1þiÚxL­ušQ¹gm	ísgÝWór¶{ä2X‰iS?Z•âh¿ç0Ë¶ý¶íŒ5¡‡¢»*'@ ±%´mÅ1%´çL‰+×·+Û„v§‰iÆ£ŸÜÝ³Á%Ø¬wÚ—s¿Ë6<Ü'‚¶­rj8|Æ•;»Oçø:Ö§ŠûÁlóÅtDÅÚÖG .0‚:Ž“©)<TK>§™¨RíôÃîÇ™„á§*v(XB{^Åõ³‚qæç>—õ“þç÷Æ5iísÚj›[C™Ðžíôôq¹LâÙ#þ;Âjâ®ätÙÆ4ÖW‹û 'v|
+x'´>¿±^â3^bµ=sÙžÝ¯jZÏŒrËN§BÛõ}¦‚O#c\NëÖýrò1®éÙ~wSD¹ôˆé®˜úËèï´§v—ÛîíOÔñfX“^÷ñ<–ÜwÊç1Æj €€UÀ;¡QC @ ¡ ¡}}ûÊÐw5"€ Œpš„F @@EZÅ^áÃFv@@Ð$4 € *
+Ð*ö
+ƒG@ Hh@ Hh{…‘# € $4	  €€Š$´Š½ÂÈ@ š„F @@EZÅ^aäˆ  € 	MB#€   ¢ 	­b¯0rD @€„&¡@ PQ€„V±W9"€  @B“Ð € ¨(@B«Ø+Œ@  ¡Ih@ T ¡UìFŽ € Ð$4 € *
+Ð*ö
+#G@ †[Bï1ü{W_líry—i¹Ëú±4Ö»oÁv}§ýŠµ1¬  ð´Ï„¶[±Ð%Œ}&w¬ýj[£ËFÜ×uk±¶–õ@ ÔY	-CÚ§~Bâ0ÖÐ>{‡Õ@ a/0âÚÿÕlkX/5{&½ie}}Ófõ?Ö768Ö¼ö‡/;ˆ cáŸÐž¯à:ÅžS”Ê£ÁgXº_Ww8p>+ÆÇ+»† Œï„¶ÎíätPµå.Áß¥cÛ„Žiíäúvlçô~Z5§öŒœç{Š $VÀ;¡[ß`oÍ}Îj[{|shŸ;â¾që¥òø>Ãj € O‘ 	íx½Úý*·Ï>&¡}B± €€I€„Ž3¡}¾„lz#˜éR¼ËFâ¸ÀÁ  0œ†gBãÍýbN÷Ú.wÚçtÙsjnûµû^§#’}A Ã-¡éW@ †‡ 	í÷L†G³ € O‹ 	MB#€   ¢ 	­b¯<-ã;Ú‰  0x$4	  €€Š$´Š½2x#2¶Œ  ð´x'´ç§ƒlwÕý[-­ß¥5p¯øÚéT¯SûÅúñ}açÀw- € Œ(ÁJh=É¬šî_l·~bÚ¥ý¶wñyå¸;Ž"€ Ø
+ÐŽW¹]FNß6HƒŽ]@ (0 „Èwl­Ý·ã³W\æÐ¶Û7}§õÂ»Ë÷n’Ð>;…Õ@ âð›ÐÖó¼ªìþ-˜z‹=·ãsßŒ‰k¼í'¹].\[GNÀ™@ûì)VC ð#à7¡­jÊl§i¥µî‘wÎÅÐ²…ží7®à2½öƒÎ: € x
+4¡]*xZæÐN»à9ù6=0î±…g'± €Àx
+Úgò9ÍécZëÕë$Ûg“FàñÄ.#€ $J a	íy•ØOòù¹Úì>å•oøÒ¬ô¼Xí§\åNÔñÇv@ œâOhcúo³q¦kÊBc¬›ëÂj|)ZFµqúkÚ¾mKlb]8‘Ç" € ~¼ÚÏVoÿñ<xm`Ë € ½€ê	=ô"Ôˆ  €€
+$4ÿr € *
+Ð*öŠ
+c7Ú€  ¬ 	MB#€   ¢ 	­b¯;j£v@ Hh@ Hh{E…±m@ V€„&¡@ PQ€„V±W‚µQ; €€
+$4	  €€Š$´Š½¢ÂØ6 € +@B“Ð € ¨(@B«Ø+ÁŽÚ¨@@š„F @@EZÅ^QaìF@ ‚ ¡Ih@ T ¡Uì•`GmÔŽ   ‚ 	MB#€   ¢ 	­b¯¨0v£ € Á
+Ð$4 € *
+Ð*öJ°£6jG PAÀWBï±üˆ¦ë?N»!WøN&p;ÆÆx¶à-o	A“_ü<*V=—õmû7Öí»´9V‡8Öõ!~„ã['V7Ï~¤]Sª¦Ó[|ò<
+Áˆ?¡õ~*Ú%ƒ5îm&p82HçVc¿ûl­¾ZL½àsãîÔ±n$Öõ=Ÿq	.O+Ïg\L{á²rLÛ1µÊåðs?<÷ÎºÂ Ûilª±m	ï;6ˆ@¬~Út^–Õä‰kC¸~LÙ0ÀºòðD‘&j;¶ûbÜ¸Ÿq@¬ë'ðèŠÕ!ÖõÒ×>kj’Ï@õÓ/žÎÑxZÚiXHºì»Ïže5<|%´Ó3Ùe,Üw€?y¡U_èÿèøvL•:—­Ëm«vI,ëú¶ûkBÓëõl§iû‰ÚŽË!âÔ_þ»ÏgØÆ‰µ–˜Ž'O§Àsñ÷C¤¯ãÔ/~6âÇÁå°têw7ÛGbÚµXCÿSÞ@Úilž‘ÂÿÓßó$Ë
+Ä-€„–§§ó©õÌåyÖvÕÚ>ÐgZ¸Ÿ†Œíw:ƒ;»Ÿñmwßz"pR²Â:=Ö³Ùž+ød·=wÇ?.“÷¼ßý´~žWîG¾ÏvÆô¤°§~ñìw—öû<Píñ9Ûé>‘ç7
+$ ¡Ýo§!ªÿ½õÌ~?›rIhSûMyÏ3¬Ó
+.gFŸ'>cÃL­²š{žˆ]²ÐÐgûãÆw”¸Ål<ÇÖlC.V"?G¾çñ£WêÔ$—Þ1…‡çAîgPâtpº</<ç§¥þ?‡=ë 0p!MhãÉÈÓ]Î;þ‡·ž'/}?§T?ÃŸ	ç™¬.íñ<3äŒã³ý~úÑ4Ž!ŽŸJâÓ4î1m*ÖÞ÷Ì<Ïºt¢ûnZÝó ÷l­iŸmóÓ¿Æ§ªjíŒµýþ?ÖD`€CÐîçM—éB¬wù9óÚž€<O©~¶l=ºOMômZkOlBû÷'¡}>µÜ»ÌópòLAÏ@?Õ’ÏtT«ÙNÏŠo^áóàa5Ü†.¡='‹Nu Ÿ'˜1/=“2Öv:­ï3á<>Ûñ3úñ—ãÌÏÅúðXûÝ=Ÿ|ŽÆôÕ|Wž³RÏíxÂú×Ê„öl¶Ë@V©vú|¾{ö#IƒÀ`øMhy€ZŸ–b‰í´Ìº¾q(êÿpOÔv¬aÛÝ1î‹iÏ²®ol¼e:§[)†~;îc#§~7î‘O§vA°º9õ‹ÓAåÒÑ.ù:½‹/½dþŸÆªéÉe›Ž¶nîÏ/Ûc5îãÁ¸ƒ¶»éô|qÚ;cKlOMN>¦J]ü}ƒqšf›#VÀoBX v@ @Hh>G  €€Š$´Š½È`J@ ” ¡Ih@ T ¡Uì¥q4@ š„F @@EZÅ^	d°F¥ € J	Ð$4 € *
+Ð*öŠRƒ8ƒ  ˆ 	MB#€   ¢ 	­b¯2X£R@ ¥Hh@ Hh{E©AA D€„&¡@ PQ€„V±W¬Q) €€R$4	  €€Š$´Š½¢Ô ŽÆ € "@B“Ð € ¨(@B«Ø+Ö¨@@)š„F @@EZÅ^QjGc@  ¡Ih@ T ¡Uì•@kTŠ   ” 	MB#€   ¢ 	­b¯(5ˆ£1 € Ð$4 € *
+Ð*öJ ƒ5*E PJ€„&¡@ PQ€„V±W”ÄÑ@ @Hh@ Hh{%Á•"€ (%@B“Ð € ¨(@B«Ø+Jâh €@ $4	  €€Š$´Š½È`J@ ” ¡Ih@ T ¡Uì¥q4@ š„F @@E‘’Ð{?r(dûc{—çú¦­2Ô¢R@ a&0²ÚÔy2¤¬g­¾¦í:ÖÕLfG	»ƒ  0ô$ôã+2­‘lúÓz—Kä}_R# €Àp ¡ûRÙvÒì”ÐúÌ›„NOöPJ€„v›4Û&´i&mìN—»”êuƒ   ¾€wB;½£êiY.ûÀ6;õ…Æ9±Ÿ«Ü~æÐO‹Ë;æÔ?|i! 0Œ¼zxì¼{B»ÌƒÞ)fËÂzx-ì  ‚ 	ÿ;Å¬ýGB«pLÓ@`xÐq~ÚŠ9ôðx° €€²#+¡­—¬M¯Â_´Öï².tš=3‡Vö@§a €ÀS'0Rú©ëŒ  0ÂHh¿‹u„”ì> €€ ¡Ih@ T ¡Uì € Ð$4 € *
+Ð*ö
+#G@ ü&´ñSIŠ¨™>¥H«h € 	ð•Ð1}óeBšås#.ß¡ís¬†  €€šÞ	mý§7bè÷Ð¶mê4oèA¨@`ØÄ“ÐúÎ»!—XÍö;¼LËõ?&Ä¶W³]®ºóÅ^ÃæèdG@ ‘,B{ª)Dýü+‡~þåGcÀ;…1!=’iöƒ•Ð2GmÓÔ´Ü4‡6^£¶}ýÛç‹â„ôð8@Ù@`Ä
+ŸÐ.‰wBÏ#ö€fÇ@ a#OB['Á~æÊzj:Í­^Ÿ–ÖÆ‡ëólÛ$&ž‡ÍÑÉŽ € #YÀ;¡MÁi›”ê$4ñ<’föN¾ÚôR±¾ÿ¦7™&».s_ÛÔwz}ÚºYã»»}¾,=œúŒ}A 	~z$X° € ¨#@Bó½Ü € ¨(@B«Ø+êŒàh	 €@P$4	  €€Š$´Š½Ôxz@ Ô ¡Ih@ T ¡UìuFp´@ (š„F @@EZÅ^	j¼F½ € êÐ$4 € *
+Ð*öŠ:#8Z‚  ” 	MB#€   ¢ 	­b¯5^£^@ uHh@ Hh{E-A J€„&¡@ PQ€„V±W‚¯Q/ €€:$4	  €€Š$´Š½¢ÎŽ– € %@B“Ð € ¨(@B«Ø+A×¨@@š„F @@EZÅ^QgGK@ ‚ ¡Ih@ T ¡Uì• ÆkÔ‹   Ž 	MB#€   ¢ 	­b¯¨3‚£% € A	Ð$4 € *
+Ð*öJPã5êE PG€„&¡@ PQ€„V±WÔÁÑ@  Hh@ Hh{%¨ñõ"€ ¨#@B“Ð € ¨(@B«Ø+êŒàh	 €@P$4	  €€Š$´Š½Ôxz@ Ô ¡Ih@ T ¡UìuFp´@ (š„F @@EZÅ^	j¼F½ € êÐ$4 € *
+Ð*öŠ:#8Z‚  ” 	MB#€   ¢ 	­b¯5^£^@ uHh@ Hh{E-A J€„&¡@ PQ€„V±W‚¯Q/ €€:$4	  €€Š$´Š½¢ÎŽ– € %@B“Ð € ¨(@B«Ø+A×¨@@š„F @@EZÅ^QgGK@ ‚ ¡Ih@ T ¡Uì• ÆkÔ‹   Ž 	MB#€   ¢ 	­b¯¨3‚£% € A	Ð$4 € *
+Ð*öJPã5êE PG€„&¡@ PQ€„V±WÔÁÑ@  Hh@ Hh{%¨ñõ"€ ¨#@B“Ð € ¨(@B«Ø+êŒàh	 €@P$4	  €€Š$´Š½Ôxz@ Ô ¡Ih@ T ¡UìuFp´@ (š„F @@EZÅ^	j¼F½ € êÐ$4 € *
+Ð*öŠ:#8Z‚  ” 	MB#€   ¢ 	­b¯5^£^@ uHh@ Hh{E-A J€„&¡@ PQ€„V±W‚¯Q/ €€:$4	  €€Š$´Š½¢ÎŽ– € %@B“Ð € ¨(@B«Ø+A×¨@@š„F @@EZÅ^QgGK@ ‚ ¡Ih@ T ¡Uì• ÆkÔ‹   Ž 	MB#€   ¢ 	­b¯¨3‚£% € A	Ð$4 € *
+Ð*öJPã5êE PG€„&¡@ PQ€„V±WÔÁÑ@  Hh@ Hh{%¨ñõ"€ ¨#@B“Ð € ¨(@B«Ø+êŒàh	 €@P$4	  €€Š$´Š½Ôxz@ Ô ¡Ih@ T ¡UìuFp´@ (š„F @@EZÅ^	j¼F½ € êÐ$4 € *
+Ð*öŠ:#8Z‚  ” 	MB#€   ¢ 	­b¯5^£^@ uHh@ Hh{E-A J€„&¡@ PQ€„V±W‚¯Q/ €€:$4	  €€Š$´Š½¢ÎŽ– € %@B“Ð € ¨(@B«Ø+A×¨@@š„F @@EZÅ^QgGK@ ‚ ¡Ih@ T ¡Uì• ÆkÔ‹   Ž 	MB#€   ¢ 	­b¯¨3‚£% € A	Ð$4 € *
+Ð*öJPã5êE PG€„&¡@ PQ€„V±WÔÁÑ@  Hh@ Hh{%¨ñõ"€ ¨#@B“Ð € ¨(@B«Ø+êŒàh	 €@P$4	  €€Š$´Š½Ôxz@ Ô ¡Ih@ T ¡UìuFp´@ (š„F @@EZÅ^	j¼F½ € êÐ$4 € *
+Ð*öŠ:#8Z‚  ” 	MB#€   ¢ 	­b¯5^£^@ uHh@ Hh{E-A J€„&¡@ PQ€„V±W‚¯Q/ €€:$4	  €€Š$´Š½¢ÎŽ– € %@B“Ð € ¨(@B«Ø+A×¨@@š„F @@EZÅ^QgGK@ ‚ ¡Ih@ T ¡Uì• ÆkÔ‹   Ž 	MB#€   ¢ 	­b¯¨3‚£% € A	Ð$4 € *
+Ð*öJPã5êE PG€„&¡@ PQ€„V±WÔÁÑ@  Hh@ Hh{%¨ñõ"€ ¨#@B“Ð € ¨(@B«Ø+êŒàh	 €@P$4	  €€Š$´Š½Ôxz@ Ô ¡Ih@ T ¡UìuFp´@ (š„F @@EZÅ^	j¼F½ € êÐ$4 € *
+Ð*öŠ:#8Z‚  ” 	MB#€   ¢ 	­b¯5^£^@ uHh@ Hh{E-A J€„&¡@ PQ€„V±W‚¯Q/ €€:$4	  €€Š$´Š½¢ÎŽ– € %@B“Ð € ¨(@B«Ø+A×¨@@š„F @@EZÅ^QgGK@ ‚ ¡Ih@ T ¡Uì• ÆkÔ‹   Ž 	MB#€   ¢ 	­b¯¨3‚£% € A	Ð$4 € *
+Ð*öJPã5êE PG€„&¡@ PQ€„V±WÔÁÑ@  Hh@ Hh{%¨ñõ"€ ¨#@B“Ð € ¨(@B«Ø+êŒàh	 €@P$4	  €€ŠÞ	½cÛš7•n\W,Ëº5‹Ö®*\³ª€‚  € 	Á*âuãúbY¶|°L„¯wBß¼}ãâ¥ógÎž’åÔ©“_}}üäWÇD9qÒTŽœ8©•ã'´râÄ†røÄ‰Ã'Ž:qü3·rìà‰h9-ÇŽ8~¬Ê¾­8NA @à)(?~ôq9v¤L–ãGËN/?õU¥,çÏ|zíÊï„nim¨o¸_S[-Kõý»÷ªïDË­{÷nÝ½wó^´Do\³”«÷îEË]Q.?Y.Ý»ÛWîÞ¹pçöÅ{·/håN´Ü>'ÊÝÛgÍåÖ™»·NS@ xîÜ<u÷Ö×Ærï¶Xò•(÷n]}÷”,µÕ§kÏy'tgW(ÒÙ
+·õ•Pk(Ü_ÄíPKi
+…ôÒ
+é¥!¥ÎPjC¡ÚPG´´×h¥ã¾^:Ú«E	µßµ/m·C}åV¨‚  €ÀÓ!ÐÑzóÉr££µ¯´·Üˆ–«í­×déh½j»áÐv>QD<u…ïÅQô´ˆb}à7¯\¹zæÌù‹¯\¹rÍvË=µ=÷ã¨T<¤§³Z” +k7•‹g?íííµ½‹… € ÃR +r_”îHõ“åNwäqéŠÜÒJø¶(>úAHD²,==Z‰;¡{ºE1&ågŸ}qýúµÿ÷¿|ÿ}ïŸÿÜûèQow÷×®ÕŠå¦@•û#&~å•K–¯Š[Ärq¯K·]ÚÐvq}ë…u-ç×ÆÛòQúâØÈ…3Ÿ‰„Žã<@`XÜé
+ëEËcY:C·Dé
+ß%È„1ÜÜÜ,‚JüüùÛÞD<÷F"½½55M!mJè‰/‰$þ›ÝX.îu
+iÏ²FùÓxvuÜ=-ºá›Þù—‰cÎhsè8ÈC@ †…ÀP%ô¹èÏíÛ·ÅïË—/ßŒþXMsè[·nêIùÝw½=]½ápo[[oKKoGGïÍ›Ô7â”ÐÇ?qâÄW_}%&Ó§OŸ‘í’Ðýñ|©·W/½õ§VÔ~½¼æäÒû'J«/¹{¬Ägß$¡ÏŸ9HBûtf5@`8
+~BñÅóçÏŸ:uê¡C‡=zô÷¿ÿ½«««¡¡á»ï¾»pá‚ÈNñ£ËZL‘ïÞ<|ø×~ø!:‰îýGWï_{zÃ½½­­½]]?|þùÑM›6É‡'d-.n÷~®÷¯gž(Æ9uoï£Å>…$ôÙÓHhŸÎ¬† GÁLèÃ‡‹‰r}}ýÙ³g›ššD*›:é¹t©¾¸xÙ¢E¥×˜ÐÇŸ;>róæƒ¦æïþ"^}súè¹û7¾ûSo{»6™/KŸ?Ý3¡Ož<ùuôGL EKÜçÐâµçÞo¿ê}t¼ùÜSi8³ªîÔŠš¯–UGgÒ¢xKè*ÚS˜@ á+`ŸÐ‡~rèàÇ}zË–-›7oþôÓOeB···_»&>}ïúõë"/7lØ˜ššñ³Ÿý2;{Urr~FF†)¡Ož¼t÷î£{÷¾­«ûËwz/ž»ºlÅò]»÷<úæûºº?ß»÷¨¡áÛ+Wê¶ný$shñÖ°ÞGD6?9m~ò¯GÇÅß×?Ï÷<,HhO"V@ ppNèO?ŽNáðN±íÛ·—••­_¿>77wÛ¶mbJ-²yéÒ¥ò¢wNNÎ˜1c~ò“Ÿ¬_ÿyJJqRR’)¡ÏŸ¿ôÍ7Ú¥ìp¤÷oßöÖÜnÚ½sÏ¥ó—¾ýæoW®tœ:ÕtêTÛgŸIï”ÐòÍbÖ"–;½SLËæðgÑW£/E?qûûærqïÕÏòÜª;ÿ¯êªŸÞ)ûoïý¿o”ý*ÖCðì×•Ì¡cEc}@`	8^å–³F_	->^ÕÝÕWzºB=]í¢H£EÑŸóçÏòÉ'YYY"ªÓÓ3^yå•Y³f‰IóôésÇŸ÷úë¿5jTZZšöÎF­D{þüÅžžˆ·m·‰kÚ¡ÞïÂ½ßµþð}Ooï?z¿ÿþííîÜy°oßá-[>”ëw†«E‘·Å§­d»ã{¹;CwDïÜîm«Ò^	-^¶+ßÕí÷^ù4·¯ÞþÇêŸ­’7î}öÊƒÎûñÛž[Ç–ÿ³é^ãceí¦rú¤ôÚÞÅB@ ‘ îèûlUgÇ-­„nj¥ã†(‘Žë¢xÚª»«ÍZŒ£˜ìììyóæ-Y²DÌªgÎœ÷ßÿû¿ýüç/Œõ‡_ÿúÕ·ÞzköìÙúÊ‘:QäŸâb×®Õ‰„ïÜokoõ>zÐ}Û˜öóí·ÿ.¦æúëÐ¶	-bøÜ¹Úuë.TV^8pàÀÕ«w~ò“ÿí¿m6Í¡õ„/6‹„Ž^å¾¤½ mWUï÷^>˜cMhñÙ*½ÜÝ÷öÜ™ÛÛ–õÍíiŸý¯Æ»ôÏ_¹a'í%¡GÂ3}D lúãYKeùÚ³LhyÛoBwuµ˜Jwg³õ:ÃÊ•+'Nœ˜Ÿ¿ôå—G½øâ‹ï¾û®˜^›V3&´¸ëøñ¯kj¾ïïÜ…´A‹D‹¯.?âÞâcT«W?þ°²ž²Æ9´HèÏ>»:jÔçâZ÷÷ßÿðáC‘Ð¢XZ~ üžø`•Hè†Ó+µ„~pÄ¶tß/ \ºt »?¡û+r×øS½ÿŸ;Oþ—úÃÿ9râ?•/ü±é^ãcåÇÏMåÈb æÐ6w±@`$	DS9úÚ³˜=ë·}Í¡;#ÍKgc§áJµ5§E*/^¼ØšÍ}‰©éŒÔ%fÒ·o‡ºº´oå¯ÕâY¼'\|FËÏâ!b¸!Šé*·HèÍ›Ë““¿:xð¾ˆçÖÖVÛ„Ž´ßE<V|îY$´xÃ¶–ÐáÏlKøêf-¡«²d]úcM;»;åÙOf?»}îv%ÿhëÌg­úcåLE~ë§í],D Ym×äÅcmê¬ßn»æ}•;®%®¥ïvè‰”µ'Û…á´æ/ô®¬¬úâ‹“—/ßnhÝ¹S#¾zD\Ü^³fim7EÑ¾øb®ˆççŸß .ndB‹»Œ¯C‹¯ E>VÿZñ¹çÛ_.ºùEÑCâÛâ­aâµgqq[ÌžE<‹+ör}ãcýï©ñ±r¦"¿õÓö."€ Wö¯e\Eÿmy#Z®>.-WBýÅ;¡ÛZîh¥õn¹ÝÖÚ7—5±Zšoˆb}ÔÇo•E¼ßJ¼ð¬¿öl\³µéª(±Ö(×oiº,JP•µ›ŠüÖOÛ»Xˆ  0,Z›.‹ÒÒxQùzskÃEQäíèòó}·Î·4œ÷NèÆú+¢4Ô]­¯ï+òO½ô-¯»\ïUj/x—šó¢Ôž3—š³†RWsö©.ò[?Ÿê] ñ € ±
+Ô×œ–E½¹®æ”ýíû_{'tMõrï|]¹ïŒk9}ÿ^¹{ê¾©Üùê¾(r¡¼m(Õw¾ª¾s‚‚  €ÀS$pÿÎI½ˆfË×žeûß¾Ýûö1ï„ŽÎ•¯5Ö_o¬¿Ñ_Ämsë4õ—Æº«æˆÛ”¾5/5Ö9—Ú‹Oï‰¸ŸÉ:ë €  ¼@ÿ5cy	¹æ‚˜—×WŸ©«>í‘Ðân
+ € " æÖÉ…µÉEuÓç]~æÉ—çe×&/©K^RÛÿÝ!ü@ ‚°$ôâzÒÚ@ J ¨nnnµa-º¨Ž‚  € <NhÔ@ PJ@{úµ7P@ @@)ÿô¦-`¹    IEND®B`‚_6http://www.brokenthorn.com/Resources/images/demo22.pngO`bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_6http://www.brokenthorn.com/Resources/images/demo22.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl-Úéÿ ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/png_timeout=2, max=99_Fri, 30 Apr 2010 19:48:42 GMTVApache_Mon, 12 Apr 2021 11:24:11 GMT_max-age=2592000_Sat, 13 Mar 2021 11:24:11 GMTU20107ZKeep-Alive_°
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDllpbWFnZS9wbmehEF8QEXRpbWVvdXQ9MiwgbWF4PTk5oRJfEBpVc2VyLUFnZW50LEFjY2VwdC1FbmNvZGluZ6EUVkFwYWNoZaEWXxAdTW9uLCAxMiBBcHIgMjAyMSAxMToyNDoxMSBHTVShGF8QD21heC1hZ2U9MjU5MjAwMKEaXxAdU2F0LCAxMyBNYXIgMjAyMSAxMToyNDoxMSBHTVShHFUyMDEwN6EeWktlZXAtQWxpdmWhIF8QFCI0ZThiLTQ4NTc5ODdjMWJhODAioSJVYnl0ZXOhJF8QHUZyaSwgMzAgQXByIDIwMTAgMTk6NDg6NDIgR01UAAgAIQAuADkAPgBFAE0AWwBgAG8AegB/AI0AmwCdAKcAqQC9AL8A3ADeAOUA5wEHAQkBGwEdAT0BPwFFAUcBUgFUAWsBbQFzAXUAAAAAAAACAQAAAAAAAAAlAAAAAAAAAAAAAAAAAAABlQ==_"4e8b-4857987c1ba80"_User-Agent,Accept-EncodingUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë$)4=CFOXZ\ckv„†ˆŠŒŽ’”–˜šœž¬®°²´¶¸º¼¾ÀÂÄÆÈÕàîõý*38=KUi‰°Ââèó§¾Ûáæü &*>             z              LÔ !"OÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      ) 1;    Â        ‚     €{    È        €€           Ø       è       ð        „‚(     }=     Ui          õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  ) " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ÷Òq\ï‹|[eáM4\N¾uÔ¹[[Ul4Ì=û(ÈËvÈêHñw‹¬|%¦‹€eº—+mj­†™‡òQ‘–í‘Ô”Ú%Ö¡©KâzQ%üƒ…Æ…Q’œ¼’I$šãÆc#‡™ÍˆÄÆ’Óq.ü?¨ø†9õÝgPhu–Ä°:‹læUSœ¦:Œƒó’r–ÿ /tûxí5Þúî!¶K•Ô<7Ð”Bœc88ÎH p-XY_üBÕÂÊWµÐíŸwŠ9r9Ø™±È=Â‚	çjŸbÓtÛ=NƒO°·ö°.Ô9¹$žI$’I$’I$šÃ.Ž!§R³ßdc„]e'¹óùºÔ5^\x:ëhÛX ä"‘´g#wI&Ÿ¬Kæ\ÙÁ{<öúD’(ºžÝ’(Ï?/_NÇœ66ŸYñÏàñU¢ÝZ²ÛkË‹{œ|®:ˆäÇUÉ8=T’Gp|žÚâC5Æ“ªÛ47Ð.h$$ŒvÎä‚ ò+—Ft«,GÄŽ|E)S©í¨÷ÏM°Ñ¬íô……tõŒ<–Ü¬§Á¿‹9Îã’IÉ$œÖxg†|Qsàk¿²]4—óò‚ÍjÇ’Ê:‘œîQÉå†C{\)soöÒC4¨xåI2®§AAë^½
+Ð­h•±©Äœô®3Ç>‡ÅV«wlËm¬Û/ú=ÆßË“”É8=T’GRgÚŠÑÅIY—(©+3æéµQcowe­Û47–ÙŽh%É uÇ±#‚ ž	ÑÓ>üGŸN†m?Z“H´ŠÉõàhÁ$ó)
+OÞ#¨Ï89{âOü–ÿ Ü?ÿ JÞ½ÄtË†ÂBŒ¥ËÔä£‡Œ±ÿÙZimage/jpeg_4http://www.brokenthorn.com/Resources/images/left.jpgO‚bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_4http://www.brokenthorn.com/Resources/images/left.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl-ÚñN ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Fri, 24 Jul 2009 23:29:22 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1540_Upgrade, Keep-Alive_À
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDEwOjEzOjE0IEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDEwOjEzOjE0IEdNVKEfVDE1NDChIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QEyI2MDQtNDZmN2JmOTViMTg4MCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyMiBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCyALQAtwC5AM4A0ADbAN0A5ADmAQYBCAEaARwBPAE+AUMBRQFbAV0BcwF1AXsBfQAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGd_"604-46f7bf95b1880"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$)4=CFOXZ\ckv…‡‰‹‘“•—™›Ÿ¡°²´¶¸º¼¾ÀÂÄÆÈÊÌÎÛãîü-8AFKYdg|œ£ÃÕõúÔêõû ',@DX             ~              fÔ$ %&OdÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      )       Â                     È                     Ø       è       ð          (       =                 õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  % " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? eÕíçuKCR¸’ÖêÙÊZÚFJ›&S‘Ø6íÀdðI¦ à¯>¥/ö&¶-b1”|anÔÿ µÆHöÈèÁ[ã>©'öÞˆ«µÓ -Úáoö°8cØ {à#0x‚×ky–º…«äVX$RGÔ`ŽG\Ž ŠñëU«…­Ï-`ÿ Ëœêaê^Z¦{ÖáŒçŠ+„ðWŒßPŸû\Û±ù¢Ý¨þ!þß#ñ^
+W«
+‘œy¢zPœf®ŽÞkˆm­äžâdŠÔ¼’Hvª($“ÐÞ¼7VÕm¼Mã6Ö4ËakeˆÚà‚­wâuÎ FìNpªž/ñœž1»û£<:NS”k¶‡aÙsÈSþñç2mÍþ©¨C¡hP—¼¶HXTpYˆûª23ß$–â¼Ü]gWýž’½÷<üMgUû:h»©üC«Ùèº,mQ[Í[…b¿fÚFX¸åœsë€l
++×¼!àë/éf¶ýõÔ¸k«¶Pf8þ;Tp9êI$®¼.4)(^çM?³®yÅ=×Áwö÷:Qhíµ¥²ŽM¹Ùè§xã.ë¾ð…‡„´Ãkl|Û™6µÍÓ(3ÇÂ£«Ðdõ$’Q[Ó„T¤Ò*Š›i=QVnÿÙ_5http://www.brokenthorn.com/Resources/images/right.jpgO0bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_5http://www.brokenthorn.com/Resources/images/right.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl-Úø” ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpeg_timeout=2, max=98_Fri, 24 Jul 2009 23:29:24 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1380ZKeep-Alive_”
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDlppbWFnZS9qcGVnoRBfEBF0aW1lb3V0PTIsIG1heD05OKESWlVzZXItQWdlbnShFFZBcGFjaGWhFl8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRhfEA9tYXgtYWdlPTI1OTIwMDChGl8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoRxUMTM4MKEeWktlZXAtQWxpdmWhIF8QEyI1NjQtNDZmN2JmOTc5OWQwMCKhIlVieXRlc6EkXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyNCBHTVQACAAhAC4AOQA+AEUATQBbAGAAbwB6AH8AjQCbAJ0AqACqAL4AwADLAM0A1ADWAPYA+AEKAQwBLAEuATMBNQFAAUIBWAFaAWABYgAAAAAAAAIBAAAAAAAAACUAAAAAAAAAAAAAAAAAAAGC_"564-46f7bf9799d00"ZUser-AgentUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë#(3<BENWY[bjuƒ…‡‰‹‘“•—™›«­¯±³µ·¹»½¿ÁÃÅÇÔßíôü
+)27<JUi‰°ÂâçòŠ «±¶ÌÐÝâöú             z                          1   <   N   d   ‚   ‘   ¨  ß©  ß³  ß¹  ßí  ßî  ßô  ßý  à  êÆ  êÏ  ë
+  óÅ  óÎ 0= 0G 0y 9) 92 ‡Á ‡ú ^ g –o –z –± Ÿ7 Ÿ@ ¤¨ ¤à             '             ­

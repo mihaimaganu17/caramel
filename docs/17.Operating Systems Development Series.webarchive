@@ -1,0 +1,1544 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameOÎÊ<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"><!-- saved from url=(0056)http://www.gamedev.net/reference/articles/article290.asp --><html><head><title>Operating Systems Development Series</title> 
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><link href="Files/reference.css" type="text/css" rel="stylesheet"> 
+<meta content="MSHTML 6.00.6000.16441" name="GENERATOR"></head> 
+<body text="#000000" vlink="#666699" alink="#000000" link="#666699" bgcolor="#ffffff" leftmargin="0" background="Files/watermark.gif" topmargin="0" marginheight="0" marginwidth="0"> 
+
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+ 
+        <div id="ad_main"> 
+ 
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+//-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+ 
+     </td> 
+  </tr> 
+</tbody></table> 
+
+
+<table cellspacing="0" cellpadding="3" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td class="tblhdr">Operating Systems Development Series</td> 
+</tr> 
+  <tr> 
+    <td align="middle" colspan="2"></td></tr></tbody></table> 
+<table cellspacing="0" cellpadding="5" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td> 
+ 
+ 
+<!-- Title --> 
+ 
+      <center><span class="title">Operating Systems Development - Physical Memory</span> 
+ 
+<br><span class="author">by Mike, 2008</span></center> 
+ 
+ 
+      <p>This series is intended to demonstrate and teach operating system development from
+	the ground up.</p> 
+ 
+      <h1>Introduction</h1> 
+ 
+	Welcome!
+	<p> 
+	In this tutorial we will be looking at managing one of our most important resources within
+	a computer system: Physical Memory. We will be looking at how to get memory information,
+	some more BIOS interrupts, memory manager concepts, and the design and implimentation for
+	our complete physical memory manager.
+	</p><p> 
+	This is one of those things that no one likes to do--but in the end it makes things much easier
+	to work with. With that in mind, lets take a look at the list for this tutorial:
+ 
+	</p><ul> 
+		<li>Physical Memory</li> 
+		<li>Translation Lookaside Buffer (TLB)</li> 
+		<li>Memory Management Unit (MMU)</li> 
+		<li>Memory Managers</li> 
+		<li>Abtaining memory information</li> 
+		<li>Passing information from bootloader to kernel</li> 
+		<li>Designing and developing a physical memory manager</li> 
+	</ul> 
+ 
+	Alirighty then! Notice that I am not covering paging or virtual memory here. Instead, I want
+	to keep the concepts of physical memory management and virtual memory management completely separate.
+	The reasons for this is simplicity; we can focus on one without the other. Don't worry--we will cover paging and virtual
+	memory in the next tutorial when we cover the development of a virtual memory manager.
+ 
+<h1>Memory: A deeper look</h1> 
+ 
+Rather then jumping directly into memory management, I want to take a different approch here. That is,
+How can we even understand what memory management is about without even understanding what memory <i>itself</i> is?
+That is, we should know what is it that we are trying to manage, right?
+<p> 
+Because of this, we will first look at what physical memory is first. You know... Those little RAM chips inside of your computer? :)
+</p><p> 
+ 
+<i>Here we go...!</i> 
+ 
+</p><h2>Physical Memory</h2> 
+ 
+<h3>Physical Memory: Abstract</h3> 
+ 
+<b>Physical Memory</b> is an abstract block of memory stored within the computers <b>Random Access
+Memory (RAM)</b>. The way physical memory is "stored" within the RAM depends on the type of RAM the
+system uses. For example, <b>Dynamic Random Access Memory (DRAM)</b> stores each bit of data in its
+own <b>capacitor</b> that must be refreshed periodically. A <b>capacitor</b> is an electronic device
+that stores a current for a limited time. This allows it to either store a current (a binary 1), or
+no current (a binary 0). This is how DRAM chips store individual bits of data in a computer.
+ 
+<p> 
+Most of the time, the memory types (RAM, SRAM, DRAM, etc.) require a specific type of <b>Memory Controller</b> 
+to interface with the processor and <b>System Bus</b>.
+</p><p> 
+The Memory Controller provides a way of reading and writing memory locations through software.
+The Memory Controller is also responsible for the constant refreshing of the RAM chips to insure they
+retain their information.
+</p><p> 
+Memory Controllers contain Multiplexer and Demultiplexer circuits to select the exact RAM chip, and
+location that refrences the address in the <b>Address Bus</b>. This allows the <b>processor</b> to refrence
+a specific memory location by sending the memory address through the address bus.
+</p><p> 
+ 
+...This is where the software come in, as they tell the processor what memory address to read :)
+</p><p> 
+The Memory Controller selects the location within the RAM chip in a sequence manner. This means, if we access
+a physical memory location greater then the total amount of memory in the system, nothing will happen. That is,
+you can write a value to that memory location and read it back--you will get whatever left over data on the
+data bus.
+</p><p> 
+It is possible for <b>memory holes</b> to appear in the <b>Physical Address Space</b>. This can happen if, for example,
+a RAM chip is in slots 1 and 3, with no RAM chip in slot 2. This means that there is an area of memory between the
+last byte stored in the RAM at slot 1 and the first byte-1 in slot 3 that does not exist. Reading or writing to these
+locations have almost the same effect when reading or writing beyond memory. If this nonexistant memory location
+has been remapped by the memory controller, you may be reading or writing to a different part of memory. If the
+memory has not been remapped (Which most of memory is not), <b>Reading or writing to a memory location that
+does not exist does nothing at all.</b> That is, writing to the non existant memory location will not write anything anywhere,
+reading from a non existant memory location reads whatever garbage was left over on the data bus. Knowing that
+writing a value to a non existant location and reading it back will NOT yeld the same value, methods have come
+up of manually parsing memory via pointers to determin what areas of memory are good or not. However, doing
+this can be dangerous as we will look at later.
+ 
+</p><p> 
+Well, Thats all for what physical memory really is. Knowing how memory stores each bit you can probably start seeing
+where the bytes, words, dword, qwords, tbytes, etc.. start to come in. The most important of these are the <b>byte</b>,
+as that is the smallest data that the processor can access. But how does the processor know where a byte is located in
+memory? This is where the <b>Physical Address Space</b> comes in. Lets take a look :)
+ 
+</p><h3>Physical Address Space (PAS)</h3> 
+ 
+This is the address space used by the processor (and translated by the memory controller) to refer to an 8 bit
+peice of data (ie, a byte) stored in physical memory (RAM). A <b>Memory Address</b> is just a number selected
+by the <b>Memory Controller</b> for a byte of data. For example, memory address 0 can refer to the first 8 bits
+of physical memory, memory address 1 can refer to the next 8 bits, and so on. The <b>Physical Address Space</b> is the array of these
+ 
+<b>memory addresses</b> and the actual memory that the memory addresses refer to.
+<p> 
+The <b>physical address space</b> is accessed by the <b>processor</b> through the systems <b>address bus</b> 
+(Remember this from <a href="OSDev7.html">Chapter 7</a>?)
+</p><p> 
+ 
+Okay, so lessee... the processor now can use an address to refer to a byte of memory. It useually starts from
+address 0, and increments for each byte in memory. Thats as simple as it can get! But, it still doesnt describe
+how the software can access memory. Sure, the <i>processor itself</i> now has a way of refrencing memory,
+but the <i>software does not</i>. The processor, depending on its needs, need to provide specific ways for
+software to provide software a way to refrence memory. Wait, what? Thats right... different ways of addressing
+and accessing memory...
+ 
+</p><h3>Addressing Modes</h3> 
+ 
+The <b>Addressing Mode</b> is an abstraction made by the processor to manage how the software accesses the
+<b>Physical Address Space</b>. This useually allows the software to set up the processors' registers so
+the processor knows how to refrence memory. We have already seen two: <b>segment:offset memory addressing</b> 
+ 
+and <b>descriptor:offset memory addressing</b>.
+<p> 
+This is the interface given by the processor for the software to allow a way to access memory.
+</p><p> 
+We have covered the segment:offset addressing mode in <a href="OSDev4.html">Chapter 4</a> and the descriptor:offset
+memory addressing mode in <a href="OSDev8.html">Chapter 8</a>.
+ 
+</p><h3>How Memory Works: Detail</h3> 
+ 
+Okay, now lets look at memory in a new way. We have already covered alot of details on what memory is, address space
+and addressing modes. Now, lets put everything together, shall we?
+<p> 
+ 
+Alot of the information in this section is not needed, but I decided to include it for completness sake. Don't worry
+to much if you do not understand everything here.
+</p><p> 
+In <a href="OSDev7.html">Chapter 7</a>, we have looked at a basic overview of a computer system and system architecture.
+We have talked about how the processor's <b>system bus</b> connects to the <b>memory controller</b> which is used to provide
+the system a way to control physical RAM. Kind of like this:
+ 
+</p><p> 
+</p><center><img src="images/memory.JPG"></center><p> 
+ 
+Thats it! This is how the physical RAM connects and communicates with the rest of the system. In the above image, the <b>DDR Controller</b> 
+ 
+is the memory controller. The <b>Translation Lookaside Buffer (TLB)</b> sits between the memory controller and processor. With this,
+the <b>system bus</b> connects all three of them through its <b>address bus</b>, <b>data bus</b> and <b>control bus</b>. The only
+2 lines from the control bus that are important to us right now are the <b>RW line</b> and <b>CLK line.</b> 
+ 
+</p><p> 
+<b>The TLB is only used when paging is enabled.</b> Because of this, we will look at it a little more later.
+</p><p> 
+Okay, so what actually happens when we write data to a physical memory location? During a <b>write operation</b>, the processor
+sets the RW pin to <b>high</b> (a logical 1). This tells the devices it connects to that a write operation is to take place.
+The processor resets the <b>IO Control line</b> to <b>low</b> (a logical 0). This insures the IO SubSystem ignores the command
+(Meaning its not an IN/OUT port instruction), but rather for the memory controller. The processor then copies the address to write
+to onto the address bus and the data to write onto the data bus. Because these lines are connected indirectly to the memory
+controller, the memory controller is able to see it is a write operation. So, all the memory controller needs to do is translate
+the memory address on the address bus using its demultiplexer circuit to find the RAM chip to use, and linear offset byte into
+the RAM chips memory space. The memory controller then copies the data from the data bus to this location, and refreshes the memory
+state on the next clock signal.
+ 
+</p><p> 
+During a <b>read operation</b> it follows almost the same process as a write operation. Except, the <b>RW line</b> is set <b>low</b> 
+to indicate a read operation. Also, the memory controller, after translating the memory address into an offset into the RAM chip,
+copies the data stored in that location and places it on the data bus for the processor. The memory controller then refreshes
+the memory state on the next clock signal.
+</p><p> 
+The <b>CLK</b> signal is used to synchronize the exchange of addresses and data values through the reads and writes.
+Communication with the memory chip is started when the CLK line is a logical 1 (set high).
+During this period that the CLK line is held high the address is placed on the address lines and the R/W line is either
+taken high for a write or low for a read.
+</p><p> 
+ 
+During execution the processor will constantly be flipping the clock line high and low in order to perform reads
+and writes with the memory controller.
+</p><p> 
+While paging is disabled, the TLB itself does nothing at all. Notice that the TLB is not used at all when reading or writing memory.
+ 
+</p><h2>Physical Memory Managers</h2> 
+ 
+As you may know, managing memory is critically important. All of our data and code share the same physical
+address space. If we attempt to load and work with more data or programs, we will need to some how find
+a way of managing memory to allow this.
+ 
+<p> 
+At this stage, our kernel has full control of all of the hardware and memory in your computer. This is great
+but bad at the same time. We have no way of knowing what areas of memory are currently in use nor what areas
+are free. Because of this, there is no real way of working with memory without the possibility of problems:
+program corruption, data corruption, no way of knowing how memory is mapped, triple faults or other exception
+errors, etc... The results may be unpredictable.
+</p><p> 
+Because of this, effectivly managing physical memory is very important. Lets look closer!
+ 
+</p><h1>Detecting Memory</h1> 
+ 
+	<h2>Abstract</h2> 
+ 
+	The first thing we need to do is abtain the amount of RAM inside of the computer system. There are
+	alot of different ways to do this. Some methods may work on some systems while others may not.
+	<p> 
+	Getting the amount of memory can be very system dependent. More specifically, motherboard
+	chipset dependent. During initialization, the BIOS abtains memory information from the
+	memory controller and configures the chipset to work with the detected memory. Because of this, <b>Operating systems
+	need to go through the system BIOS to abtain this information.</b> But Wait! I thought we were
+	not able to use the Bios in protected mode!? Thats right...we can't. Instead we must get this
+	information some other way... The bootloader, perhaps?
+	</p><p> 
+	I should point out that there is indeed other methods that we can do to abtain the amount of
+	memory within the system. For example, the CMOS, PnP, and SMBios. However the only way to guarantee that you get
+	the correct amount is from the device that configuares it: The BIOS.
+	</p><p> 
+	The last thing to note here is that all PCs are required to have a memory region just below
+	the 4 GB mark for use by additional possible devices (Memory mapped hardware or the BIOS ROM).
+	We will look at how to get around this a little later, don't worry :)
+	</p><p> 
+	<b>"Low Memory"</b>, otherwise known as <b>Conventional Memory</b> is memory below the 1MB mark.
+	Memory above 1MB is known as <b>Extended Memory</b>.
+	</p><p> 
+	With all of that in mind, lets take a look at some
+	nice Bios interrupts to help us out...
+ 
+	</p><h2>Bios: Getting Memory Size</h2> 
+ 
+	All of the following routines can be found in <b>memory.inc</b> in the demo at the end of this tutorial
+	inside of the 2nd stage boot loader.
+ 
+	<h3>BIOS INT 0x12 - Get Memory Size (Conventional Memory)</h3> 
+ 
+	<b>Return</b><p> 
+	CF = Clear if successful<br> 
+	AX = Number of KB conventional memory<br> 
+	AH = status if error (0x80: Invalid command; 0x86) Unsupported function
+	</p><p> 
+ 
+	This is quite possible the easiest method. This interrupt returns the value found in the BIOS
+	data area (The word at physical address 0x413). Because it returns a WORD sized value, it is limited
+	to 0xFFFF (65535 decimal). That is, it will only detect memory below 64KB. Because of this, on systems
+	with more then 64KB of memory, it will not return the correct size. Thus, I will not be using this
+	method.
+	</p><p> 
+	While this method may not return the complete memory size, it is quite possibly the only one
+	guranteed to work on almost all, if not all, PCs.
+ 
+</p><blockquote><pre><div class="code"> BiosGetMemorySize:
+	int	0x12
+	jc	.error
+	test	ax, ax		; if size=0
+	je	.error
+	cmp	ah, 0x86	;unsupported function
+	je	.error
+	cmp	ah, 0x80	;invalid command
+	je	.error
+	ret
+.error:
+	mov	ax, -1
+	ret</div></pre></blockquote> 
+ 
+	<h3>BIOS INT 0x15 Function 0x88 - Get Extended Memory Size</h3> 
+ 
+	<b>Return</b><p> 
+	CF = Clear if successful<br> 
+	AX = Number of contiguous KB starting at 1MB physical address<br> 
+	AH = status if error (0x80: Invalid command; 0x86) Unsupported function
+	</p><p> 
+	This interrupt returns the amount of KB extended memory in AX. Because it uses 16 bit registers,
+	it is limited to returning 64MB, or 0xFFFFF (65535). On some versions of Windows, this function
+	may return 15MB instead.
+ 
+</p><blockquote><pre><div class="code">BiosGetExtendedMemorySize:
+	mov	ax, 0x88
+	int	0x15
+	jc	.error
+	test	ax, ax		; if size=0
+	je	.error
+	cmp	ah, 0x86	;unsupported function
+	je	.error
+	cmp	ah, 0x80	;invalid command
+	je	.error
+	ret
+.error:
+	mov	ax, -1
+	ret</div></pre></blockquote> 
+ 
+	<h3>BIOS INT 0x15 Function 0xE881 - Get Memory Size For &gt; 64 MB Configuations (32 Bit)</h3> 
+ 
+	<b>Return</b><p> 
+	CF = Clear if successful<br> 
+	EAX = Extended memory between 1MB and 16MB in KB<br> 
+	EBX = Extended memory above 16MB, in 64KB blocks<br> 
+	ECX = Configured memory 1MB to 16MB in KB<br> 
+	EDX = Configured memory above 16MB in 64JB blocks<br> 
+	</p><p> 
+ 
+	This interrupt is exactally like INT 0x15 Function 0xE801 except it uses the extended registers
+	(EAX/EBX/ECX/EDX).
+ 
+	</p><h3>BIOS INT 0x15 Function 0xE801 - Get Memory Size For &gt; 64 MB Configuations</h3> 
+ 
+	<b>Return</b><p> 
+	CF = Clear if successful<br> 
+	EAX = Extended memory between 1MB and 16MB in KB<br> 
+	EBX = Extended memory above 16MB, in 64KB blocks<br> 
+	ECX = Configured memory 1MB to 16MB in KB<br> 
+	EDX = Configured memory above 16MB in 64JB blocks<br> 
+	</p><p> 
+ 
+	This is the method that I tend to use. This interrupt is used by both Windows NT and Linux
+	during boot up to detect memory size if INT 0x15 function 0xe820 is not supported (Get System
+	Memory Map). We will look at that later. This method has been around since around 1994 so older
+	systems may not support this method.
+	</p><p> 
+	The "Extended Memory" and "Configured Memory" values are almost always the same. Some BIOSs
+	may store the results in either EAX and EBX or ECX and EDX. In other words, some BIOS may
+	use EAX and EBX but leave ECX and EDX alone. Other BIOSs may do the exact opposite. Yey for
+	standards! :) Uh, okay...Sorry ;)
+	</p><p> 
+	The typical way of using this method is to null out all of the general-purpose registers
+	first before calling the BIOS. This way, after the BIOS call, we can test if a register is
+	null or not so we know what pair of registers to use: EAX/EBX or ECX/EDX:
+ 
+</p><blockquote><pre><div class="code">;---------------------------------------------
+;	Get memory size for &gt;64M configuations
+;	ret\ ax=KB between 1MB and 16MB
+;	ret\ bx=number of 64K blocks above 16MB
+;	ret\ bx=0 and ax= -1 on error
+;---------------------------------------------
+ 
+BiosGetMemorySize64MB:
+	push	ecx
+	push	edx
+	xor	ecx, ecx		;clear all registers. This is needed for testing later
+	xor	edx, edx
+	mov	ax, 0xe801
+	int	0x15	
+	jc	.error
+	cmp	ah, 0x86		;unsupported function
+	je	.error
+	cmp	ah, 0x80		;invalid command
+	je	.error
+	jcxz	.use_ax			;bios may have stored it in ax,bx or cx,dx. test if cx is 0
+	mov	ax, cx			;its not, so it should contain mem size; store it
+	mov	bx, dx
+ 
+.use_ax:
+	pop	edx			;mem size is in ax and bx already, return it
+	pop	ecx
+	ret
+ 
+.error:
+	mov	ax, -1
+	mov	bx, 0
+	pop	edx
+	pop	ecx
+	ret</div></pre></blockquote> 
+ 
+	Notice what this routine returns. In order for us to get the amount of KB in the system,
+	we need to do some math. EBX contains the number of 64KB blocks of memory. If we multiply
+	this by 64, we effectivly convert the value in EBX into the amount of KB above 16MB. Afterwords,
+	simply add this number to the number returned in EAX to get the amount of KB above 1MB.
+	Knowing there is 1024 KB in a one megabyte, add 1024 to this number and we now have the total
+	amount of KB in the system!
+ 
+	<h3>Manually Probing Memory</h3> 
+ 
+	Manually probing memory means to manually detect memory from a pointer by directly accessing memory.
+	While it is possible that doing this may detect all of memory, it is also the most dangerous. Remember
+	that there may be devices that we may or may not know of that uses regions of memory for different
+	things. There may also be memory mapped devices, the ROM BIOS, and other devices that use memory.
+	We also have not taken into account memory holes within the physical address space.
+	<p> 
+	To directly probe memory comes from the fact that reading or writing to nonexistant memory
+	does nothing. That is, if you write to a physical memory address that does not exist, you
+	will not get an error. However, if you attempt to read from that same location again, the
+	value that you get back may be completely random garbage--whatever was left on the data bus.
+	</p><p> 
+	Thus to probe memory, just go into a loop for every 1k (or so) of memory. Use a pointer to
+	read and write to a memory location. Continue incrementing the pointer (Hence reading from
+	another location in memory) until the value read from the pointer containes an invalid value.
+	</p><p> 
+	I might create a little demo code for this method, but we would probably never use it do to its
+	many problems. I decided to include this method as it is a method to detect memory, although
+	it is the most unsafe method to use and can cause unpredictable results. Use at your own risk!
+ 
+	</p><h2>Getting the Memory Map</h2> 
+ 
+	Yippie! Now we have gotten the amount of memory in the system. But Wait! Not all of this memory
+	is available to us, remember?
+	<p> 
+	This is where a <b>Memory Map</b> comes in. A memory map defines what regions of memory are used
+	for what. Using this, we can also abtain what regions that are safe for us to use.
+ 
+	</p><h3>BIOS INT 0x15 Function 0xE820 - Get Memory Map</h3> 
+	<b>Input</b><p> 
+	EAX = 0x0000E820<br> 
+	EBX = continuation value or 0 to start at beginning of map<br> 
+	ECX = size of buffer for result (Must be &gt;= 20 bytes)<br> 
+	EDX = 0x534D4150h ('SMAP')<br> 
+	ES:DI = Buffer for result
+ 
+	</p><p> 
+	<b>Return</b></p><p> 
+	CF = clear if successful<br> 
+	EAX = 0x534D4150h ('SMAP')<br> 
+	EBX = offset of next entry to copy from or 0 if done<br> 
+	ECX = actual length returned in bytes<br> 
+	ES:DI = buffer filled<br> 
+	If error, AH containes error code
+	</p><p> 
+	<b>Address Range Descriptor</b></p><p> 
+ 
+	The buffer used by this interrupt as an array of descriptors that follow the following
+	format:
+ 
+</p><blockquote><pre><div class="code">struc	MemoryMapEntry
+	.baseAddress	resq	1	; base address of address range
+	.length		resq	1	; length of address range in bytes
+	.type		resd	1	; type of address range
+	.acpi_null	resd	1	; reserved
+endstruc</div></pre></blockquote> 
+ 
+	<b>Types of Address Ranges</b><p> 
+ 
+	The types of address ranges defined for this function is shown below:
+ 
+	</p><ul> 
+	<li>1: Available Memory</li> 
+	<li>2: Reserved, do not use. (e.g. system ROM, memory-mapped device)</li> 
+	<li>3: ACPI Reclaim Memory (usable by OS after reading ACPI tables)</li> 
+	<li>4: ACPI NVS Memory (OS is required to save this memory between NVS
+sessions)</li> 
+	<li>All other values should be treated as undefined.</li> 
+	</ul> 
+ 
+	<b>Getting the Memory Map</b><p> 
+ 
+	This interrupt might seem a little complex, but its not to bad.
+	</p><p> 
+	First take a look at the <b>inputs</b> that this interrupt requires. We put the function
+	number (0xe820), of course, in AX. However some BIOSs <b>require</b> that the upper half
+	of EAX is zero. Because of this, you should us EAX here instead of AX.
+	</p><p> 
+	Also notice that EDX must contain the value of 'SMAP'. This is another <b>requirement</b>.
+	Some BIOSs may trash this register after calling the interrupt.
+	</p><p> 
+	Okay... When we execute this interrupt, the BIOS will return a single entry of the memory
+	map (This entry has a format. Please see the <b>Address Range Descriptor</b> above). If,
+	after calling the interrupt, EBX is NOT zero, then there are more entries in the memory map.
+	We will need to loop for each entry in the map. If the entry length is 0, then skip the entry
+	as there is nothing there and go to the next entry in the list until we reach the end.
+	</p><p> 
+	This routine uses the MemoryMapEntry structure we have defined above to get information
+	from the entries that we abtain from the bios.
+ 
+</p><blockquote><pre><div class="code">;---------------------------------------------
+;	Get memory map from bios
+;	/in es:di-&gt;destination buffer for entries
+;	/ret bp=entry count
+;---------------------------------------------
+ 
+BiosGetMemoryMap:
+	pushad
+	xor	ebx, ebx
+	xor	bp, bp			; number of entries stored here
+	mov	edx, 'PAMS'		; 'SMAP'
+	mov	eax, 0xe820
+	mov	ecx, 24			; memory map entry struct is 24 bytes
+	int	0x15			; get first entry
+	jc	.error	
+	cmp	eax, 'PAMS'		; bios returns SMAP in eax
+	jne	.error
+	test	ebx, ebx		; if ebx=0 then list is one entry long; bail out
+	je	.error
+	jmp	.start
+.next_entry:
+	mov	edx, 'PAMS'		; some bios's trash this register
+	mov	ecx, 24			; entry is 24 bytes
+	mov	eax, 0xe820
+	int	0x15			; get next entry
+.start:
+	jcxz	.skip_entry		; if actual returned bytes is 0, skip entry
+.notext:
+	mov	ecx, [es:di + MemoryMapEntry.length]	; get length (low dword)
+	test	ecx, ecx		; if length is 0 skip it
+	jne	short .good_entry
+	mov	ecx, [es:di + MemoryMapEntry.length + 4]; get length (upper dword)
+	jecxz	.skip_entry		; if length is 0 skip it
+.good_entry:
+	inc	bp			; increment entry count
+	add	di, 24			; point di to next entry in buffer
+.skip_entry:
+	cmp	ebx, 0			; if ebx return is 0, list is done
+	jne	.next_entry		; get next entry
+	jmp	.done
+.error:
+	stc
+.done:
+	popad
+	ret</div></pre></blockquote> 
+ 
+<h1>Multiboot Specification</h1> 
+ 
+I do not plan on covering the multiboot specification too soon. Mabey in the future, but not now.
+However, we need a way to pass the information that we abtained from the BIOS inside of our bootloader
+to our Kernel. We can do this any way that we want. Because the multiboot specification defines
+a standard boot time information structure, and I dont know if we will fully support the multiboot
+standard, I decided why not use the same structure?
+<p> 
+Also, if you decide to use another boot loader (Such as GRUB), we can have it boot our kernel as well.
+</p><p> 
+Anyways, the entire specification itself is rather large, so covering it in a tutorial about memory
+management is not a good idea ;) Thus, I will cover just enough so we can use it to pass the information
+that we need, sound cool?
+ 
+</p><h2>Abstract</h2> 
+ 
+The Multiboot specification is a list of standards used to describe standards for boot loaders for loading
+and executing operating system kernels. This specification makes it easier to boot multiple operating
+systems because the specification describes a standard state that the machine must be in before the
+operating system takes control. <b>This also includes how and what information is passed from the bootloader
+to the kernel.</b> 
+<p> 
+I will not be covering the complete multiboot specification right now. However, we will be looking
+at what the machine state must be in when the kernel is executed. We will also be looking a little bit
+at the <b>Multiboot information</b> structure which containes the information passed from the boot
+loader to the kernel. We will also be using this structure to pass our bootloader memory information
+using this structure as well.
+ 
+</p><h3>Machine State</h3> 
+ 
+The Multiboot specification states that, when we invoke a 32 bit operating system (That is, execute
+our kernel), the machine registers must be set to a specific state. More specifically: <b>When we
+execute our kernel, set up the registers to the following values:</b> 
+ 
+<ul> 
+	<li>EAX - Magic Number. Must be <b>0x2BADB002</b>. This will indicate to the kernel that our boot loader is multiboot standard</li> 
+	<li>EBX - Containes the physical address of the <b>Multiboot information structure</b></li> 
+	<li>CS - Must be a 32-bit read/execute code segment with an offset of `0' and a limit of `0xFFFFFFFF'. The exact value is undefined.</li> 
+	<li>DS,ES,FS,GS,SS - Must be a 32-bit read/write data segment with an offset of `0' and a limit of `0xFFFFFFFF'. The exact values are all undefined.</li> 
+	<li>A20 gate must be enabled</li> 
+	<li>CR0 - Bit 31 (PG) bit must be cleared (paging disabled) and Bit 0 (PE) bit must be set (Protected Mode enabled). Other bits undefined</li> 
+</ul> 
+ 
+All other registers are undefined. Most of this is already done in our existing boot loader. The only
+additional two things we must add are for the EAX register and EBX.
+<p> 
+The most important one for us is stored in EBX. This will contain the physical address of the multiboot
+information structure. <i>Lets take a look!</i> 
+ 
+</p><h3>Multiboot Information Structure</h3> 
+ 
+This is possibly one of the most important structures contained in the multiboot specification. The
+information in this structure is passed to the kernel from the EBX register, <b>This allows a standard
+way for the boot loader to pass information to the kernel</b>.
+ 
+<p> 
+This is a fairly big structure but isnt to bad. Not all of these members are required. The specification
+states that the operating system must use the flags member to determin what members in the structure
+exist and what do not.
+ 
+</p><blockquote><pre><div class="code">struc multiboot_info
+	.flags		resd	1	; required
+	.memoryLo	resd	1	; memory size. Present if flags[0] is set
+	.memoryHi	resd	1
+	.bootDevice	resd	1	; boot device. Present if flags[1] is set
+	.cmdLine	resd	1	; kernel command line. Present if flags[2] is set
+	.mods_count	resd	1	; number of modules loaded along with kernel. present if flags[3] is set
+	.mods_addr	resd	1
+	.syms0		resd	1	; symbol table info. present if flags[4] or flags[5] is set
+	.syms1		resd	1
+	.syms2		resd	1
+	.mmap_length	resd	1	; memory map. Present if flags[6] is set
+	.mmap_addr	resd	1
+	.drives_length	resd	1	; phys address of first drive structure. present if flags[7] is set
+	.drives_addr	resd	1
+	.config_table	resd	1	; ROM configuation table. present if flags[8] is set
+	.bootloader_name resd	1	; Bootloader name. present if flags[9] is set
+	.apm_table	resd	1	; advanced power management (apm) table. present if flags[10] is set
+	.vbe_control_info resd	1	; video bios extension (vbe). present if flags[11] is set
+	.vbe_mode_info	resd	1
+	.vbe_mode	resw	1
+	.vbe_interface_seg resw	1
+	.vbe_interface_off resw	1
+	.vbe_interface_len resw	1
+endstruc</div></pre></blockquote> 
+ 
+Alot of information in this structure! Most of this does not apply to use, so we will only focus on
+a few. <b>memLo</b> and <b>memHi</b> containes the amount of memory we detected from the BIOS.
+<b>mmap_length</b> and <b>mmap_addr</b> will point to the memory map that we abtained from the BIOS.
+<p> 
+Thats it! Now we have a nice way of passing our memory information (And mabey more ;) ) to the kernel:
+ 
+</p><blockquote><pre><div class="code">	mov	eax, 0x2BADB002		; multiboot specs say eax should be this
+	mov	ebx, 0
+	mov	edx, [ImageSize]
+ 
+	push	dword boot_info
+	call	ebp               	; Execute Kernel
+	add	esp, 4
+ 
+    	cli
+	hlt</div></pre></blockquote> 
+ 
+...And inside of our kernel:
+ 
+<blockquote><pre><div class="code">//! kernel entry point is called by boot loader
+void __cdecl  kernel_entry (multiboot_info* bootinfo) {
+ 
+	//*snip*
+}</div></pre></blockquote> 
+ 
+The kernels multiboot_info structure is the same one shown above but in C. Thanks to this setup,
+all the kernel needs to do is access the memory information (And any information passed from the
+bootloader) through <b>bootinfo</b>. Cool, huh?
+<p> 
+Now that we got the memory information from the Bios and passed it to the kernel, the kernel
+can use it for its physical memory manager. Thats right...Its finally time to develop a
+physical memory manager!
+ 
+</p><h1>Physical Memory Management</h1> 
+ 
+We have covered alot already, don't you think? We have looked at how to abtain memory information
+from the BIOS and using the multiboot information structure to pass this information to the kernel.
+This allows the kernel to be able to retrieve this memory information anytime it wants. Yet, we have
+yet to cover the most important topic: <b>Managing</b> this memory. Lets look closer...
+ 
+<h2>Memory Management: Abstract</h2> 
+ 
+Okay, so we know we need a way to manage memory. To do this, we--of course--need a way of keeping track
+of how memory is being used. Doing this for every byte in memory is simply not possible: How can we store
+information about every byte in memory without running out of memory? Because of this, we need to come
+up with another way.<p> 
+ 
+What we need to insure is that, whatever data structure we use to manage the rest of memory, is smaller
+then the total size of memory. For example, we can use an array of bytes, for example. Every byte can store
+information about a larger block of memory. This is the only way we can insure we do not run out of
+memory.
+</p><p> 
+The size of a "block" of memory must be a feasable and efficiant size. Using this method, we can split
+up the physical address space into "block" sized chunks. When we allocate memory, we do not allocate bytes.
+Rather, we allocate blocks of memory. <b>This is what a physical memory manager does</b>.
+</p><p> 
+The purpose of a physical memory manager is to split up the computers physical address space into block-sized
+chunks of memory and provide a method to allocate and release them.
+</p><p> 
+On the x86 architecture, when paging is enabled, each page represents a 4KB block of memory. Because of this,
+to keep things simple, each memory block for our physical memory manager will also be 4KB in size.
+ 
+</p><h2>Setting up</h2> 
+ 
+Allright...We know that a physical memory manager is important. We also know that the physical memory manager
+needs to split up the physical address space and keep track of what memory blocks are being used or
+available. But wait! We immediately run into a problem: The kernel needs an area of memory for managing
+memory. How can we allocate an area of memory before we can allocate memory?
+<p> 
+We cant. Because of this, the only method that we have is using a pointer to a location in memory. Think
+of this location as simply some more reserved memory, simular to the BIOS, Bios Data Area (BDA) and the kernel itself. We
+want to stick this somewhere in reserved memory, so how about at the end of the kernel? Afterwords, we can
+mark this region (along with the kernel itself) as reserved within the data structure to insure nothing
+touches it.
+</p><p> 
+Great! Now that we have a pointer to some location in memory, we can store the information needed to keep
+track of each block in memory. But...<i>how?</i> That is, all we have is a pointer. The data this pointer
+points to must be in some useable structure so that we can use the area of memory effectivly. How can
+we create a structure to manage all of physical memory?
+</p><p> 
+There are two common solutions to this: Stack or a bit map.
+ 
+</p><h3>Stack based allocation</h3> 
+ 
+ 
+<h3>Bit map based allocation</h3> 
+ 
+	This is the simplest to impliment. All our physical memory manager needs to know is if a block
+	of memory is allocated or not. If it is allocated, we can use a binary bit 1. If it is not,
+	a binary bit 0. In other words, for every block in memory, we use a single bit to represent
+	if it has been allocated or not. This is the method that we will be using. However, the physical
+	memory manager is designed in a way to allow other methods (Like the stack-based approch) if
+	we decide too switch. ;)
+	<p> 
+	The bit map approach is very efficiant in size. Because each bit represents a block of memory,
+	a single 32 bits using this bit map approach represents 32 blocks. Because 32 bits is 4 bytes,
+	this means we can watch--out of 32 blocks of memory--using only 4 bytes of memory.
+	</p><p> 
+	This approach is a bit slower though as it requires searching the bit map for a free block (The
+	first bit that is 0) every time we want to allocate a block of memory.
+ 
+</p><h2>Developing a Physical Memory Manager (PMM)</h2> 
+ 
+	In the upcoming demo code, the entire physical memory manager can be found in <b>mmngr_phys.h</b> 
+	and <b>mmngr_phys.cpp</b>. It may also help to study the updated 2nd stage boot loader to see
+	how the memory information is passed from the boot loader to the kernel, and how the kernel
+	initializes the PMM.
+ 
+<h3>Globals and Constants</h3> 
+ 
+I never like "magic numbers" as you may have noticed ;) This is why I tend to hide all of these numbers
+behind more readable constants.
+ 
+<blockquote><pre><div class="code">//! 8 blocks per byte
+#define PMMNGR_BLOCKS_PER_BYTE 8
+ 
+//! block size (4k)
+#define PMMNGR_BLOCK_SIZE	4096
+ 
+//! block alignment
+#define PMMNGR_BLOCK_ALIGN	PMMNGR_BLOCK_SIZE</div></pre></blockquote> 
+ 
+These are just to help with the readability of the code. The PMM creates an abstraction known
+as a <b>Memory Block</b>. A Memory Block is 4096 bytes in size (4K). This is important as it is also
+the size of a page when we enable paging.
+<p> 
+There are also several globals defined for keeping track of everything.
+ 
+</p><blockquote><pre><div class="code">//! size of physical memory
+static	uint32_t	_mmngr_memory_size=0;
+ 
+//! number of blocks currently in use
+static	uint32_t	_mmngr_used_blocks=0;
+ 
+//! maximum number of available memory blocks
+static	uint32_t	_mmngr_max_blocks=0;
+ 
+//! memory map bit array. Each bit represents a memory block
+static	uint32_t*	_mmngr_memory_map= 0;</div></pre></blockquote> 
+ 
+The most important of these is <b>_mmngr_memory_map</b>. This is a pointer to the bit map structure
+that we use to keep track of all of physical memory. <b>_mmngr_max_blocks</b> containes the amount of
+memory blocks available. This is the size of physical memory (Retrieved from the BIOS from the boot loader)
+divide by PMMNGR_BLOCK_SIZE. This essentally divides the physical address space into memory blocks (Remember
+this from before?) <b>_mmngr_used_blocks</b> containes the amount of blocks currently in use, <b>_mmngr_memory_size</b> 
+is for refrence only--it containes the amount of physical memory in KB.
+ 
+<h3>Memory Bit Map</h3> 
+ 
+	Okay then! <b>_mmngr_memory_map</b> is a pointer to an uint32_t...right? Well, of course... sort of.
+	Rather, we should think of it as "a pointer to a series of bits" as that is the way we treat it.
+	Each bit is a 0 if that block has not been allocated (Useable) or a 1 if it is reserved (In use).
+	The number of bits in this array is <b>_mmngr_max_blocks</b>. In other words, each bit represents
+	a single memory block, which in turn, is 4KB of physical memory.
+	<p> 
+	Knowing this, all we need to do with the bit map is be able to set a bit, unset a bit, and test
+	if a bit is set. Lets take a look...
+ 
+</p><p><b>mmap_set () - Sets a bit in the bit map</b></p><p> 
+ 
+What we want to do is provide a way so that we can think of the memory map as an array
+of bits rather then an array of ints. This is not to hard:
+ 
+</p><blockquote><pre><div class="code">inline void mmap_set (int bit) {
+ 
+  _mmngr_memory_map[bit / 32] |= (1 &lt;&lt; (bit % 32));
+}</div></pre></blockquote> 
+ 
+	The bit is a value from 0...x, where x is the bit that we want to set in the memory map.
+	We divide the bit by 32 to get the integer index in _mmngr_memory_map that the bit is in.
+	<p> 
+	To use this routine, simply call it passing in the bit that you want to set. You are not
+	limited to 32 bits: mmp_set(62) sets the 62nd bit in the memory map bit array.
+ 
+</p><p><b>mmap_unset () - Unsets a bit in the bit map</b></p><p> 
+ 
+This is very simular to the above routine but clears the bit instead:
+ 
+</p><blockquote><pre><div class="code">inline void mmap_unset (int bit) {
+ 
+  _mmngr_memory_map[bit / 32] &amp;= ~ (1 &lt;&lt; (bit % 32));
+}</div></pre></blockquote> 
+ 
+<p><b>mmap_test () - Test if a bit is set</b></p><p> 
+ 
+	This routine simply returns true if a bit is 1 or false if it is 0. It is very
+	simular to the above routine, but instead of setting the bit we use it as a mask
+	and return its value:
+ 
+</p><blockquote><pre><div class="code">inline bool mmap_test (int bit) {
+ 
+ return _mmngr_memory_map[bit / 32] &amp;  (1 &lt;&lt; (bit % 32));
+}</div></pre></blockquote> 
+ 
+Thats all too it! Now that we have a way to set, unset, and test bits inside of the bit map,
+we need a way of searching through the bit map for free bits. These will be used so we can
+find free memory blocks that we can use.
+ 
+<p><b>mmap_first_free () - Returns index of first free bit in bit map</b></p><p> 
+ 
+This routine is a little complex. We have a way to set, clear, and test a bit in the memory bit map.
+Lets say that we want to allocate a block of memory. How do we find a free block of memory? Thanks
+to our bit map, all we need to do is traverse the bit map for a bit that is not set. This isnt to
+complex:
+ 
+</p><blockquote><pre><div class="code">int mmap_first_free () {
+ 
+	//! find the first free bit
+	for (uint32_t i=0; i&lt; pmmngr_get_block_count() / 32; i++)
+		if (_mmngr_memory_map[i] != 0xffffffff)
+			for (int j=0; j&lt;32; j++) {		//! test each bit in the dword
+ 
+				int bit = 1 &lt;&lt; j;
+				if (! (_mmngr_memory_map[i] &amp; bit) )
+					return i*4*8+j;
+			}
+ 
+	return -1;
+}</div></pre></blockquote> 
+ 
+<b>pmmngr_get_block_count()</b> returns the maximum number of memory blocks in this system (Remember
+this is also the number of bits in the bit array?) We divide this by 32 (32 bits per dword) to get
+the amount of integers in ths bit map. In other words: The outmost loop simply loops through
+each integer in the array.
+<p> 
+We then test to see if the dword is all set. We loop this in dwords rather then bits because it is much
+more efficiant and faster. We test it by insuring its not 0xffffffff. If it is, go on to the next dword.
+If it is not, then a bit must be clear. Afterwords we simply go through each bit in that dword to find
+the free bit and returns its physical frame address.
+</p><p> 
+The physical memory manager includes another version of this routine--<b> mmap_first_free_s()</b> that
+returns the index of the first free series of frames of a specific size. This allows us to insure
+a certain region of memory blocks are free rather then a single block. This routine is a little tricky
+I admit; if any of our readers do not understand the code I would be glad to describe it in more
+detail in this tutorial.
+ 
+ 
+</p><h3>Physical Memory Allocater</h3> 
+ 
+We now have a way of managing memory. Wait, what? Thats right. The way this works is to remember
+that each bit in the bit map represents 4KB of physical memory. If we want to allocate the first
+memory block (The first 4k) just set bit 0. If you want to allocate the second 4k, just set bit 1.
+This continues to the end of memory. This provides a way for us to not only work in 4k blocks of
+memory, but also to know what memory is currently in use or reserved (The bit is 1) or free for
+use (Bit 0). All of this provided by the three simple routines above and our bit map array. Cool,
+huh?
+<p> 
+Now we just need the actual allocation and deallocation routines. Before that, however, we need to
+initialize the bit map regions to that of the BIOS memory map. And even before THAT, we need to provide
+a way so the kernel can provide some information for our physical memory manager to use.
+Lets take a look...
+ 
+</p><p><b>pmmngr_init () - Initialize the physical memory manager</b></p><p> 
+ 
+This routine is called by the kernel to initialize the physical memory manager (PMM). <b>memSize</b> 
+is the maximum amount of memory the PMM is allowed to access. This should be the size of RAM in KB
+passed to the kernel from the bootloader. <b>bitmap</b> is the location that the PMM will use
+for its memory bit map structure. Another important thing to note is how we set all the bits in
+the memory bit map using a memset() call. There is a reason for this which will be looked at
+very soon.
+ 
+</p><blockquote><pre><div class="code">void	pmmngr_init (size_t memSize, physical_addr bitmap) {
+ 
+	_mmngr_memory_size	=	memSize;
+	_mmngr_memory_map	=	(uint32_t*) bitmap;
+	_mmngr_max_blocks	=	(pmmngr_get_memory_size()*1024) / PMMNGR_BLOCK_SIZE;
+	_mmngr_used_blocks	=	pmmngr_get_block_count();
+ 
+	//! By default, all of memory is in use
+	memset (_mmngr_memory_map, 0xf, pmmngr_get_block_count() / PMMNGR_BLOCKS_PER_BYTE );
+}</div></pre></blockquote> 
+ 
+<p><b>pmmngr_init_region () - Initializes a region of memory for use</b></p><p> 
+ 
+Remember the memory map? We do not know what areas of memory are safe to work with, only the kernel
+does. Because of this, by default all of memory is in use. The kernel abtains the memory map from
+the kernel and uses this routine to initialize available regions of memory that we can use.
+</p><p> 
+The routine is very simple. It just finds out how much memory blocks to set and loops--clearing
+the appropariate bits in the memory bit map. This allows the allocation routines to use these
+now free areas of memory again:
+ 
+</p><blockquote><pre><div class="code">void	pmmngr_init_region (physical_addr base, size_t size) {
+ 
+	int align = base / PMMNGR_BLOCK_SIZE;
+	int blocks = size / PMMNGR_BLOCK_SIZE;
+ 
+	for (; blocks&gt;0; blocks--) {
+		mmap_unset (align++);
+		_mmngr_used_blocks--;
+	}
+ 
+	mmap_set (0);	//first block is always set. This insures allocs cant be 0
+}</div></pre></blockquote> 
+ 
+Notice the call to mmap_set() at the end. In our PMM, the first memory block block will always be set.
+This insures us that the PMM can return null pointers for allocation errors. This also insures that
+any data structures defined within the first 64 KB of memory are not overwritten or touched, including
+the Interrupt Vector Table (IVT) and Bios Data Area (BDA).
+ 
+<p><b>pmmngr_deinit_region () - Deinitializes a region of memory for use</b></p><p> 
+ 
+This routine is simular to the above routine, but sets the bits instead of clearing them. Because the
+bits become a binary 1, that 4KB block of memory the bit represents is effectivly set to reserved
+so that area of memory will never be touched when this routine is called.
+ 
+</p><blockquote><pre><div class="code">void	pmmngr_deinit_region (physical_addr base, size_t size) {
+ 
+	int align = base / PMMNGR_BLOCK_SIZE;
+	int blocks = size / PMMNGR_BLOCK_SIZE;
+ 
+	for (; blocks&gt;0; blocks--) {
+		mmap_set (align++);
+		_mmngr_used_blocks++;
+	}
+}</div></pre></blockquote> 
+ 
+Woohoo! Now that we have a way to initialize and deinitialize regions of memory for use,
+and initialize the PMM we can work on allocating and deallocating blocks next!
+ 
+ 
+<p><b>pmmngr_alloc_block () and pmmngr_alloc_blocks () - Allocates a single block of physical memory</b></p><p> 
+ 
+To allocate a block of memory is very simple. All of physical memory is already there,
+all we need to do is return a pointer to a free block of memory. We can find a free block
+of memory by looking through the bit map using out <b>mmap_first_free()</b> routine. Also
+notice that we call <b>mmap_set</b> to set the same frame returned from <b>mmap_first_frame ()</b>.
+This is what marks that block of memory just allocated is now "in use". This routine returns
+a void* to the 4KB of physical memory just allocated.
+ 
+</p><blockquote><pre><div class="code">void*	pmmngr_alloc_block () {
+ 
+	if (pmmngr_get_free_block_count() &lt;= 0)
+		return 0;	//out of memory
+ 
+	int frame = mmap_first_free ();
+ 
+	if (frame == -1)
+		return 0;	//out of memory
+ 
+	mmap_set (frame);
+ 
+	physical_addr addr = frame * PMMNGR_BLOCK_SIZE;
+	_mmngr_used_blocks++;
+ 
+	return (void*)addr;
+}</div></pre></blockquote> 
+ 
+The PMM also containes another allocation routine: <b>pmmngr_alloc_blocks()</b>. This routine is almost
+exactally like the above so I decided to leave it out of this tutorial for space purposes. It provides
+a way to allocate a sequencial amount of blocks rather then a single block.
+ 
+<p><b>pmmngr_free_block () and pmmngr_free_blocks () - Releases a block of physical memory</b></p><p> 
+ 
+Alright...We now have a way to allocate blocks of physical memory. Now we need a way to free these blocks
+of memory so we do not run out of memory. This is too easy:
+ 
+</p><blockquote><pre><div class="code">void	pmmngr_free_block (void* p) {
+ 
+	physical_addr addr = (physical_addr)p;
+	int frame = addr / PMMNGR_BLOCK_SIZE;
+ 
+	mmap_unset (frame);
+ 
+	_mmngr_used_blocks--;
+}</div></pre></blockquote> 
+ 
+<b>pmmngr_free_blocks()</b> works almost the same way but is used in conjunction with <b>pmmngr_alloc_blocks()</b> 
+used to free a sequencial amount of blocks rather then a single block.
+ 
+	<h1>Demo</h1> 
+ 
+	<center><img src="images/pmm.png"><br><i>The Physical Memory Manager running in VirtualPC</i></center><p> 
+        </p><center><a href="Demos/Demo11.zip">Demo Download</a> (MSVC++)</center> 
+        <p> 
+ 
+	I decided to spice things up a little. The memory map from Bochs is boring ;) This demo is quite
+	nice in a way that you can run it on alot of different machines and see how different computer systems
+	map the regions of physical memory. This demo should work with all optomization levels as well.
+	</p><p> 
+	This demo uses the passed multiboot information structure from the bootloader to get the size
+	of physical memory. My VirtualPC is set to use 130 MB of memory so I would say it detected it
+	pretty well :)
+	</p><p> 
+	There is alot going on in this demo. Some updates in the second stage boot loader is used to detect
+	memory using the methods we looked at above, and passes this information to the kernel using
+	the multiboot information structure in which we looked at above, remeber?
+	</p><p> 
+	Play around with the allocations and deallocations and study the way the code works. If any
+	of the allocation routines return null (0) then it indicates that there is no more free blocks
+	left. If you are out of memory, try to free some memory or allocate the objects on the stack
+	or globally instead.
+	</p><p> 
+	There is an important thing to note here: Notice how all allocations are aligned on 4k boundaries?
+	This is a very important characteristic when we start getting into pages and virtual memory in
+	the next tutorial.
+ 
+	</p><h1>Conclusion</h1> 
+ 
+	This tutorial was not to bad, huh?
+	<p> 
+	We first looked at physical memory itself; understanding what it is and how it works, the physical
+	address space and addressing modes. We have also looked at how to abtain memory information from
+	the BIOS and give it to the kernel as well as the development of a physical memory manager.
+	</p><p> 
+	Now we have a way of allocating and releasing physical memory blocks. This is great, but it
+	still has some problems. That is, if we load a file or program we can simply use our physical
+	memory manager to allocate an area of memory large enough for the file or program. But...What
+	if there is no area big enough for it? This also means any programs loaded must be linked to
+	a specific address that it is loaded at by the kernel.
+	</p><p> 
+	This is where virtual memory and paging comes in. In the next tutorial, we will be looking
+	at paging and virtual memory. We will learn how we can map and control the full 4GB address
+	space. We will look at what virtual addressing is all about, and how we can use it to fix
+	all of the above problems and more. I'll see you there.
+ 
+ 
+	</p><p> 
+	Until next time,
+	</p><p>
+	~Mike<br>
+	<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2/">Neptune Operating System</a></i>
+
+	<br><br>
+	<i>Questions or comments? Feel free to <a href="mailto:neon6000@aol.com">Contact me</a>.</i>
+
+	<br><br>
+	Would you like to contribute and help improve the articles? If so, please <a href="mailto:neon6000@aol.com">let me know!</a>
+
+<br><br> 
+<table width="100%" border="0"> 
+<tbody><tr> 
+<td><p align="left"> 
+<a class="anchor" href="OSDev16.html"> 
+<img src="images/left.jpg" border="0"></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev16.html"> 
+<font size="4">Chapter 16</font> 
+</a> 
+ 
+</p></td> 
+<td> 
+<p align="center"> 
+<font size="4"><a class="anchor" href="OSDevIndex.html">Home</a></font> 
+</p> 
+</td> 
+<td><p align="right"> 
+<a class="anchor" href="OSDev18.html"><font size="4">Chapter 18</font></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev18.html"><img src="images/right.jpg" border="0"></a> 
+</p></td> 
+</tr> 
+</tbody></table> 
+ 
+ 
+ </p></td></tr></tbody></table></body></html>Ytext/htmlUUTF-8_1http://www.brokenthorn.com/Resources/OSDev17.htmlP¦#'Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl!~5 ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl!ˆ© ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔO+ÄÿØÿà JFIF  ` `  ÿá Exif  II*          ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  ŠÅ" ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? õÍcX¿³ÕM­©¶ I	–6c’Ì;0þíSþßÖ?¿cÿ €ïÿ Ç(ñüŒ-ÿ ^‘èrV} hoëß±ÿ Àwÿ ã”oëß±ÿ Àwÿ ã•ŸE hoëß±ÿ Àwÿ ã”oëß±ÿ Àwÿ ã•ŸE hoëß±ÿ Àwÿ ã”oëß±ÿ Àwÿ ã•ŸE hoëß±ÿ Àwÿ ã”oëß±ÿ Àwÿ ã•ŸE hoëß±ÿ Àwÿ ã”oëß±ÿ Àwÿ ã•ŸE hoëß±ÿ Àwÿ ã”oëß±ÿ Àwÿ ã•ŸE hoëß±ÿ Àwÿ ã”oëß±ÿ Àwÿ ã•ŸE t:©ysußDI)‰
+ýâàç,º+z¸}*úâÇP»0ÚùÁâ‹'œ`¿÷#^øü{loßÐ3ÿ ¹ÿ äz è(®û~ûþŸøíÏÿ #Ñý¿}ÿ @Ïüvçÿ ‘è ¢¹ÿ íûïúã·?üGöý÷ý?ñÛŸþG ‚¹‰<Mr·ÇŸ,r¼ašä‚v±\ãaÇOZŸû~ûþŸøíÏÿ #×9+M#.Æ{‰˜¯<#qÈó û
+ Ûÿ „¦óþ°àYÿ ãtÂSyÿ @Ø?ð,ÿ ñºÈ¢€5ÿ á)¼ÿ  løøÝð”ÞÐ6ü?ün²( øJo?èþŸþ7[:Mój:tw-‰™JÜV+×ÓÒ¸ú¿¢ê÷Vºh†;5Ypûgç÷Œ†ûý(°¢¹ÿ íûïúã·?üGöý÷ý?ñÛŸþG ‚Šçÿ ·ï¿èÿ ŽÜÿ ò=Û÷ßôÿ Çnù€:
++Ÿþß¾ÿ  gþ;sÿ ÈôoßÐ3ÿ ¹ÿ äz %ñL	<±ÇòähË(© ã.QGü%Ð:ûÿ !ñuÎC#JÓHË±žâf+ÏÈÜrüÀ>Â¤ ÿ øK ÿ  u÷þBÿ âèÿ „²ú_ä/þ.°( ÿ øK ÿ  u÷þBÿ âèÿ „²ú_ä/þ.°( ÏN¿Q²K˜£‘‹.Ù1¸b§8$u½\¬È/úë7þzØ Š( Š( Š( Š( Š( Š( Š( CÄò0·ýzEÿ ¡ÉYõ¡âù[þ½"ÿ Ðä¬ú (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š ®–þ~£7ú?›ˆ£ÿ –f9úc.?OÇµ°Ó‡þI÷WK?Q›ýÍÄQÿ Ë3¿ý1—§ãÚÇØ?éÃÿ $¿ûŠ€°Ó‡þI÷`ÿ §ü’ÿ î*>Áÿ Nù%ÿ ÜT}ƒþœ?òKÿ ¸¨ ûý8ä—ÿ qQöúpÿ É/þâ£ìôáÿ ’_ýÅGØ?éÃÿ $¿ûŠ€°Ó‡þI÷W²]Û·H6íÛÞ1µqÿ | éV>Áÿ Nù%ÿ ÜU^Év@WnÜM Û·n?xxÆÕÇýò>ƒ¥ X¢Š( ¢Š( ªövžlÿ có3,Ÿ7Ùwççnÿ e|ÿ ßGðè,U{;O6±ù™–O›ì»óó·²¾ï£øt >Áÿ Nù%ÿ ÜT}ƒþœ?òKÿ ¸¨ûý8ä—ÿ qQöúpÿ É/þâ ìôáÿ ’_ýÅGØ?éÃÿ $¿ûŠ°Ó‡þI÷`ÿ §ü’ÿ î* >Áÿ Nù%ÿ ÜT}ƒþœ?òKÿ ¸¨ûý8ä—ÿ qQöúpÿ É/þâ 
+öK²»vâiÝ»qûÃÆ6®?ï‘ô*ÅW²]Û·H6íÛÞ1µqÿ | éV( ¢Š( ¢Š(§ðÇü€bÿ ®³è×­ŠÇðÇü€bÿ ®³è×­Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š ä<Aÿ #×¤_ú•ŸZ ÿ ‘…¿ëÒ/ýJÏ Š( Š( Š( Š( Š( Š( Š( 
+éŸ¨ÍþæíŠ?ùcæc—ÿ ¦2côü{Xûý8ä—ÿ qUH 7Ö`3Hñ˜<Ì›þ˜IÓêz-¿°Ó‡þI÷ `ÿ §ü’ÿ î*>Áÿ Nù%ÿ ÜT}ƒþœ?òKÿ ¸¨ûý8ä—ÿ qPöúpÿ É/þâ£ìôáÿ ’_ýÅGØ?éÃÿ $¿ûŠ°Ó‡þI÷ `ÿ §ü’ÿ î*¯d» +·n&mÛ·¼<cjãþùAÒ¬}ƒþœ?òKÿ ¸ª½’ì€®Ý¸šA·nÜ~ðñ«ûä}J ±EPEPUìí<ØþÇæfY>o²ïÏÎÝþÊùÿ ¾áÐXªövžlÿ có3,Ÿ7Ùwççnÿ e|ÿ ßGðè ,}ƒþœ?òKÿ ¸¨ûý8ä—ÿ qQöúpÿ É/þâ£ìôáÿ ’_ýÅ@Ø?éÃÿ $¿ûŠ°Ó‡þI÷`ÿ §ü’ÿ î*>Áÿ Nù%ÿ ÜT }ƒþœ?òKÿ ¸¨ûý8ä—ÿ qQöúpÿ É/þâ£ìôáÿ ’_ýÅ@ì—dvíÄÒ»vã÷‡Œm\ß#è:UŠ¯d» +·n&mÛ·¼<cjãþùAÒ¬PEPEPþ‹co©xYm.ãómä–Q$eˆÌv¶:©Æ
+ž ‘\þ™£iqj:ÍŽ³¤éZu„–×’éÖÒn°7Î|¬jÌvüÁ“Ê‰·ÎƒE±·Ô|,¶·Qù¼²’ ‰˜«+`@! Š%ð^‰=›[J—Ò+KÍ+êW&bÑ’c_3~ÕbX.í¡Žà3Í rïaye6Št›H,`ºñÉ¦ÚÏ-¡:|¨I‰q·,²Kåü¤ïÃfm±ø‹ÄZ•Ï‡o^im¨E£ë Þ¤M½Öxâcað[;HN[gÍØIá-*k(m%mIÒ´Å#j—&T“aL¬¾fð6³ ã“Ç5$žÑ¥³û,–{¡û$öd_-åLÛ›9fr —$±99É9 “VÔ¦Ð¼+}ª\,wSØYIq"ÆK+" d±PHõlg½rëyªé~#ñ×÷i»LÓÒ;„ŠA†žèä‚Î_,@X™PKá{O°Û¶ö	cóíL^K%Ã|ÄÆrù/‘×vsß5—„txñ|»¹ÚF’És}<ïˆÙš=®îY
+³3¤y€h—ƒÄ:Î±©èqÇw"ß]{;¢Ú|ößj_±4ã÷R8hÀW»,AÀÚu#ñUÐñ}¶šïö·wrÚ"Áe8XŠG#î7G÷R7îŠ´jVb2|³»Rhv¢!oi$F;Ñ¨K‰C5ÀË23nË\†ÎCå‹d’L‹ám5ˆõQgþ™¯4Oæ¹XÕ•Ê&v¦ýì[ nl3e€ /^“øëDM.KH§m2ø4·HÒ,kæÚ„R¥É n\dœœm4ÿ á7¼ŸÃÚ¦­¬ù·Ö`‰É|I*NÅ‚7(ò”pëê1Òj¾Óõ›‹{‹¿µ¬öèé–·³[0W*X© ”Cƒž‚«ê^Ðõ[u·žÒH âÔÇiq-²¼ #a(d °
+Ùsc9 §{®êv¾([IÖ&XãŒOi3-Â¸Q¼]/îâmÌQbu,Ì€dyŠGQYsx{L¸Õ£$÷¬Œ‚yR:ãk¼A¶;«†e$lL•q©@Q@Q@‡ˆ?äaoúô‹ÿ C’³ëCÄò0·ýzEÿ ¡ÉYô QE QEu‹—’Iíì<í>)fYœY«”ˆ)Üæv¶Õo—tgTÕ®5û{6ÊH¬æXL“Þ¼lÌcI>è‰¸ùÀëÚ™m§§,Ú}µ—›æÜM<w¬ËäÆ%‘¤;×prT± (!°¿2î;[‡’ãUÖ.®Úò1=Ò¼>EüÐ« ‚%ÎØÜîVŒñéŠ ·¥kqêó.‘=½ê3‘¸¬ÆL)¡_©ëíÍ2ÿ ûFÕçòü½·Á·vsåÊÑçñÛŸlÕ-fÒu6»±ÓžæÞKXm~ÍjcF„FÒ ;*•"B:‚6Œ	ÛoG²“OÓ¼™™¯4Ó¸BJ«I#HTŒ¿ÀÎ3œPú(¢€
+(¢€
+(¢€)Ãmçj—èÞn?ùwó?½ÿ L$ôöéÔãsìôáÿ ’_ýÅTà¶óµK³öo7	ü»ù˜ûßôÂOOnN0·>Áÿ Nù%ÿ ÜT }ƒþœ?òKÿ ¸¨ûý8ä—ÿ qQöúpÿ É/þâ£ìôáÿ ’_ýÅ@Ø?éÃÿ $¿ûŠ°Ó‡þI÷`ÿ §ü’ÿ î*>Áÿ Nù%ÿ ÜT }ƒþœ?òKÿ ¸ª½’ì€®Ý¸šA·nÜ~ðñ«ûä}J±öúpÿ É/þâªöK²»vâiÝ»qûÃÆ6®?ï‘ô(–¿©^éd÷ö¶v÷1[C$Ó	nZ&
+«Ÿ—Ù'®;~m©^ÿ i[Ø_ÙÛÃ,ðÍ00\´ª6ˆwEäù‡é·¾xwˆ-f¾ðÖ©in›çžÎh£L¹™'Éªú »·×´ûû}:âö8ín!qÄYÞ¿}×‘ºPîµ=Kûbm?O°´ŸÉ·Šw’âí¢ûí"€ óþ¬úu«z]ÿ öˆœÇå¸’HdMÛ€xÝ‘°xÈÜ§ ‘ŽJç/,~Ý®I¨xB[øå³†(Òeµ‘¡e’bÀî“!ü¤ûò1[º¬¶ZDpÌžYó%t‹ ù1´ŒÉ¨Up2Ü@¥Uìí<ØþÇæfY>o²ïÏÎÝþÊùÿ ¾áÐXªövžlÿ có3,Ÿ7Ùwççnÿ e|ÿ ßGðè ,}ƒþœ?òKÿ ¸¨ûý8ä—ÿ qQöúpÿ É/þâ£ìôáÿ ’_ýÅ@Ø?éÃÿ $¿ûŠ°Ó‡þI÷`ÿ §ü’ÿ î*>Áÿ Nù%ÿ ÜT }ƒþœ?òKÿ ¸¨ûý8ä—ÿ qQöúpÿ É/þâ£ìôáÿ ’_ýÅ@þ ÷Iý—gkw-—Úu)a‘â7	3íÓ”^6 éUuíBÉ.tÅÔ%i£’Ä¥éŽ?7d÷[6ì$l a‡¶…Ö™sw£Z\Ek=ì³/n]ND‘•*<²8œ`tè:S.t››iž[èŽ§,–în>ÎDJ ”Hˆ#ßœgvrÄ’çœ` 
+z½ýþ…c ¿–î_ì»«Èn'Ž0ñ¼AF0ªóŒ®AS’À€¥–©kPéþ&þÙHÉqûwòc»yŸºE#çT\ž>|c$båÖƒq©YÞ.¡{—SÙÍg@cHR@7…Ø±$)9la@ |ÄèÉa»UƒPŠO-Ö6†eÛ‘*W=9VèN@ã6@Ê(¢€:È
+/úë7þzØ¬È
+/úë7þzØ Š( Š( Š( Š( Š( Š( Š( CÄò0·ýzEÿ ¡ÉYõ¡âù[þ½"ÿ Ðä¬ú (¢Š (¢Š (¢Š (¢Š (¢Š (¦I*B»¤`£8¤úÜý*/¶ÅýÙ¿ïÃÿ … X¢«ý¶/îÍÿ ~ü)ÑÝC$sÑ]JôÈ `¶óµK¿ôo7	ü»ùŸÞÿ ¦z{têq…¹öúpÿ É/þâ«ÞÓì¯5óugo9BG›¶2dÏQì?!]öÿ @«üOð Cìôáÿ ’_ýÅGØ?éÃÿ $¿ûŠºÿ ì-þV?øŸáGöÿ @«üOð Cìôáÿ ’_ýÅGØ?éÃÿ $¿ûŠºÿ ì-þV?øŸáGöÿ @«üOð Cìôáÿ ’_ýÅUì—dvíÄÒ»vã÷‡Œm\ß#è:Woý…£ÿ Ð*Çÿ Óü+ŽXÒ)®#.¦UU 	[ 
+ uQ@Q@W³´ó`gû™™dù¾Ë¿?;wû+çþú?‡Ab¶ü?¤é·::Mq§ÚK+K6ç’f?¼qÉ"€1>Áÿ Nù%ÿ ÜT}ƒþœ?òKÿ ¸«¯þÂÑÿ ècÿ €éþahÿ ô
+±ÿ Àtÿ 
+ ä>Áÿ Nù%ÿ ÜT}ƒþœ?òKÿ ¸«¯þÂÑÿ ècÿ €éþahÿ ô
+±ÿ Àtÿ 
+ ä>Áÿ Nù%ÿ ÜT}ƒþœ?òKÿ ¸«¯þÂÑÿ ècÿ €éþahÿ ô
+±ÿ Àtÿ 
+ ók«‰­á´³·>D—·²Û	6€a I!`¤œF@È 	\†_>ãF´™ï®ö%dX$Ú¢iÛh€
+™ÜTùGÍÎ6–iï´ÕœÈ°2ÛÍk{4–®©•ƒÈ lxfR88'Z]æîÆD»¾]¼‘J²$ea¢pè{€-ónl‘¸ ¡@'‰ Š(÷Ù^}¥î~ÈmU¤I|£(«ÁPàÄÃql2Iu®ØYÁe'Ù®-îY`1IŠŒ‡æþ,§ ‚J•$d‡Á¡H·0ÝÜ]¤—|of1ÂQ¾Î`
+ªX•vžKrLðZèRYê6·QÝ!XšôÈ	Ë­ÄÂ\»å*TàägØ–Þ(ŠöÊÒâÓM¿™®ã3AØãwŒÜÿ ;¨ Uë’yPWæªwzüÒÝ4¶7´’=.XO–9YîYò3ó ž°jäZÅ•–’¶W±%ÖŸgö1$ðD"=Ç`u æ%#æÀ91|-1Ç7N"ŠP:m¶²™H#%³Žƒyé@o…üA†ÚÆK;¨âžîæÞÞñ¼³Ò£ÊÌŠäå”/ÈpNW;~×"ñoª[[]ÁkpŠñ}ª0ŒêT…É8É#'®ÒFT«[Áþ†Þõ5€š`ÅÍÔ«"iÈ.ÙžIpI%~fÀUS€£q †ët3ûÃún•çyßaµŠÛÍÛ·~Ä»8Î3Œš Ó¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š(ñüŒ-ÿ ^‘èrV}hxƒþFÿ ¯H¿ô9+>€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€+Ûþõä°X±EÈûŠ	~#?—<
+±š¯eþ¡¿ë¬ŸúTùò8íš \ÓdE•
+? õ?—#ðý:ÓúÑƒèhÚ§skutRÛíc±/%EÏÉõç®?q»ý¿}ÿ @Ïüvçÿ ‘ëÓ 7·¿èæP­Æ`ó1óÉÿ L$Ç9ôúžƒOìôáÿ ’_ýÅ@ÿ Û÷ßôÿ Çnùíûïúã·?üX`ÿ §ü’ÿ î*>Áÿ Nù%ÿ ÜT¿ý¿}ÿ @Ïüvçÿ ‘èþß¾ÿ  gþ;sÿ Èõöúpÿ É/þâ£ìôáÿ ’_ýÅ@ÿ Û÷ßôÿ Çnù¹ÈdiZiv3ÜLÅyà™Ž@?˜ØTŸ`ÿ §ü’ÿ î*¯d» +·n&mÛ·¼<cjãþùAÒ€,QE QE UýÄV–`¶•2é,¹?hzÈÇ£H~â¨U{;¿*O¶yx–O—í[1ó·oµ&?ï‘øõ ?ü%Ö?óÏÿ &í¿øíð—Xÿ Ï?ü›¶ÿ ãµöÿ úÿ Éßþí£íÿ ôÿ ÿ “¿ýÛ@ÿ ð—Xÿ Ï?ü›¶ÿ ã´Â]cÿ <ÿ ònÛÿ ŽÖÛÿ éÿ ÿ 'û¶·ÿ Óÿ þNÿ ÷m oÿ Â]cÿ <ÿ ònÛÿ ŽÑÿ 	uüóÿ É»oþ;Xoÿ §ÿ üÿ îÚ>ßÿ Oÿ ù;ÿ Ý´3-ÃM2ð²\Lãx21ê	ð$T•^É·À[vìÍ!Ý»vxyÎæÏýô~§­X Š( Š( ŸÃò‹þºÍÿ £^¶+Ãò‹þºÍÿ £^¶( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š(ñüŒ-ÿ ^‘èrV}hxƒþFÿ ¯H¿ô9+>€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€9¿»³ñ„…§s¦˜â†X‡D’YçTwÎåXÈD€ž³nu-[QþÕž×S–Õ.ÿ ³_O(2°G%ÓÆ3½@raé]?ö-µôwï#J¯tžAd öK+#¡ÇÊà¹ óÈSÆ9š]ÊIK¨h—mª,qaQÞS$aF8ln˜ K^»¾‡LK7{I#¹µ}A²W7+	ƒ8Ä¿2ö„‚±5ÝÂø_¸YäÅý¥²Mä2m–m¸=° €ô¬t"nHÞ†âæ+—)†Ö@)u,G«¹êÙ¤—A‚YŸý"á,¥bóX)Q¬y$ü»€'ª†¹ÜæÜ í6ØÍ}}›o3ÿ >ûÿ ÿ é„žžÝ:œatþÁÿ Nù%ÿ ÜU—¦Ûy××ßèþn?ñïæcçúa'§·N§]O°Ó‡þI÷ `ÿ §ü’ÿ î*>Áÿ Nù%ÿ ÜT}ƒþœ?òKÿ ¸¨ûý8ä—ÿ qPöúpÿ É/þâ£ìôáÿ ’_ýÅGØ?éÃÿ $¿ûŠ°Ó‡þI÷ `ÿ §ü’ÿ î*¯d» +·n&mÛ·¼<cjãþùAÒ¬}ƒþœ?òKÿ ¸ª½’ì€®Ý¸šA·nÜ~ðñ«ûä}J ±EPEPUìîü¨>ÙåâY>_µlÇÎÝ¾Ô˜ÿ ¾GãÔØªöw~TŸlòñ,Ÿ/Ú¶cçnßjLß#ñê@,}¿þŸÿ òwÿ »hûý?ÿ äïÿ vÑöÿ úÿ Éßþí£íÿ ôÿ ÿ “¿ýÛ@Ûÿ éÿ ÿ 'û¶·ÿ Óÿ þNÿ ÷moÿ §ÿ üÿ îÚ>ßÿ Oÿ ù;ÿ Ý´ }¿þŸÿ òwÿ »hûý?ÿ äïÿ vÑöÿ úÿ Éßþí£íÿ ôÿ ÿ “¿ýÛ@ì›|·nÌÒÛ·g÷‡œîlÿ ßGêzÕŠ¯dÛà-»vfîÝ»?¼<çsgþú?SÖ¬PEPEPø,4+ŸCs¯ÚAuko,Ûb¸ŒÌ…šb"ä<„áW
+[æ*¿xƒ— xnÚó\¼Ó¼A¥Ú]Åkeö–wq$Ëd“]^2Æ åPˆÖ!8ýÒ€HU5±§øO×4[¾û^ûK‹‡­ïf·(Ìî¤þí×'i#' f©Î„žÒ¥HT¶¤¯ló£Õ.RW]Å€y@ò Y¶†'nãŒdÐ¤ë:ÅŽœuÈž	þÍàý2úõîË¼—Ó”#ÿ 7ï	m¤‘óÆååþ¥/Œ­`²–ÒÎñÙîB@Û®—û0K™p	ÆTd»þ7Asáêâ9žÒD	o¯‘Ä±@ð¡b±¼HÁöYHÃÓŠ±7‡´Éî…ÓÁ œ^­þôžD>zÄ"ò°ãËJýÒ3rh?jSéštom4Í,¢5imå¹n…ŽÈ"ùål/Ýaw98BŸâ­WY‹L†ÂD»/d‘®¢’5”ZÎ°•~xL…Ãe·˜ðAW<×Q©ivšµºÃv’Ž7ŠWŠHÛee8$Èb:+<xCCK{+{I,à·yZ±\KlÑùŽ]ÕZ6VXçfvð¼|£ 6¥©KðôË%´Zx6‹‘0mÒ¬ÐJ˜FPB[•mùò}êê5?j¶â¼›O±é÷¶ÖŠIeg™m¾vEå‚Øí^dáFÂ¹mK¯h7štZÎ–°Ú-H/&‡|
+0±ÈQÁ‘@'óÍýã	tM:x¯ã’ß+*ÏpC°&ETUu åDi‚¸ ¨#š æãñ.¹.ƒ4ëg ’+ß³µëi*^X9lÉó˜oarùÚ
+‰.üE«N¸¶0m›ÍÞÁ¦Ü^*º6Ð†Ù
+Ë7Î[q>[FQ‹lÂ/¤ÿ g}‹ÉŸo›çùÿ k—íf6ïó÷y›¶ü™ÝŸ/Ýâ‰¼/¤Ígml!ž·ÝåËow,3|Ç/™Qƒ¶æÃ6Xî`ä€h?Å—?løY®]n¼íâLÛËæÆs‘ð7/<6G8^ãÄšÆŸqsg{‹]G.šàÂ¯±#ºº04|œ» F"O”6áò.0zIô«]í£|–æÕ­ãùDWnÁ·FÞ8Æ;U8|/¤Ãgslaže¸ÛæKqw,Ó|§)‰]‹®ÖË.mbX`’h.ÿ Ä:ªa- ZšZyëi%É†#m»ÚÈyIy6aÀ`Ç…lîh—Ï¨èð\Ë$HÛ•žeRUŠœ£üÑ·4m’•$•É§„tx¬¦µXîÈ–ãíM3_NÓ‰v÷¬ÅüÅ;'>\Ž„ƒ©cco§YÇkk—
+d€X±$’Y™ŽK1$’Ä’I$’M X¢Š(ñüŒ-ÿ ^‘èrV}hxƒþFÿ ¯H¿ô9+>€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€+Ù¨oúë'þ†Õb«Œûóä³BÉÐg'=9=02¿o³ÿ Ÿ¸?ïà U·Ùÿ ÏÜ÷ðQöÈŸå·e™Ï@‡ }Héþqš §¦Û‰¯¯ˆ¶ópÿ óÃÌþ7ÿ ¦z{têq…Ôûý8ä—ÿ qS´8tx/.—Uû	fŽ&VºT›t›ˆÝêqúVïüRõÿ È4öúpÿ É/þâ£ìôáÿ ’_ýÅ[ÿ ñHÔÿ  Ñÿ ‡ý@ÿ ò `}ƒþœ?òKÿ ¸¨ûý8ä—ÿ qVÿ üRõÿ È4Å!ÿ P?üƒ@`ÿ §ü’ÿ î*¯d» +·n&mÛ·¼<cjãé´}Jéÿ âÿ ¨þA®r'tßgÙä}¢o/ËÆÝ¾ccã 	(¢Š (¢Š *½ß•'Û<¼K'Ëö­˜ùÛ·Ú“÷Èüz›·áí2%y.Ã4³dGw*/úÖè€‰öÿ úÿ Éßþí£íÿ ôÿ ÿ “¿ýÛ]ö5¯üõ¾ÿ Àùÿ øº?±­ç­÷þÏÿ ÅÐ!öÿ úÿ Éßþí£íÿ ôÿ ÿ “¿ýÛ]ö5¯üõ¾ÿ Àùÿ øº?±­ç­÷þÏÿ ÅÐ!öÿ úÿ Éßþí£íÿ ôÿ ÿ “¿ýÛ]ö5¯üõ¾ÿ Àùÿ øº?±­ç­÷þÏÿ ÅÐdÛà-»vfîÝ»?¼<çsgþú?SÖ¬SUs\"–!n¦ ³<JÝIäýM:€
+(¢€
+(¢€:ÿ È/úë7þzØ®>ÛV¼Ó4="(.î¯õ	í‘g¹0"ãÏ”±`ŽzDF1Þ´ ñ#Ûj¦½mŒšm¢_NÖÓµÄbó0rcFÜ<™2¡zmÁ$ :
++—¶ñeÃxr[Ûí+ìš´7qØÍ§ Šy^5ˆ4 `©DÅ”6	«–ž%‡PY[ÈãX·7d!qbç¨$4¦ÐsûÌŒ…4¹ES¼Õ´Ý>âÖÞ÷P´¶žíö[G4Ê3d ',rÀ`zZ­¦­úX6¡h/ÙÜÌ¾c2 vs’B²±ƒÐÐÊ+ïÄVpkVZT2Áqu5Ø¶¸&í³³+2Œ‘‘ 8ÎsÛ™5]VkK‹{hîµ+”y"ŠYLQˆÐ¨ww
+Ä ] X’ãŒne Ô¢°Æ¿2K¥ÛÜéÒAswzÖS#1Û,M½n$B# ½ÈVVArmOÊñ–“äçí6“Üù»¾ï”ð®ÜcœùÙÎxÛß< hQYúf§ý«æÜ[Ãÿ þ½Éoøùë¹Õqþ¯¦ÖÏÍÉnÖzv#†ê'žàÚZAß	×@2­´æ"ø ˜˜älÊŽs¹ESM[M’Þîá5F‚ÉÝ.¤Y”¬ƒ.ç
+TrAÆ;ÔÛº?ö?ö¿ö­ögüþý¡<Ÿ½·ïçoÞã¯^(BŠŽ	áº·ŠâÞXæ‚T‘°eu# ‚8 ŽsE bêš×ú‡Ú¢¼ŽÝ,e^ýçpþ÷éUá¼ÿ  ”øøåuP/ÿ µçý ÿ ÀCÿ Ç(ÿ „Zóþ‚Pà!ÿ ã•ÔQ@¿ü"×Ÿôƒÿ ÿ £þkÏú	Aÿ €‡ÿ ŽWQE rÿ ð‹^ÐJü?ürøE¯?è%þþ9]EËÿ Â-yÿ A(?ðÿ ñÊ?á¼ÿ  ”øøåuP/ÿ µçý ÿ ÀCÿ Ç(ÿ „Zóþ‚Pà!ÿ ã•ÔQ@¿ü"×Ÿôƒÿ ÿ £þkÏú	Aÿ €‡ÿ ŽWQE rÿ ð‹^ÐJü?ürøE¯?è%þþ9]EÏXxoìóM-Íä’´Šª<†’  -×küß{¿¥hÿ cZÿ Ï[ïüŸÿ ‹­
+(?û×þzßà|ÿ ü]ØÖ¿óÖûÿ çÿ âëBŠ ÏþÆµÿ ž·ßø?ÿ Gö5¯üõ¾ÿ Àùÿ øºÐ¢€3ÿ ±­ç­÷þÏÿ ÅÖ7ü"×$¦-E6‘™D3°ËÁbãw^¤WSE rÿ ð‹^ÐJü?ürøE¯?è%þþ9]EËÿ Â-yÿ A(?ðÿ ñÊ?á¼ÿ  ”øøåuP/ÿ µçý ÿ ÀCÿ Ç)Öþ·Xq=ÂÉ)ffakÉ$ŸâF=û±®šŠ çÿ á±ÿ žŸù)mÿ Æ¨ÿ „FÇþzä¥·ÿ ®‚Š çÿ á±ÿ žŸù)mÿ Æ¨ÿ „FÇþzä¥·ÿ ®‚Š çÿ á±ÿ žŸù)mÿ Æ¨ÿ „FÇþzä¥·ÿ ®‚Š ãcðÎ§o¾(E›D$r…¤*v–$eDx{`Sÿ °5îXÿ àCÿ ñºëè CûXþåþ?ÿ £ûXþåþ?ÿ ®¾Š ä?°5îXÿ àCÿ ñº?°5îXÿ àCÿ ñºëè :ïÃ7Wv~³¸Y6[jrÜÝ=¥ÓÂQ€
+º”o¿"—×ž3PÞAö½%ažâÒóP…äÔ.nÌò5Ì­†F,ë½^ŸweÀo¼Ü÷P/{áë‰üimz1ö\ÝE±§„:¦åÏÌÍæÆÛ±òýŽ?öJžðõÆ•«jÜ¶ëxsm§)ÀdyŽÁ“±xíã‹T=6…ê( ââRßR·Ñ ‹Ý1­Ã[5¼~kbL¥ÃÊ¬Û0àF#ÇÌÒnd0±wáË·¸×®"±Ï½×tÛ”%¼&Ð±'9Â˜æ!O=p>n{J(ƒ¶Ñu¼A£E&‹#bþôê{á1ˆnË_ŸÍÎeˆ0ØS© Ðk×pk6:å¥¬—ÆÖÞ{Y-"dYeh›z!ISI\†'9P­¹E rz¨×&:¦ÚD“½®¦×ÆÚH„±Bm¦ˆg‘QŸt€§ví»š¾¡£OâýfÆMOKÔ´ý1,¯-nà’â$i„nU	†F;cŸ•ù0ß+a»J(?LþÑ‹Í´Ô?äãÊ½GÚçï(ÆÙ>l§!—(œ>¡ámf}+P†;=ÒK§ø‚j½ÍÒÉ ëüJ	öïƒ^‘E pú÷†/g¸Ô†—Ù­ÖÓJ¿fòÔƒku,¬‘«|¡‚¸É œˆãÐõÒ&½kmfMEõ?¶«µÍŸÛc>@ƒr¨Ao ®ÂHØÅ·oÂŽòŠ ËðôvÚ$)}q\‘ÙUQXîv`dÙòy¤\¯Ê\±bŠÔ¢€?ÿÙZimage/jpeg_6http://www.brokenthorn.com/Resources/images/memory.JPGOŠbplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_6http://www.brokenthorn.com/Resources/images/memory.JPGÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl!‘q ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Tue, 24 Jun 2008 04:04:10 GMTVApache_Mon, 12 Apr 2021 11:23:00 GMT_max-age=2592000_Sat, 13 Mar 2021 11:23:00 GMTU11204_Upgrade, Keep-Alive_Ä
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDExOjIzOjAwIEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDExOjIzOjAwIEdNVKEfVTExMjA0oSFfEBNVcGdyYWRlLCBLZWVwLUFsaXZloSNfEBQiMmJjNC00NTA2MWE2ZjU4MjgwIqElVWJ5dGVzoSdfEB1UdWUsIDI0IEp1biAyMDA4IDA0OjA0OjEwIEdNVAAIACMAMAA4AEMASABPAFcAZQBqAHkAhACJAJcApQCnALIAtAC3ALkAzgDQANsA3QDkAOYBBgEIARoBHAE8AT4BRAFGAVwBXgF1AXcBfQF/AAAAAAAAAgEAAAAAAAAAKAAAAAAAAAAAAAAAAAAAAZ8=_"2bc4-45061a6f58280"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí&+6?EHQZ\^emx‡‰‹‘“•—™›Ÿ¡£²´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÝåðþ /:CHM[fi~ž¥Å×÷ýÛòý"/4HL`             ~              nÔ !"Oc#‰PNG
+
+   IHDR  ‹  ×   [,‡Q   sRGB ®Îé   gAMA  ±üa    cHRM  z&  €„  ú   €è  u0  ê`  :˜  pœºQ<  b¡IDATx^í½yØmEuçýüºÿè§óëü:ú<Q£Bï½€ Êè	¢ÁÄŽíš -Dã,­1*âÜ–Ž?§D‘˜(ŠC«8@d¾Ì£ 3W¢!†èÛõ¾û¾uëÖ°Öª½ëœ³Ïy?÷Ù!çîSµjÕg­Zßª}Î¹>àƒÇŸ|ÿ/·ùÿÏ6ÿöËmÞ÷Î7üúÿ÷kKKKÛð€   ixÀðÓ»ÿéš«.ÜjÀc?vòû>|rwë¯?w  @ 3!ÐiñÏVÿlÓÉsçÊëßò~.@ € fB Ób/Ò›Î¯zíÿè®W¿î¯ÓÇÞwÜÿ×‰_{Ç;NøÓ×¾ë5G¿ï•¯9ÆÝç‚   ŒÀ¾èHË¥zn1âÚLÈŽb/Ò›ú%/ÿó—¼âî:éçl¼èGW]þãk®ºõ†ë7Ýð£»¯¸ìæóÎ¹ê«_9ã„ã¿øº£Þû‚?zC×’€  0s‡ýÁ+Þø¶ã,—k)xëÞ}ÍÑï´\ª‹3®MÞÎËÿ|‹B»Wð‚×øëË_ÚxÏÝ·ÝtÃoøÑ-7ýøÎMwüô¿øW÷Ý±ŸÞsß…ÞýÙÏÜzøsß¶ç5  @`V~ö‹^÷†wGw-]ûlcwÿÿô-Ï<ìËåZ
+všøÓ‰ô6>ñž}øËýõw'_pÇí7_wõ.½äš‹.¸ê‚s®¼ê²ëO9åâ?ãWŽxÅÉ¯|å?<ëYo
+Ûw¯Ÿùœ—…×Á‡¾¸»ÜÍ´±åŽëñ=è¸+5µï1D7‹ì Æ‰d}èá˜ì|-Šª6.
+O;øÝÕ…ÃºÖ½|Ò.¡K¡?þ~ä¤µO§.{»yùÆÑ.7J¯bHc@ §ô¼WùV£5×ÒµÏ6v÷_ü²£žvð³\®¥`§‰?NšÿýøÛ|à„“zæüåúòË®»øÂk~xæeçyÙûýÚËŽøÌ;ÞqêûÞ÷íÃ;:lß½~êÁÿõ)Oÿ}=ñi‡u—»Ÿ6¶Üyú3žï­9#Þ¾³éîww\oÊýµvÐ´Kwç€'ê®Îšm™HÖçdçmä°B¶MÉÉÎç†eGïâÒ‘Ùÿ‰Ït—·k?ÛÀísÀÁÎ%Ÿ$«ŸÝÍ.gü,ü[>yä;]Nvs&Þ; t„ †xÂS~ï%¯È¨RÖ¦kéÚgßr÷Ÿ÷‚Wø”Ã,—k)Øiâ“æ‡?bïmÞ÷ÑÏ=åwžç¯“WÏÐBŸö_pÍ'>þ­·¾å”|àô}èŒßîÑaûîõOzÎ¾rÒWNßgÿƒÝµ÷>Ow¯ÝµÿžýÄ§îÞu/ÜÝëèzòÓþÀ]áM÷WgÐý×uéŒ8ËÝåÿêw–ÝåÝëñOó²cu£¸·ºw»^]w§›…¿ã¦à.oÓO¤ëëÝ§tvº–]ƒÔaÁNG t	NzìáÐ!Š4ápR¥^] ý@Ý¼º@$p?Ž—3> ]”½“a\Ü[]¸ÃÆé÷®¥Ÿ¸±,Þ‚ &M`¿Ÿùß^t¤q×ÒµÏ6v÷ŸóÜ—í³ÿ³ÜuÌ;?Rºº®¥`ÇûsÌ»>Ò]~ÄèŽà“æ‡=ü±ÛüÅ?}àSžë¯“¿pþ+O¹/¿|Y¡Ï[QèÏ~ò;oxãÉ¯ë)uÊï:á«/;ú=‡þòýÔ­v|üÏÜëq¿Ó•­Çìõ¤Gíy`÷ÚÝtoí½ßÁ{ï{ûïæ×[¿oº×û­˜=àÉ‡»öÍ=ö~Š»ük÷ÂYëîtmº¿îþèýý ÝXÑµïÏvÆ»á:‡«]÷W7¨û¯³ã‹¯7¸\Á÷;8ìë-‡S:;›ç»ïA‘ÃË(Vidí8?ÝôÃ „¯'vg¹.‹}3®UþQ›Ð÷Ú¹ÑÝÙ*|+¨;D»=j?wu¯]›Îç™Î»äsfÙ½}êüôNºÙuw|®úÞBzgÅ~‡Þ¥+ 0+ÛïÏýCwö5-C×ÒµÏ6v÷Ÿqè‹÷Úçîzë1,]]×R°úãí¸AÃ×‚?Nš—ú˜÷þïžô}á¤órçÍ·Üxã•W^wñE+gèó®9þSßyÿ‡þÏq9ó%ÇŸñì÷žvØ{¾þ'ýÁ£÷|Ò><³ë¸÷¾¿ûè=ŸèµmÃîÛ\þö8pÏ½Ÿêï»î¯þŽ{ñØÇ/kpxsß'<ÛÜÿ‰¿çªêcûdo§{áFyôžOè^?rBËÑ(Ý_ýnˆ®L?~õÐ¼\š÷8p×Gí³úÖïv³p7ÓY,{ø¸§†};‡½å®‹óv÷GoV,oÄyëýLîìDˆœŸ‚{±¯Kw¹GOü=ÙIÝùæþš"j“:Ò[åÿ„tŽÝ[{3ÜÎë÷ŠÒÃåŒ›ˆŸÃèt¯ç0|2xž§¿ãÒÀQòœÙ.R\€À¬¸ºýœß?Â8ºkéÚg»ûòü=w»ÞòöãJW×ÀµìDþ¼åíï¯ptÁ'ÍË
+ý–wýÏ]Ö=~·Gîß]_øÂ…ßþögüàÊ¯¾ò²ë.:ïê‹Ï»úã'ñÖ¸äµŸ8óUÇÿƒ§\ü±ï\ñÂüàÁÙn§]öìzmØ}Ÿu»>ÖËÒÎë÷è^ï¼as¹ÜeÃ^ëwÝ»»¹~·Íúvñ¯½'»í¾ß†ÝÙqw|wg34¸Ëú=»¿:SáX¾½{áº»w}GßÅùŸÎ"”|g0êë^1»Yé·XæÞL=ôvBD[ 8¼»ï·|­(B:é§’ñ¾Eüý_·Âåc´ëÞn^Ù6~\ßàæk¦Ýëà¸À… '÷qL“a§u›³7}áL-gà*¥]wßw«Hy¼€ ¦E`ý®â“Ÿe\‰®¥kŸmìîïýø§n¿ãîzõŸ¼¡{]þ¾k)ØIýq»+ºäe'ÍË
+ý†·h—]çjMw}çÛ7Ü}×½gŸù£/ýÃÆ/yã©ßºä›Wmúâ9×þÜðë—ÿýÙ×¿ëäó?öíK_ö±3ãÙa§Gu½–ÕkU/½</+ôªT‡BâZ®Û°,çÝ»;oXVÖîõú]·xâÌº¿†-Ý_Wîlf_@]wù±\Íõewe¬-»„u«µu³ð¯ºçüfÑYm–ú:û+ú½ìX7—nRÞoÄ;œ}7D´ëîû¬€ÝÏý×ßïþ¢ŽœÜbu^YßÜDÆ-î®zVnP×@žŽ{×7pÓïÜë®nóhÃ–}ØJRu<7#Ýœ´»;­]Ý,“z9ÓVSheÊ›çË@`VÖmØ{ÿîF?òµo*]]×ÒµÏºêîï±×{‡G»ëU¯~}÷"ºü}×R°ãýñ¹ŽÝ]òÇ‰²“æe…>êÇî¸Óc×ox\w=ç°#¾wÚ¹wÝ~÷¦;þéüónü»/\ð×ÞtüY×žwóOO¿~ÓéWm:òg~è[—ìñ;/yÐƒºýìz9_·œ]V ®Vî´þ1›kÝ;¯Ûs—õËÚ*h¤âÎÎ†ïlºËfWõuùp¼aïõ®ò®ž•}%u7C\ƒ-Î¬ßcË~KÇÍ^y÷œ…ÍÃùƒøú½Ö­ßkçÕ¹ì\îëÆZ·~y‹à^lQôÀ‡´â‡¦ˆœ5O`ySÒ…f×e jçaèä–V±g}‹p9ŸýìÜÿz%4«Ž w¸}ócŒ€#	Üú{/‡c5s–ýÜàºäÙÌpÅÕ½çÎy×rc’W>úì
+O?å-¹ê—/  )ØeÝ^s'Ú•:ùò—ÿ÷ÒÕ5p-]û¬‡îþîÜwÛívw×+þøuÝ‹èò÷]KÁŽ÷§Èõ
+¯pô’?N”4/+ôŸõ®vÙg§u{úëÛívÈ!/þÄÿÿ•k¯¾íö›zòUwþõy·l¼é§çÝ|ï×.½ã¥Çÿà_:ï×þßÿò›ÙnûÕõrÕm§Õs›+g&­jáºÇõnkÝ©xè‰ûëV‚±õ@¡|®t\}8¹~‚3éÓKïžh¹FWæU~à¹Ó:/ón¾«J–óa‹ŸysˆÖïµBu¯–w	Îç˜s¯»Yt2ðVòmY†C\Ë›§-èÜk?µpúã[zÅÛÕðÍ0p+|–¡­8³úiË–­Æf°ËÍVÞuóêö%>ôiÐÓv£„¹Êk@`&vÜå1Þó€nè?zÙŸ–®®kéÚgýt÷Ýºþ­G¬w×KŽ8²{]þ¾k)Øñþ¸\—îŠ^+þì²“æe…þã#ßºnÃ;îòèèzÄvëöÙ÷o{ËGN¹ñ®Om¼é3çßüÉs~ü¹·<ýEG>é÷_ö_ø›Ûvçv~T×ËÕô-ŠUxÝWº–¾}ú:t#Û2(kÓ>7ÎÞLÝŽf‘T8h8„ ÁwIû†½ÂwÓˆ”P—€È¾•Æõ½BøÑÍ»ÿ«÷y¶ó	Í±ûk”®Ù©…‰*Ì½#îC S#à¤î‘ÞÏ¸9p-²f}svÜù1$Jß5p-;ÞoÇ»Ý)ùãDÙIó²B¿ôÝg×OÞa§Ý³×¶ÛíòÕ[îýüåwœxîùþuÿû‚[ÿÓ¯ýúo<ð7òÐí¶Û~½ï²ãÎÜq§Ö[_N¿—%|ù¿;­ü·{½Ü¸{iÿÈÐ­Znî¸y gpÙfw-ÌÙ\wóÐ«ÎlõWïÆÖÆ·ØÜl³ó™¾ñÔâIy?·rx‹çED¥ˆl…º›øŠµ-ö‹Øs¸BÿÃ…¡)ÍÑ´Ö­ò¡Àv
+ëÜð)±5™åÛ’-Ý‚‰¤aÊ€]I¹R€¸L“€“Û»ïmÜt-³î¹ûÛí°ÛC¾³år-;Ãýq¢ì¤yY¡_ðÒÿþ˜=úíw+]î¬üÀ=ä?ÿú»ë7øà‡>lûm·_¿Ý»ú.Ûï´ûö;?²tí°Ó#wX®h+vÚÝõZnŸ»RÂf›;®´l³3ÚÜÚ‡Íãú¡}Ç­ïx#[Í¢s/kÐÛ¹‘µ¶ÚÑû¹•Ã	«Q)%'SûEß|rþo±³J@°9ú<ÃÀEiÎ¨{«s»˜«‰º¥Yñ0å„UÃ[€Àt8¹Ýy]^tS%îZfs÷öˆò[;X.×R°3Ü'ÊNš—ú¿¾èÕûì÷Ìí¶ßPº¶ÝnÝo=|G§ÊÝå^»;B{Þ‚   L‡@}@Ö±ÎÎo>t{ËÕ5ìTy•Úq¢ì¤yY¡Ÿû‡/â“Ûvûu\€   ù"Ðcà¨ì8QvÒ¼¬Ð‡>÷žú´çmûÛ»pA €  0sN”4/+ô³{áï>ãßvG.@ € fNÀ‰²“æÍ
+}ð!/|Èƒwû  @ ˜)'ÇN”Qè™Á! @ 	š¤€   Œ‘ 
+=Æ¨à  @`úoÿæ¤Ñr´¾Ö±Ñ†Ç  L™@B»².Töð­¶Ðë¯ˆQ7VøßZˆ‘qa,Ùrêg[–yE#–˜¾cçi@ žÀ¤º-bYNîRã½Ê¦Ú2)YC¡§Ã™Q  Lš@…BûÒ	˜?X‡gÜ°qxòîw<Í*tzðíNÒòA?{þ–oÚ›‚BGŽ¥²w¼c½}â²ÛŸtFb€ :ƒZ8®uo¥‡Ñ~ÇS‹z¥#Zb\Òþ°¯]½B?C,,mŒ3*¹Ñu—³A@ ˜¹Qhá˜[’¾æ
+õÓ¢¾Ù½KmGvÛdß:X Ñ€ ¦@ÀªÐQ‰Ï*GoRç)<=…ªÙè”ïÛÏd›%?{“i¨ÐÆ­ƒm  @`
+*:ôfa:+ÒýÅ¦z+ti!dFéí?JCL!ç€ ,)t§ÝÕæ_GwÂ¿–Žª²ê„‡øp¬Òˆ–É‡ž„IÇ2ZÎúYP)ºðŽŸ¦qôl{9½gZå! @ «B÷0MûI·ÛÜ¤í³7‚´ý†®b
+€ÀZ#€BÏ&âò'ë=3ô›
+Ý½  L 
+=È@ ¨&€BW#£  @`
+Pè)@f@ €@5º  @ S Wèûø@ €ÀL	ä:ü™,¯! @ ˜2¥¥¥¢B¿ëÝÇrA €  0}×\«¢ÐÛœt  @ S&€B³ÿ€   Œ‘ 
+=Æ¨Ly›æž¢tÜ¸þEçƒ«{W¸Â–¡‘Ðx“yEö³i÷*¤ß í5/~– Dù3QV©ñlžëbÊî1Üš%€B¯u…Ž´9Râ*9L…9”ùVk¬Ê%uK¡z•–iu³¢ÚœDƒyñÓ‘V!®åœM`ûf®v8ÚC@%€B¯u…¶œŒÕ4J•¸¤ÖFSShf”ôÙÀÈÚþØc
+«†˜yÎS¢jR4†À(4
+­?»6f˜z†JpöÁxZ1³šÒRY«ŒåXPèì¸Â£Q¡½#M-rOõÖè§¥7˜"-q+M­j^–3´§îü²|ºÝR–U³¯
+Ù¸hVPhº±B?,¦%R•In-²ö›éº
+•Ìî*Z‚ÛYåS9D®–ü›©>”lf%3}pRRÖTD³õ+t/Ú@‹h?QËMàÓªÈb½	 Ð(tc…DÎ¢pj5·—àìÙ.­õòâ‘w‚GÇ;£:ªÊTòVµ_Ú9¥B+Ÿ‰ånVeÕ˜–|ð›pV«$gh¦L …F¡G§Ða]–õ^(ý%©h«Ð‚{ýºäž*–gªŠÏÊ*ÛìñZ-m–3tö0mÜùU9 6¦¦@ …F¡Ç¨ÐB‰7ž¡UQ5/ëCéŒ;D9²ž§©*ºÀAUDËXÀh$œÂ$8«õ´ÖaÕ  0 
+BK¡Ue’d+»EKÉr6ÍžáÖæZÝ	Ë»´³Z+Qh¦L …F¡u…¶T®®MÚ2º™Vð´cx§«¿Ñ1+«šéèá¡‹¼ä„AÖÏ~í…=D	lä¶eÜª‡Ø‘òù¾çRp-EÍtŸ–ùZò6|Rboo™m 0œ 
+B‚ Å±j£0|å±@°†Ð£/ìPèQè“=`Ù’Š?~yNÏÇ™ŠL
+£"€B£Ð³! <ÕÕ
+™•3#äc|Þ>+bŒÅ#€BÏFŸ/“˜  ´%`PèmNÚ†€   é@¡Ù@ € ÆH …cTxh@ @¡Qh@ €À	 ÐcŒ
+;G@ € 
+BC € ÆH …cTØ9B € Ph€  0F(ô£ÂÎ€  €B£Ð€   1@¡ÇvŽ€   …†   Œ‘ 
+=Æ¨°s„    Ð(4  @`ŒPè1F…#  @ …F¡! @ c$€B1*ì! @ (4
+@ #)ôI+ì›¦Rû’‘*û]ã¬©*;Ât„!ì\K#‡ÞÃ¥ö½)á­p
+Bû’ÿvo£–Þ¥hÐªÔÊ:_5î­Ùùˆî€À	,šBòY«¬“VhA\«"ë§ý¦<Vª‘åð¯‘:v–…öþÝH>‡D*ëÏ@ÔµþXV…8Û¸­WÃýÁ ÐœÀˆºÉÜ–­†¦JS›ÜM:<†ªS()±ªè²„[²Â¢ÊCPékñ¿_›qzÕo.ô‚ ²t…N†g£îô“–Èô¾å`ž¥Jã¦£GwÒcŸ|V+U:AäR?C1óïfo¦ÞZÈø6Y=“ýIûVw¹q&u¬ÔZC…Vwj!ß²sTÇê—‡¥P¦žƒºQJãú’<]bÃÃJÉ† t…Î
+p¸ Ãu+ÜWYËµ[­ì¡òeÇ*š ÆjeL«[Ö“l3K‘U+Ýy¡X[¤+l=L’Nc²Eßâj$¡b•œLÉnÚª2P­R\jã¥¶`–öj8ªZ«ë:;zÖ¬e^jDh 5N`¨BwK:*ÐþN©¸´$~‚WÉp$‘W%SÆû©Ò”¤KNA?\Ú½–ƒÌS.ñê»%?ÕJ-7©EÚ²v¾¥öÙû‚Û²Ï*ì¼ºè§›$µ~ÉqI—@8ÖòQ}¦ ÐX»
+­–o£—dÒÒÝ.?éNH>Ke-«S6îœ²:QUZ)tº¬o+…öž¤²*;Y`5šB93*nšNÑŽ°vG¢Æ¨PèÌ÷…³iZa³wJ7£û(´ªXUˆ¼ÍíXÈ¢¬½wr–…@dÅE¡ÕZILŸÀÂ*tZ¿JgÖÚ³c¿ƒ]ú4Òx†¶œå´³ŸqÃãš?>ªJf·_òÓ2G‹žUÙ©ûü±(½
+Çx&6ž¹Õ4Vã>ýbÇˆ˜;
+íE"{ÄÌVgá(‘
+([Ë²^¨\^!BoKFJ'¹’Ì§å)« %YIV)‡ÅŸˆ^¤”%áÌ&näjJð'4¨rÈ¦VtSV t^%ç…%*1Mû!|ÂüTùØó3 ”Â|…5(KXÔ–<Ÿ»ê‰Ã˜4
+…ž´+Ø‡Àl	Q‘!}g;ëéŒŸépf”#€BWü;£{¦“=óõÀ‚üÈÐàÓ#©èG@WèðQÈ °¨jó¼ôhzQùÔÎ>µÄh”€®ÐPƒ   @`úPhžrC € ÆH …cT¦¿ScD@ …†   Œ‘ 
+=Æ¨Œm‡?€  0}(4
+@ #zŒQ™þN! @`lPh€  0F(ô£2¶}þ@ €Àô	 Ð(4  @`ŒPè1Feú;5F„   ±@¡Qh@ €À	 ÐcŒÊØöqø@ Ó'€B£Ð€   1@¡Ç•éïÔ€ ÆF …F¡! @ c$€B1*cÛÇá  LŸ 
+BC € ÆH …cT¦¿ScD@ ]¡?|)ºº9ø›­¦ÔhÍîU4\“Ñ:Ÿí>/~NbîØ„  °–	è
+íÅ8æôõpˆ­4Òh'Ôr»®Ÿf­…yñ³v^´‡   ™ÀˆºU¨j:|BÐÊ‡†vÒgŸ4ù4œ¦  @ 6
+}á©löiyx´§Ô^ÖT£	Ê§>ÕÏÎ1:ˆû6¥ûÆçF?}ìKã¦z¤]  @`j*:}œ>€u~—Zý<UnÕ]ûÍh¨d¡Û²ÿ©x[v$û¥—üÛ«>L-Ÿ€ Z¨PhAäŒ
+$ŸnU	NéŽÁx*Í6KžÑI½VÑ£ÍJdß~¢UÕ·´sª¢Ñ*Ÿ°@ ­LU¡½h9Q‘õ>=‹g%­É:R²Ò6b B—$YÞµ¤²J¯ªx«tÁ  LÀ´Z8ØÏÐa3Z~Ýè¨{‚©%A €€@`z
+­
+°ñsè)+tzfí XžZ[6ª^–°dDêˆ,@ ]¡£c£§µþyuª
+iÇðNô ;;J©}øÉkVÀ,"¤>Gž6û·²í‘.ÒÂâgäžÀy9‡€  `! +´ÅŠÐÆ"–‡˜ëî“à3	›sç! Ì#É*4R!çÄ„øLÈì<æ7>C ˜_íšG¬UŽ‰7L ãÃó†#b
+€ &A ½BOÂKlB € ÖšÿõI@ €À	 ÐcŒÊZÛ'2_@ H	Ì@¡'ú=¦É}¾ëÙE¿ëUMìÔÎ·Ô¾•Þ4ÒŽ¥ßãõ"L¹Ú™¶{«ä¯E¶}ö+#ÑÍìýÒY´Ê+G»Éºè‘$¥.=B–íÒj^%ãF?åÌé—Wic*"°P
+ísÔ˜¬=²¡•å&vjç[j_k§ãÖd
+Ue±ßˆ%9©Š~¿¡³C7U¯lû¬ô¦‘›©¯K6íS¶·¬
+_ïÆµŠUZ=ìT-ªõ(C®AmûÞ±X›g Ð-Tœ†ŠÒ*;Æ!ÔùFœÕÓ8zUEèñ¬vßÂƒ¯ë%£°¸×chÁìÙM!îéÙpw`ÛæU[ÎwH^VÓª’ÏÚ•%!Ó6vtmzÒ¥ …é¥+t”^a²†œ½_ZÀQÆgíãZ^š…µì½
+>»h…›ž€Ÿr4ÙÞúQ[kÛ«)^"œå–rˆî¤áŽì„¹TÊ¬BËRg÷§ägz¿É¾¡6Žµí#Î²Ïº´.TÿkùÛ“§ÇÎ^-;aùuÖÏª¤ÊÖ¥pÝ¥Å§´+™êH-,4	è
+-WÒt—Ò®´Ô…B©š
+g–Ô!Û:cá¶ïºe ›í‘”Â|#u‰VQäOonvPÙ8ÊÁUË“±Î
+v¢ Ø§“­JYæ¥<4:/çXšWUq*ucÆ–ò§_^¥djëƒÑmûŠ«
+Öpÿ³5M½)W¼yuÈynqÉ™–%
+ú.Àá%W=KÈK…[]'ý*‚EhÕ\L!¤3\áH+u´©š¦BgQ´Uèl•ò[­AFe-U^u¾µ	¦–*9Ï½?ÞŽq]”b”Ú‰<§B—–¤Š7m V¹>¤E²[°B©”/ù£¦h6”Æ-E?—zÐ¦KD Z¡í+¶´­“µj¸BWUp¹²ûµ$ÌºäpiúMÜKg©†þ—°÷Þ:Ø;.°B×æÏðè[–%î%¡5.ÛÒŠ0îxì;*a¾j^5)÷MZUÇ,·ìÐF…6Ö%£BË$«5	ÊÚ1²†ºG©é+l„{+´ÑÏV•Ú.´BM·OÖX‰ÔÚÔ’pv±ð”OKiÕ0Ó*Ù¶ø9…îFi»óSW\IxJ;{Pì›AÚú¯®!!QèÅPñf
+m¬¼ÆÃŸPI-Ë£*³«„'¦q%”FQ—tù–ªUíýª³ YD·0IÔŠ¬®C™°Ê$JEµ½ºã©’íììzû`ÚÒLi)ˆÆ¤RçXÚ÷æßD¡«ê›o\•ä–èØOjýiÎS]°4	è
+ÝEHÐ¼ôÝ°‹{nô²Q/ÙéqÂˆ­¹à¸¨¼ÙÐó¨²”–SÖN­Ÿ‚3‘oYW³q1úÍŠ7¹ ©Ù&€¬ 6BU¾•Þžçjþ!«›³0ÏåJš…¬±D²TÖÓuW
+n©¥ÞÊùÖcèÈ«È¾½ª”>ÕoáN7œºöºšì~)A¨Z†ÃÓ~ZÐzâ7„ÞÚé;Â<¡Kk'Tý®ÚµÃóK ½BûÇùÅ„çÍ	Œ9OçæánbP~NÐdŒ@`TÚ+´¢B™U¤GèLéyòL\MÏÄÊòG°‚À¢˜ˆB/*,æ@ ˜šÿõI@ €À	 ÐcŒÊÔ6h@ £%0…žôçÓS°ß$œöoÃÕþ¤Dý‰…÷*ý©Ièpé#ä’?Mül‚ÝÉþn¤_PÒo½õ°Ó£K
+¤Uò·WêU«<é¾õÒ61z[ëýU†lþÔ† ·Û;
+%e eº;‹¦Ð“Në¶p`
+zgŒ^eÛG}ÓbÑ9Yu¿dÓèg:â@PF%«r/Tú¬ØWùÜoèìÃM5É«ˆOˆ¨d¿vÜ(-«€7o,¬#y¬Òöe
+« „lÊÏÃVîÍµ(ôäx…{XcQ®u¦UÚ	vŒCÔV£j–”ØV²%­•jVÉ9¨vì2ÖcÄVµ©ÇÐÂÄ‡xÕ*¯B‘“ªïÚq§&`ýBcì¥FÊh§ß*hÕ«ää\8ß
+Â„ìè
+•Út/ìu1»kÎ.¼Ðˆ_œ‘aÜÚ=iíb•Þ»Ý,qHVÙy…Ö¢éÓºTÑZÝ‹f:Yu…/Å¢&tÊAˆK˜ErªqLÕ¢ŸÊ’“¦·°ŽJ‹¨ª2N9¯¢ü‰ÖQi™Øó¤G5ÿíœkë†Ýy¹e8…ôµÝÿ~ë%uÖNi.cÊ©¥`-7Ð:ª}jå-¥W))…B¦šÊFn`Z«eèp-Éf{¤`ˆHT²1RÛ‡ëPX~ª*tµ8õ!º¯NÙˆlžÈÉ“…¯’·‚RP²u?µ£* C–€š'B²YT¹d_·j‡T[O&·0Õ/í³ŠX›*‡t=ªëÈRgPhKÜím*:ªQÉª „MÍ¤Úìò¤Ž%Wvã\J+Ó¶¨¦C±I'8PZ¥¥Vz¢
+­/cÊÊjÝŽ}Ã‘n¢hª®6°h^ZÁ=–î-9¯ÔúÐ$OÒ™×`”'Ù¼ªZjéÈZ“ó']ŒjþGqQÛg×{ºÓJí”:¢Ð=ÒFèR­ÐöJ-ïKvÔŒQç?¤<¥ù'W¹
+·Í]KÅÏVR¹”¨¯„·ä‰ŒZkÖgy"reB—²=Òl5KÕUcY²By%Ä"RJµ¼¨3í§Ðv>–ÍÝš=å²–æƒq½”ŠR).Ù k‚-=5¤Ð=”[Öã´$ÙÕ¨Çú©0uÅZ•Z><TÒV^Á`ºz× BÛ·Y5/›Òµ;¿¹VhcÝ06SwQæ«J©J¬¼^Ôî½…}›‹š)t6“,%¾vÏ«†Ó’RöpÉ=Ë|-2lÙ”¼UUPu¾JõÕís­?r(åíN©è[âÖÕN|Sw–1vöü±KHmU©ËWkë‰œfv™Qí¨«X^_
+›¤T¤…ÆÆõeç¦®¯5Þ@Wè.$‚Ö¦ï†]Ük9|,KväãBÉ¸}‘—ö˜ê¬£ÕÍ4Ê`Á’ýªŒ”¡•” 6(2¢l²Ú«î“²UÉž'B†Y&˜÷°*ªü,-(û:R×WU
+e7É«l}ûâRç¢r‹bª¶WG”‰	Ó"Ò‘{aj•â^u_u/Í|Õ¾°ãì“^ž€®ÐC`U•¹!ÑªÞ
+Kc:áHn:ã2
+šh¯Ð,‰&ÁÈ@cÎCäy`pÝ³Ï6Œ}i1h¯Ðþ‰eh^Ë>¨ô¦	G~ä>MO{,õ‘lø°}±Q0» 0…^ .L€  0[(4ÿë“€   1@¡Ç•ÙîÚ€ Æ@`
+=¹Ï§§óQ_«Ï±šØ)ýj¥”[êOM²_®I]­ýµÌp?›¯–hRµ†þdSëpÃ|¨:m_K#Û^X­ò§ÖÏî[2Ãù4±Ð»^eó­Š&³¨5"¤J­©µÐ~qz:ßÛlµ½hbÇ1Z+µO|—újûsã}y'Õo•f÷1íÕÃN.ò&¬9îêˆ¥D
+si¶yÕóÂô¯‚q9ßÆ3Áª)TH~¾ºÏ@¡§¨IÝ,-†OAXHÆ5V»#Ú§o	Ä¨¾ªº«T;Ù­z¢vúM­TìŒ<æUè¿šÓÉ+#„Þä{+Ñ15ßŒv†Lpxß’“sáüðéWYÐ:ZZî¯~€î-¥÷K…>4âÛDv„qÕªy,[ÈÎ+ºYâAg×½%Ø	ÔÎ±wc”Nª4á÷k'Ø#OÂŒJÓ©”·UEVÈ4Yêìþë«ªÒËß$”2´ÙÊ¾Œ7Í®ÒºSý©åoäœÝ¾ôXQº¦¨íþu/­c=Æ–p)F*„5Õ@Wè(6UJ`QJa¥	[R"¬–ªBmÜÉ^•K
+†(­–,ÀÔŸpef¥7RqoaÈ}uŽF…«š{:»4ôÙx•¼•3Ü¢L¥m™ª¥ŽU;¡J–òD žZ˜Èüò¿ª8ÔÖŸÉ-duE”"++k”'=ò*ÔøRJ«ºu4å¥ÛpîÚT(t6Òir¨²:°òÊˆ›ÄX0"Tä0Óê9¹…-ì º·ÒÀÉEVn_ªŒµ÷Õ¥’%¦£l¥H£&+«]äìvìiòWç›Å8dÈÊ'$¹‡é6¨#<¿
+‹šÒÂ~ÈØWÎ·´öÚó'jY*ãêý’Uì‹ÎÈj1šU+tZñ…}Z¿Ò¨¨PµAî¤´¥¢;D†‡ÔÐ¬'%=+ÅK]0%Eiu_,iÙ¢Ÿ­øÙ•¯f¦1@v;ýºD©”Ÿ¥,Ui[òÄ“ìÄUÍCN)^CîË3M]â’]#ÆÄ° ïaJEêÈÆÓüÚ—Þªâ£:›3‹£Ðjº«,;\y…÷a‹cßŽ4Tè®þ¶Rb;™ƒ±‚d+”Z—ÕÍ–¬”–Mj[…–•X­ãSÈ+KY¢ÄýòJÍ„’•Ï.3=ÊQÉx•Rª[[KÖ‹%î–6–-ÎZhÓL¡•Q(ýr•TZ]±ªõL-(ÂÞÐ"*jÉ°ÓVjE§T•ZÝ¯:îñU+” Y­Èj#¨²Š²Nmß;ÏùßJ5-ñj•·C¦fñÓÂÄç‰Ñ5ŽöM¡šÿÿ²›QKÚÈÛMu.v]¡;²Ù´ßr¯£ÍöÊZ“íã1®“ltKþ„ždç›®ÁÕª„KÈ+¿Ô^eie¼/—¡ì\ä)§…@ÍÞlX«ò§ÊÏÒ‚RCc__U)$/’ð”¦\rRm_Z\ýî«ûZ¡^ù·ÔEQ•$‚¶Õ–‚l’§u²ÖÿlûRº
+;uÜ°NËûð”žSºB™Ø2.}!aŽÐ%r&RbDJÌœ@{…N÷w3Ÿ$¬AcÎCJÿ8R~þ4NŸñj±	´Wh¿¥-vêŒvêºiN¡ôèoš>0VJ@}$> ¦L`"
+=å90  @`ñ Ðü¯OB € ÆH …cTo'ÈŒ  @ –ÀzrŸOOç£¾VŸK5±ÓïwÙ¡³q)ÙŸôýR×Î·v=tß¢{QøUŒÝ±†yb´ÿ”^´H=¢Úû‡³ÊÃ4O†³h¡G]--ùž„¡‰LÙW“ÜÒnGp¦É4'mdqz:ßÃì±²!lb'ªnj®í³_j?éûòDš “([VT¼j¯ž÷èR5µªI5É7a¦š´¼fÛ”l¼/Ài—ª´Ú9ùÍMoUÝ.!²£“[ÚíÌµHÏ@¡ÕÐ6iÆ¯6¢“SÖÒò¨Ê¤Ú‰Zeƒ“Ve{tì-{$RÖx'j§Ç¼Ôcj³a¾…c•T¹[#Y·»ûÕWÍçn«ê€GQ•¥r~V™R3GÝ¹öÛSöp²G—ÚÙ5o¯+t”Ê~ÙD™‘½_ZHaã’a\…!
+ÝõõW¸`Òû¥Rò?2¡Å»TÚÂ^µ•ËÛœ_…âF'šiTè…¸”ª¹‡B¬â¬æ›e=–B\¥µy%O3ëRÈ9›êédS;ò3Mžl}ü‰Úõ³*.rpíâ'Ä+|+}-§zê@©2Ûï—ødë€P3-:2ó6ºBG5®T­²÷…àY„¡”jeÌŽkdm, YkÙ¾‘ô[~B¢§öåXdýIwQ¹LmFvZµWÃdP6ä¤RË1µäÌ|g'‡©‹ˆ`FçåÜn•o¥¹+u«|+Ù‘ó°ä¤¼ó§¬Z]Qƒªà÷_U¾’?‚Ÿ%&òjÊ&¼¥K-á™´¯PèD‡ º¢UgÁ$dª\Lk—¯=‡B&…ºJÓÚd÷-5žVÌhS•.ë€°<²•%·UÅTQdýLó°”ŠrR©k¬ƒv;r¥–å*J9Õ7µ ¿ßh	óSÎÀ.µJ¦ä|žNW¸RýTó¿Ô *¸½ó*]>iÝËJf¶*ö®ŸiþXxV!êˆ¶«Z F­S%ÐFS–‚Ò—=í„Š_«ôU®Z*{Xéäör ²
+Êìp¥qUŒ•È9,ÜÞOµÎöÎC5ó³þ¨QÈ
+[*f‘Â©kÖ’xmóMå“Uhá¦Ê³mª™S*%?-!ÛTÉO[ÿ‡DÓX?«6–ŽáÌ§`a)tU—¶r¢ØUÇ¨+ö-Hvh:c¡"”ôOî’‘Z³TE±g`ê@)»T¯¦–oO„”°•©Ubûš•7‚lþ¨åHm«ª}•à©þ[¢YÚ&¢Ð²Ì7SèlÅ±D®6³û#5ûÙI§iÌ°ÒrêígÃs­*­ªžÑNÕY¡6Œ
+]jf¯ƒrdkZm¯*M•lËÛcK>×î„TÏú#ø©V	5.Ñd-íKë±j]¨Ç;9a²ïV-
+5jé4k9Ë§wþ« fÛ@Wènæ‚Ö¦ï†]Üëtï)„?l/ÓÒÑ¡ä­´à¿_o©ŸÝh–Ò4kÇîa´!-A+5„ ”B“ÝaDv„I©)dœ{6Kñ’ŠÑ¥¨™ÐRB¦Á’ó¿Z;éº3Bš•{ä›Ÿ%ù‰‚h\GÆ ýIó¹Š4Eåül^¯ì³
+lšç¥;QÝã+tQëgXLjíXœ¾¦cAWè!~T•³!Ñ=Œ0?GèR°tÄ8°h¯Ð¤¦>-§O`Ìù‰<O?&1böÉ$ÂæÂh¯ÐÑÓ‰…'ÈçŽ@úr†S(=¡KÝƒ€åQv³tYã&¢Ðkœ)Ó‡   '€Bó¿>	@ #zŒQ¾óÂ  Ì;(ô¾3Ñ!ì?f“£‰ÚŸj¤í£ÏÏ<ºÚûÝdKþ´º_BZË¡Çºâ5dÄôÛj=’¡G—tÖ­VJ-{¶Í+!îMxöÈ«RPj‘úÕÌÎ+ý*FºÞC;ö¯nÈvjù´‚ ×Z¯¦Ù~ºGPíÄÛV4û¸Ù–‘šªÖ²í£¥â–Hãë’Í÷ÕÏäŠl6îý’!íÕÃN.“+RMò0˜lN.òT—aUÛR4Zµk<]õö)Øýo•Ÿµ#Ö¶ßÚî3PèZ«Ú{½&‘hb¤´Û­Z	‚²Êr.RZ½ÏÙ¾ÝýÕ³TåíÀí-«2JÀÕcÄVJßchaÖC¼j˜‡©©†ye•éaéÒ/dÆ^r…E]Z×©A£'ÂNËB)mc·Ÿ}¹÷¶Ùª£®ÐQé·c¡fï—XØØ·ñÖ¢šÝ·š!Gö'»n†ÖÂye»4QèZ¥Œxfs6^áÚnXIk+¾÷¿TSìy¶LÓ>ÍÃ¨eM
+™)OÜîOÉOaY/µù&L3œc)¬%æêýRt¢"æS]W-ç,d5gŒ½JÉŸbf×¾°¾d¤i5‹PG–Kù)¯ëlù
+ëUvQEOÈ”è
+iŒºä0¥¼Q£n©ãÉeÖZ¶o—.²Y£oa³¨œe§_º™ú“…®¨th¡„…öK~ÖÞWÙgg%—'Ëâ·Ô‚ìš²OGˆ1ñŒ2 ç|šçò¼Jí'”WrþØ.BªÖC5oªö¸Øýl†ë=9c–Wk8–:‘lnF“ÊNßÎ¹_4‡ôªPè(N¥™gËŸJ0[
+US%ÙKg:jgËn:¨àÿðœ()\¦lê§•±´£!ÒYì—ü¬½¯Æ1[²E'9ÙÔ…m¨ÝN©¢ÉÁRç+«¬
+9mÐ0³ùV›'²?¥	ªÂPJp¸´$öàiÙÒ	Q(Édäg40fx¸ƒI¡¥ù©š-…Æ›’‰YòAõax{[¨Vè¬”–X­Ga8ÓÒ#MaÎÃ‰Ãù/WUa›Ò#~–
+îÚ”âeqµ„±*¬¥jï«ˆ,3rLN6uÊÆ”³Û±Ä×žQ¥|.é½J»*¯Œy¨Â)UË}yF%ÈN3›*Æ°ƒ­
+ÝÁOy
+ö	VñQÍ
+¡6aR¹©‚\»&í×B«©`ß™w$ýƒÑOK7VÆÚÄ­]Y7Ph¹ú[âkWh¹YZ*7?yhqÃ·i›?v…+mÊÕe«6È6ö²ûŸmi*£'µ|T³(ôÒÒÒC¼ÛÁ‡¼ðY‡½ðaì6îÿ¹¿¸[û7'½ëÝÇËwvåT-9á|SòÁX5,ùWu&(íÙåj•­§êÒ6b½«•qÐÒâQï×VOcûªcqaóVm¦šR‚+šŠHmPZj4Õ£@«<T=©c ¨sé/{³×(.rÇð]ËkËqÅR~Užê|Y-àÎN6
+ö$QÂ$ègèn‚Ö¦ï†]:.¾,ô’*}õ1Â]ð?´ŸN*UnÁÕª0ËÐÒŒ”C©FJÅ«¦J¶¬DI’…l‘çyU÷h¦UùVågiÚ×º«R.Ûxx
+uFÈ‡Ú|S÷»a*FÜü[%žrþØ!÷¶æU6Ç„:läŸ.UyE§.Ùó¶TmBÂRÊ
+‡ŒÅ£©µÔzˆ+UekÈ@ô…@C#ÌÛºÔøøM	â7~çñp~	´WhRy~³a-{>æ¼Ežg›™swðš-.FoH ½B«Bz)4$ ?èk8ÅTïGã´Q	Xe«Fh &¢Ð}¢;  @ (4ÿë“€   1@¡ÇvŽ€   (ô„¾ö’þ4Býa@¿ð·2ÛÄNé×&¥©©?uðÑ)ñ¬½ßyRò³ö¾}^ý‚+ôŠâUK>´œý	J­Ãó§vè´}-¡}¶>ÔæI­?]ŠçÐÖBm©,¡âåg®ë4c-þ”¾U'|Û®ê+‚¶ð«¬YÈTôM¡ûQ°÷j‰&v"5Ug‘m¯®œPb¾®]½U”ª«¬¢‚l7ÕÃó]äÍMí,²£WBÞf•µÔ¾ö¾¼ý›B×n2ì;›°¥åuºêU’‘ðû=ºï¨ÆÎ²¯E4$ÉÕ¾ÆäWíDf Ðµ.Û«€Ô–šIó5[ïdj÷’Æö¥Ûùœ]«òýªlnoi	ô„º•Ò·ì¯Œy•–æÒnO6¨VöZªä§Gæ”&nYÝö(Ëui]§ÎxÕìÊBóx…öG¥ÐrUï9ºBGˆ}9ö¥˜Â;Ù)ÙÆÍÎVM µA´–¢y¥™‘m_Ú$F2åqC….U(cåÊ.æl¼Âµ•¹4IJXì÷Õ/Õ”lÃ¬Kã˜V–l¼JÕGpU¨¤r€Òå ¬»Ò¢+-Á«ZìÃ+r‡áùSZ×ê:²ó¯Ý4É+Õÿ4²Ùµ_»ÃHyvÕ@«½2§b‘úœ]ï‚Æú`©ŸUQWV×@Wè¨–U­@ËÊ7FN|i¥A”Ñ¹¯š µfå0»ºJ7Ó“-"!Òt‘F$Û>L˜Tù¼Ì§y•åf¿Ú¼êQžÂµ­æ§P¦³kJN¼ü~Šet>¿ßl¬£›Ù<,M<Ê‡Ú¼’W™gä³ZkW·œ‡%kvÿ…XG%4Ë˜$#Ÿp)#UÊ‡´<FóÊ–»Ñ~Zk#.·¯Pè3ÏÕ^zú%«P
+ìÔ$Îænšd‚ÿÆt·’pÝ[ª¢—ˆEE°dJ¾_[I…Šo\ºát²E'9ÙÔL6ÔnÇ¾Lªæ+«¬qd«Ò„òp:ù“ÆEà/äO6ßª¨¦r®âZ…Ný©-néê¶/Ã°$Êùl/Ú%;%njþ¤C«õ!Ú¥Õ"ªÊ‡j…V½‘+]:·Ú•`œž±bÊŸ®y%[²Ðž‹ö•P¢ú_[ñKYX{_^QYuÜ¶lYTÂê
+Tëµ¼ªíN
+vjã%'|X+S÷†,‹Ÿö<´×‡Ú¼ªZM²jþk”ÚÌ5cC¡*I¾%…j}.[K²1îÙÂ†Õ¨;%½Ëú©:¯ÒK¬!…îOÍûh%7Qh£Ÿm+cUÂU­.ãŠª]ÉªÌÕ
+k‰»zyç½«ú£ê–°m
+Ç8ãŒ²áF¡£Õ#›Ûê¦Öî¿Eù²	oñAXjnwIh©3–bhiÓC'¨ÐÙ™[¦a‰¨%?Tul¨|¥H«>dwvaý²ÌT5¢faê]è-«Â¨âUEª6¯„ªa	·1»²ñ¢Ðµ±6†~Vy(ó1æI‰‰?i—!ù£FÙX»íI¥îáJé-§½eÕË»Š,Æ°âÙkfVÂíù?i…®
+–1\3ýÝ,hmúnØ%+?¥°W…¼/yk‡"øïWBšdÙÂ6ÜOÁ™TÅÃüŽ‚"”RA·ß·Œ[ò'½o	}4÷R~¦¾*î‘ÙªõY•ÿ¥h_wêz´/•¿œxihRÈÎW-AY°ç¼®³±¶óï‡W(¼rd%‹Ö£G$gwF¨á~èR°,‹HÕya†Ý³ëB˜iÔ>Ì.‹çýÒ@Wè~v³Y2Ä}!05“[o½§0B—zÏe;¦•}gÏ­Lm=¶WhR¹U`gšÆœ·S+Ó>Gc©çÂ9š®'0ÍõØ^¡ÃçEUO™†ƒÃ†°?Ê2Š±¯ðhÚhfC”ø*I†L¾Ufµ'¢ÐU3§1  @ )šÿõI@ €À	 ÐcŒ
+{I@ €Àz¢³§?hãV®7±S;ßÚö½4d%;­î—¢ÖÏÿªˆâ2dÄôÛg=‚Þ£K:ßV‹®–†Ü~<yÕ%yUžL®qï<³ùV²ÉÍK¶œõ³UÞÎjRÃÇ](…žB8[ÑÄŽ7b´VÛ>”ç°~•ì´ºoYÉÃS?k!KÒˆ72X’Ÿ*ÏûmŸZ?gŒ^Éù–VäVùÓ#Ï3ªÂÕ¯qä‰Ý19ßìvú¹Ý¤WÃÕ×ÄŸ1™BOhÚj
+ª,Ž51’=•úÑCÔ®äÚö‘<{….Ùiu_‚‘jÇ.c=FlUkz-L|ˆWµù#·÷ò<’¼jËÙžZj–S#k´£ú3Ñ%'çÂù	‘Ñ:ÚúåeÆ/¶Hcº–Ù…)ÙÆí· ìaËGTAÒÊùŸ
+mÄ'2¡Å;œø1
+A¨Ù¥i¿¯&zG!^atäüâ’å û)TL‹t¥‹¢jÝUU:ãºh˜o£Ê«RÜÕù
+uOˆ¾šÞÂ²÷
+]Ê®K=Oë+-¥qK%4-&Uô£±®ÐQJÕÊ²êä_Šh¶WJ_U>cÀŒÔ²K×°lÖè[võvµ[X<À´½:—’ñpÜ0†ÜWQØdg"×!Ž%oåuÌ²:¢@g9ëÅ(Ær>Ì·ÒÜ[åOÉŽœW)!ÍÔ¼JÃ¤fu© ;
+ùí$Jóª½_ÒK-2¶‘W¥‘Ì¼7«Pè´ÐgEQ¨>–¤.`cMlRŒŒË&âM¬i*t´xd…Nƒ–àtj³­¤%‰Ê†@­¤j]N3Ö˜W²BÛ•µä¡:_u×U[¹då‹d š`:ß±å•š	j]*­£ZÎÂK0%ç[ê¼=„y©Lªâ.lkŒ‹®ê‘÷ªVhu_³ 
+U¸ÒÊæ+$Öðœ“%_¨˜=J€eŽ%jï«FžxØ}ZÞ§º‰ON¡…}v8®%LãÉ«V
+­f¯¥AâÐ{Gù£ÖÒúªZwjã¬Wt‹×f)t“¼—W²¥*©iô…®"éqÉ;H{¥“kÝŽ%Ž–²hi£ze?¥eÝF¡í å=V­Ò¨‘Íæ¿Å‡ÇugŒBÛãÛL¡ÐOKgñRUuKUGÕ‚p8H½µÌ×’ÜêæÝ²æKs7ÞWÓÅh§TjïW‰ŸwµRð{ça)±£ÌW™DÙ¨¶ïÿÆuú?0Ôµ?Ð~•ÕrîÇ´îYÔÑÞ+ÛRÍÿ!1•}ë†.-¢Ò¸ê>C­T‹×@Wè”u´À¢Hxúéýè-£¬pf#ºê^÷Ž–lG˜ošyªHñ3ä©V½cÕ ÙÈ7ë<nÉŽ\¿²¼—4ªâ+š›	u½DÑQÛ«ë¨ªÐ[fz(ï„øŽ*¯„¥T{\ª
+Q”œBIÍ¦Šè#•}«je‚ZßB'Kë.´,§SÉÅh¬+ôyV¥×èF˜Ÿ#t©ØÅë’*ÜâÍ‘@{…&•Gf\Ê>c›ŽÍÒ&} Óðx! h¯Ðáó¢èyê 0Ùç«S7;„üÈ}V^1®úH–âF’LÀDz
+~3  @`±	 Ðü¯OB € ÆH …cT{WÈì  @ÀB …F¡! @ c$€B1*–½m  @`±	 Ð(4  @`ŒPè1Fe±w…Ì€ ,Ph€  0F(ô£bÙ[Ñ€ › 
+BC € ÆH …cT{WÈì  @ÀB …F¡! @ c$€B1*–½m  @`±	 Ð(4  @`ŒPè1Fe±w…Ì€ ,Ph€  0F(ô£bÙ[Ñ€ › 
+BC € ÆH …cT{WÈì  @ÀB`ú¤•?–É·mS;n©}Éù*û]ã¬©*;"a#Xo!r){?ºYê’zø”K“AeÕ$ÔQ|yFÃç;Ü‚}.MZÎÃMfm7bä3ïy%×‡kx‘É2G¡›iym„²í#Mì·Í¤Z—ÂÌJlêžoVjv–t®¶¥í‡@PGo˜êX‘H—ÚŸïpö¹4i9w7™µÝˆ‘ÜÌhD=3ØÝ®jiq~x‘I]Z@…®â>¶ÆÃÓÔXg›L¼v“Ñcu•€X”Û‹wªª'MFFšx^ë˜¥ÕÚ6gFS3AÑù6Ã¡pfÛÌÈg®óJÝ+!ÔFJWè¨úmÂæ´]yž:Wº¯nÉÃŽáÂî§‹'m•éÈÿðÝHÛ²¦äY„{¨·hj¥A£í˜:¯Ô1A>S?½ýl(SSaû&¢"x›eáÍîKJmÔ Fðå2-ÃPgCß*,yÞŠC6yJë.[.äõ^%“i«ëºä4µ¶
+‹([g,‰]›?j{¡.•ÐM‚¥^6¯äÀ©yRÕ@WèÒŠŠð¥Šx¶¦w¹¥V^afWrT@å,Œ&›þU€[ªÔ¥úÒ[“,É-x^$õ¿VùThCP„Î”ò'k_õ*›¥*ü^{$!á‚ç²A5Ï-Ó·Ä¥Ç|³ùcác)mÆ‰«uF¨E–ºÕ7•zh©ŸÑ^AÅe)Æõ%×c>×úÓ6¯:k–uaÉUK›¡
+ÝÅ;›µ)AÈ"„RJ©R™³D´´±4–×4¨µa.Y¨Í˜ÒrÊ‚Š¢ÐTm“•2\öi¦þ[*cUhúU–T†³qjŸqÜ!“—˜q\ÕsãŠ¨Zƒòd…°Ïóu¦4µ,ÿR=Œ¦•£lþ—â[5®Z‡å½¬ýÏYå•\…JQ¨ÍÞ´ýèZ¼HÂåÔ´¶d%ÙSë{ZyS·Kwä0K@@ãöÂ>©Þi\ðµ[@-,¹i*t•–‘fŽ¥
+W)„eA…nô¨¤¾»ë;¡DJ×uÉOcBZ°(²Ó¬J¿0ÃCn*£‚¶â¥híBöíÕy	ô†ä
+¯ÉÞ™!(™%=VEUÌÔŒTµdr
+]5wµrÕÖ£hârwcÕ\ªv–„”ÒÒ]Ý")´°íDUÒUÖ/.²¼Ý°ìÔwUËE&»´[ñQ™ë¶ªÐÊ«ªjß{™vœ›3tveYÉFa+íÑìz#—Wcñ¶ŠÆ‰¨KºßJèÍßX†Œüåˆ[ª‰ÅK^YOa±(a—w<ýò¡v'*T5o-ó²ø#§¥PvÎ×ú)Çeæ
+­®—ÚrŠ·0w{Íu^e³Ñ®Uú]¡ÐîOv#¦fŒ\…šëé¤÷£·¢Z²SÚVgíWÍBÅ%Ï:ÝgW]‘Ò[>^ò
+ô“M}øÛëf–›eP¡Ðdù”ê‚eý„3íÍSÈÏì|ÃöÂÊWã¨Ž›]¶ö¸”òG7[7²e¤Ä§6ÍJqTùÛ×—[8¨¥4í{û_ZÔÂ,JÅ'ÌCa½ØùÌ6¯,1êHm CW(´Ñâ4›YÊî4ýa,@ €@+ó§ÐÂÁ´ì@ € fN@Wè	Þ‡Ì|„.™}! @ )]¡¡@ €Àô	 Ðýy9ýh1"  ¬(4
+@ #«B§?¹™ô.Fq¸?Ã-¨já
+?mJ?}~¢úF@ 9“Bû¯OOù×MòpÃnAˆnö·•^ƒ}Gõ«é%'KöGžp¸@ Fu
+Ý	ŒÑôðfãTè~º®
+­Ú@æÙÏ«á1Â  Lˆ@µB§‡?õÁlÔÅþxYþUUªIµO•KçWùéq?-ÌöRÐé™»”ý¼šPVa€ †ÐZÉPkKOÂÕû–Åª¼	O…§ÁYßÚ>=Vé•¶/þYE´]ˆžaÈ›˜áù@ ˜]¡…c\ö˜*J'*¥û…Îú KiigW’·IœGUáWtž—|›„Ï³JJÆ…   G ™BGgÁn	‘ON¡ÃýD«,Qh£Ð­Pc€Àb@¡«¦=¶áÙ×x66S7F‹‘¦Ì€À$0q…nò9tÃ§Ü¥³¬ÝO£B—ÎÄ“¾¿“˜)C XHºBËÖfå*úÈ9:çùwU %;áSèîCîîª7r#Un»Ÿ¥‰dý‰½\ù{ÿ…ùª`i @ ã' +ôøç€‡€   Å#€BOï`Y¼ìaF€  09(4
+@ #zŒQ™ÜŽË€  0/Ph€  0F(ô£2/û;ü„   É@¡Qh@ €À	 ÐcŒÊävdX†   y!€B£Ð€   1@¡Ç•yÙßá'  LŽ 
+BC € ÆH …cT&·#Ã2  Ì…†   Œ‘ 
+=Æ¨ÌËþ?! @`rPh€  0F(ô£2¹–! @`^ Ð(4  @`ŒPè1Fe^öwø	@ “#€B£Ð€   1@¡Ç•ÉíÈ°@ óB …F¡! @ c$€B1*ó²¿ÃO@ ˜©+´Äm¶–ÆÒý¨Ù¿º!ªº·r©jÜƒv]Œ<gÈ¿
+>! ¬ySWhG<«(Âý&A**ï×+´YeÁ7¶÷Ê*nÉNíý&ä1@ ½ ÐâSn»R–èÛ-D--Cß½%;µ÷{åSÝS
+†€   2ƒBG/Ë3Û¬r”$D¸©gÔ2=>
+Šey+=ûZdÒŸþ³(£NÛêyW•ä®j§ÇÎ€@ “'`Pè°ÊG¯Uÿ²
+g|Ê=äÌ—¡Þ	”T­Ç|Ii‰¹…gè|V¡»=V:Çè¾:Y@ €À$	LF¡KgßèTML>ÌYTS·¤Ði—¬TË1¨·dª¤¬!´NDÜŒJ,;Éäã‘8  & ÐªÂµ=C{	‘ÇUÏÐF;²@ÚG±mo…ŽöCCžI Ó€  0u(´x$µ<£®Ý¨gèì“ïf?ik•{ê¹ÈV€ Bó¯ÐÙ§ßÂY¶ô´Üh§÷ºJìçÝÒ§UsÅÛâ$Ê@ S!P£ÐÂ1.ûÉhô9hô´6úH5<ÊFœÓqKŸû†-K"ŽÛÏNI¤³óõúÍW>I§N
+áetBhÂ·ìÁJ^²†   …¦4C €  0-(tò9ô´Ð³=„   û.wö!*2@ €À$	ØÎÐ“ô€  @ )š§Ü€   1@¡Çö’€   Á
+]ú•Î~½cüýRúÛ-õ¡}éWXÙŽòL‡snaæ¿ªªâi‰ŽÚ¦GÐÃßÅY~ª×1Ãü·C % 0Ÿ+´/RéüÓ2×Q?ã–^Q›]¢iZ,Èd†[åDYÃ EYúkíˆU(|cK/!î%;µ÷k'K{@`m@¡µ§Ü=Šûøºé™¤¾…§à˜½{V8n­úªígB›A! y&`SèPÅìgeáQa¶z¦³ã¦’Ï²å)”BhÔƒZ>ÑTÿC7Ò×ÙùfgTšNÖŸHrTE·´ÂSˆ»e²U
+Z>~(í îæ¹šÌfÏ1,.›BË(åº¯>í´T´’Øg=ÝÍl‘5*DjAÎ€RõÏÚéQÙ³ö-ÜR>*Éì âiÙÐ¨YÕ#!´ª|”Uènï’Æ(ºo™/m  l
+=cÉ²Öt£2•D%:Ã•jwêªpR¡·–«¢2ƒ°)Q3;;)AékÑ	í{ðô¡ì7eA¡}rFI•Ýˆ”ìÔÞW£C@ [0(´Z¦KÅW>ä¥gŽ(6ò¸ªf7F0631C('%EIïg}ˆB[VN)dU<kã^rÌ‚=âVÅÇ¸Óªš»2m  5C …ö'µÕ=Jj•¨+{öàhÜE«k&(Y-Š,‡&FÔ6é”kÚÈ¶´³Tï¯™šÂ§Ñ€@+ãSèl¥NÌje”å³¶²«gSÁUYJ©ÎWP‚ª3bö‘¯,3…VÛ¸ÝQí„þ[vEþ;Â¸ˆ4  …Ÿ²–Ž\%YÊV4jFÂý¬Z´²ñòfÃeJý	Ñ¹wíóMUÊwÏ¾e—+A¤#ÿíÓ—ç5„§1îê¦$…ŸÊe?³Á–FèF©}ÍâlµÇ 0§l
+MY€…€e£`±C@ Øæ$:{tâf/(45€@;(t/)j€9}ö’q»ÇSq0B €@™ 
+BC € ÆH …cTç`Íî€ ú@¡Qh@ €À	:úúÏÀoÕþj¥ïÖ#ÿAi•µIÿ`&ü	P•c³ýUŒe8´ÞfæÀôîÞ¶ã¯¯Y­—l^ÕrîÕmÓkóF`ê
+í •*éD+l?ãýzY’ ‰eo¤‰5‹Û]y¸áÎô°0Ã
+ØÃ[;ê-r}5Üc½dóªd§ö~àÒe@¡ýÌ½hR²)ÕÄrh¤É	Ã˜ýcSè0tÆ),p3Ú²â,0›WQÇZU¶Œ»ÀÉÉÔ*	Pè(5C…+¦½‚D¢éçf¹_j\ò3R8{Ñ8•BXüÙm»¥èDÜÔŽ…›Eékã[;n´ó°¸¤žìÕ…QÇ¶<ªóÆu´Æ××ðõR«¬QQÿÚÛ¾š™4XÃ(tT³ºk¿™VØ!ŸŽ«ÞÉªBi3eLE©òGUú¬?]M -4%ÎÂª(ÙŒ¶ò_…qeû%ÇŒÁ²Ì«Jïe€¯¼üXâú¿FÖW6µy&U©vYx–ìÔÞ_ÃªÃoUì&£Ðá†7=C”j–±Ò	%O·¤ˆi—rk©ÈM*Ž "Ân£4_9dU;’¶q´2#ùI+t•º§›˜hw’ËZ[_MÖ‹ ÐÞ~Z¬„“C×8ÝMïÛ›–k˜ÀZU¸	)´<nI¡ÓØ«þ7ïb9zfsÔH2k?=LÛ—Aê’`wZý¼²÷*IízŸméEÔâ‰`¡G²³¢6.UA¯Ý>ª”Ôõ«ÆË²q¬RèhYyª~ª(h°– ÐÑydë/*—Ó@QG¡Kgt#yb_Ï=â(Ÿ˜þ£ÐjŒPh‘Àü+tú”)[4Óf–=o
+[Û%ë¿\÷Õã¯¥â··¶tZÆm«”ÆˆDÌûõJg±Ó;^–Ž¥l±ä8ãZïÀàªö…2­ö5ò¬µSj¿ˆŠbÿ„•–…ö«´Ë3we×|ºðº–Ù.¥².4NÇ-ù“7œEä­t]y–rœŽ®ú“]Éá aƒÒ}5Ž)‡Ræ›½Ô>{?rÃ‚4²¦Šq¯žÂí"¤mãh‰×Y_Qtúq–5MNéh”’§*©Pn¬°)4¼dáø	ÇñÇ!°– Ðéù«þ•}1Öq\Œ82,
+º^KÏµ¢‡«‹’"–K¡ðé ¡„  0(ô`…žEØAá@ "…†   Œ‘ 
+=Æ¨pD†    Ð(4  @`ŒPè1F…#  @ …F¡! @ c$€B1*ì! @ (4
+@ #zŒQaç@ @¡Qh@ €À	 ÐcŒ
+;G@ € 
+BC € ÆH …cTØ9B € Ph€  0F(ô£ÂÎ€  €B£Ð€   1@¡ÇvŽ€   …†   Œ‘ 
+=Æ¨°s„    Ð(4  @`ŒPè1F…#  @ …F¡! @ c$€B1*ì! @ (4
+@ #zŒQaç@ @¡Qh@ €À	 ÐcŒ
+;G@ € 
+BC € ÆH …cTØ9B € Ph€  0F(ô£ÂÎ€  €B£Ð€   1@¡ÇvŽ€   …†   Œ‘ 
+=Æ¨°s„    Ð(4  @`ŒPè1F…#  @ …F¡! @ c$€B1*ì! @ (4
+@ #zŒQaç@ @¡Qh@ €À	 ÐcŒ
+;G@ € 
+BC € ÆH …cTØ9B € Ph€  0F(ô£ÂÎ€  €B£Ð€   1@¡ÇvŽ€   …†   Œ‘ 
+=Æ¨°s„    Ð(4  @`ŒPè1F…#  @ …F¡! @ c$€B1*ì! @ (4
+@ #zŒQaç@ @¡Qh@ €À	 ÐcŒ
+;G@ € 
+BC € ÆH …cTØ9B € Ph€  0F(ô£ÂÎ€  €B£Ð€   1@¡ÇvŽ€   …†   Œ‘ 
+=Æ¨°s„    Ð(4  @`ŒPè1F…#  @ …F¡! @ c$€B1*ì! @ (4
+@ #zŒQaç@ @¡Qh@ €À	 ÐcŒ
+;G@ € 
+BC € ÆH …cTØ9B € Ph€  0F(ô£ÂÎ€  €B£Ð€   1@¡ÇvŽ€   ƒBŸtÒ6\€   L— 
+Íþ€  0F(ô£ÂC@ € 
+BC € ÆH …cTØ9B € Ph€  0F(ô£ÂÎ€  €B£Ð€   1@¡ÇvŽ€   …†   Œ‘ 
+=Æ¨°s„    Ð(4  @`ŒPè1F…#  @ …F¡! @ c$€B1*ì! @ (4
+@ #]¡/¸h#¸ðâK&z]tñ¥º.¾ø²øÚxÙÅ“¼6n¼|ËuÉåçè
+<Ÿ(¢eãI\&” ÎìDS×o¸Ð0µ t…¾íö;¸ ÐÀíwÜ9ÑëŽ;6Å×›îhqÝyçOâkÓOîœäµiÓ][®ŸÜµiŽ®Àó‰"Z6žÄ¥I¸—$¹4ÑÔuÆ.4L- šýÇ´	LºÆ¡Ð£rº×NtD…)4$€BO[ŸoNM¡Ðö3%gh+ÎÐ<é\P=ú§½þtŠ’v½øâçŸÁ?þãÙ?üáùçŸaÖv©¯Å‘ÙöÍêèe—^9§ú:ÜmÚ¤:+ÏQh+zAõixµ™w3VèSOýæE]øÏÿü/÷ß¿ô³Ÿ-Ý{ïÒO~ò«/¼ÆÝ¤7TÙ£ÿâ‡rÂ±Çžvzî»ïÞ»G
+}ó¹'ÜüÃão:ç¯~|öÿT^P÷Vÿ”ŒÉBON§yÊÍSn>‡žweÂÿŽÀ,ÚÉð7Þ¸´òçg?_ºûn'ÏKwÜ±tçKW_ýÓH¤#…>âˆsÿkî»ïÞE:ìëä¹±ûó£3?*‹´¬Ð×ß³´ÓN;¡ÐUËirÚÜYF¡QhºjIÒxœÎ:ó¼6
+}ÖÊŸK/½Ôý÷¼óÎÛ¸ò'Õ­Hí.¹d£WÊûî[ºkÓÒí·/Ý|óÒ¼të­K7ÞzÊ)_ñFJ
+}Úi§}÷»ßýþ÷¿ïŽÓgœq†“lA¡WåùÜ¥%-]wú‡®ùÁ¯þÞqW}÷ýWžvìåßyŸpþßrGhºGf£Ð¦'·<å¶Iž§Ü<å^8NžÝ£Ö¡
+ýÍo~óoxÃ«^õª¯ýë÷Þ{ï¿ýÛ¿mÚ´éúë¯¿ï¾ûÎ9ç§îOVeÝùòËÝgÒ¿øÕ¯~µrˆ^úå¦¥_Üµtû­K?úÑÒM7-mÚô«¯}íÛÿøÇ»îMÎÐîáöÒýg-ýâ·ºÂ3õÒÒeß~/
+ÝCwí]PhÚNÀÔ…^8}²×“…lÙÉó §ÜßøÆ7ÜAùºë®;óÌ3o¸á§Ê‘BßqÇ]çž{Ý{ßû¿üË÷§*{Úig}ö7Þ}Ã÷ý‹ûú¶{ÎøöYWm¼þ¾Zºå–åÃ´ûXúì³/Rú{ßûÞVþ¸´óD>C»Ïž—~þý¥{O»ñ¬E×õÿø‘kOÿÐÕßÿÀ•+'iw¥>GO8C÷[(´Iu8Cs†Fw×$/ÏîðØÿý‰O|âÄOüêW¿Ú)ô-·Ürá…^qÅ]t‘ÓËNø_¯ý›Ÿô¤§¾ýí9úèw¾ùÍoŽÎÁßûÞ¹—_~ïWüüÚkÿå¾{—~xÖøÐ?÷ù“î½çþk¯ýÙWÜ{ýõ??ÿük?õ©O7<C»¯†-Ýý-§Í[›·þÛ½§¹¿_ôµw¢ÐýXí…B£Ðv¦–œ¡×¤’©¥f„ò<èsèÏ~ö³_üâ?þøcŽ9æ3ŸùŒ;R;m>î¸ãº‡ÞïxÇ;^üâï±ÇÇÿµ?û³÷¾ò•¯Œúì³Ï½çžåGÙ·ß±ô¯?_ºúÒ>ÿ·'{ö¹?¿ç_Ï?ÿÖÓO¿áôÓo>õÔ³œÒ—ºû²Xz¹û¥oŠ-kóí§®|~½Õëûoü{÷î§þY¡/þÛ¯üò.ûâž—~a÷‹¿ø;Â/Ä²YÂw¹'§Ó|SŒoŠñM±y'|ŽäyèçÐ¹òçì³Ïþô§?ý¶·½ÍIõ›ÞôæC9ä5¯y;4ÿÉŸ¼î¥/=êÙÏ~î¡‡úÆ7¾1QèÞu×/Ý×¶ovÏ´o[ºïö¥ûnúÕýw--ýréþûyË-÷^vÙÝ'ŸüO|â¯…îÄ8{e¿Ëí¾¹½tó——?v
+í>Î]÷]{’{÷ü¯ë[Õ½¸âÔCî¾ó*wÚþù]—|çƒŠÞû¢ÐÉi3ßå…6wÿ4)ÿ¦ÿ¦'û©<úÚŸßþö·uÔQÇ{¬;UyäQûî{À“ŸüôC}ÞÁ?óðÃík_[ú¦Ø…^ëÚ}sÛ}5ì÷Õ°Û–î½{iåkcË~þóvGsásèî |ÖY×üÕ_ó¥/sÊ)§\pÁe{ìqÂc{béí>lv
+½ò”ûÜå¤s×½Wþ{÷¼¯¼#Uh÷Ím]~òw]öº¥›ßvÏ¥¯þÚ»ÿsø–ÿý¿‡Î@¡MOnùšÏ¡kê;Ð¹&•çAŸCGÏu?üáqÄï|çqÏxÆ¡tÐóŸÿ|w¼ŽÚD¿¶:í´\}õ=î{aî›Û·Ý¶ü3h÷“h÷O—¸?îÞîgTýè–+§ßåîdøÔS/8ôÐ¯¹gÝ÷ß¿Î)´»J
+í~Xåúú3>¼¬Ðw+{ýä’OºwÏ=åí‘B;Ýÿ\ùwºó{®ûÆº;¾»Ëß¿õßGïr†V
+BÛ	˜Zò94Z>ÏJò<èsèì'¯N•ßóž÷¤Ú\úL×ýæêÒKoÛ´iù_s×/~±,Ïî;áî7Z¡<gmÕÉð‰'þýÑGÿ+_¹Êµ¹é¦›d…v¿{v
+í¾°½¬Ð·Ÿš½n¿àÄe…þòÛäÏ¡?ÿgøôkðÙ×ý»Ïýï>uäøÚ¾E¡MªÃš3ô<«Ž½ ¬ñ–‚<ý:+KÂÍèÝµüÒ—¾üÍo~ï¼ó.½þúÛ.»ìj÷O¸‡ÛûØÇäó÷AãäùiO;Á=Üÿt
+íÞ*ý›bþŸ%q¿{¾ôÿüåÆo¾ûâ¯¿Ë}sÛ}5Ì}öìn»Ó³“g÷Ä^ý.·:}žró”Û.ÆÙ–ü»Ü&€œ¡Ñòù$ Ës›Ï¡U¡Ê~öúä'?Õ]îûVîƒgÿÙsØ&«îÆ¡gÛ—oŠñM1“ÌäŽŒ(´	
+=ŸúÄé¹ûQ{rÜøsè5NvøôùµÕäžuók«Q|£›ïró]nöeêé¹“ížÿbÉp‰ÂÂš%09mæ×V£Ðf~mÕK›»ì]³ea­M\==úw¹×MæÛ 
+mzrË7Åø¦gÐ5O@9C»·¹  @ ˜	÷¸û!ÞíàC^ø¬Ã^ø°‡?v÷ÿÜ_Ü-é¯æ=@ € &O £ÐßvG.@ € fN >CÏÜ!€   @ÀØ¢Ðà€   @`l–?‡vÿÇ@ €ÀØü_a¯µýÞ´u    IEND®B`‚_3http://www.brokenthorn.com/Resources/images/pmm.pngO]bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_3http://www.brokenthorn.com/Resources/images/pmm.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl!™ö ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/png_timeout=2, max=99_Fri, 12 Sep 2008 02:35:27 GMTVApache_Mon, 12 Apr 2021 11:23:00 GMT_max-age=2592000_Sat, 13 Mar 2021 11:23:00 GMTU25379ZKeep-Alive_°
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDllpbWFnZS9wbmehEF8QEXRpbWVvdXQ9MiwgbWF4PTk5oRJfEBpVc2VyLUFnZW50LEFjY2VwdC1FbmNvZGluZ6EUVkFwYWNoZaEWXxAdTW9uLCAxMiBBcHIgMjAyMSAxMToyMzowMCBHTVShGF8QD21heC1hZ2U9MjU5MjAwMKEaXxAdU2F0LCAxMyBNYXIgMjAyMSAxMToyMzowMCBHTVShHFUyNTM3OaEeWktlZXAtQWxpdmWhIF8QFCI2MzIzLTQ1NmE5YmNmY2Y5YzAioSJVYnl0ZXOhJF8QHUZyaSwgMTIgU2VwIDIwMDggMDI6MzU6MjcgR01UAAgAIQAuADkAPgBFAE0AWwBgAG8AegB/AI0AmwCdAKcAqQC9AL8A3ADeAOUA5wEHAQkBGwEdAT0BPwFFAUcBUgFUAWsBbQFzAXUAAAAAAAACAQAAAAAAAAAlAAAAAAAAAAAAAAAAAAABlQ==_"6323-456a9bcfcf9c0"_User-Agent,Accept-EncodingUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë!&1:@CLUWY`hsƒ…‡‰‹‘“•—™›©«­¯±³µ·¹»½¿ÁÃÅÒÝëòú'05:HRf†­¿ßåð¤»ØÞãùý
+#';             z              IÔ$%&OÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      ) 1;    Â        ‚     €{    È        €€           Ø       è       ð        „‚(     }=     Ui          õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  ) " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ÷Òq\ï‹|[eáM4\N¾uÔ¹[[Ul4Ì=û(ÈËvÈêHñw‹¬|%¦‹€eº—+mj­†™‡òQ‘–í‘Ô”Ú%Ö¡©KâzQ%üƒ…Æ…Q’œ¼’I$šãÆc#‡™ÍˆÄÆ’Óq.ü?¨ø†9õÝgPhu–Ä°:‹læUSœ¦:Œƒó’r–ÿ /tûxí5Þúî!¶K•Ô<7Ð”Bœc88ÎH p-XY_üBÕÂÊWµÐíŸwŠ9r9Ø™±È=Â‚	çjŸbÓtÛ=NƒO°·ö°.Ô9¹$žI$’I$’I$šÃ.Ž!§R³ßdc„]e'¹óùºÔ5^\x:ëhÛX ä"‘´g#wI&Ÿ¬Kæ\ÙÁ{<öúD’(ºžÝ’(Ï?/_NÇœ66ŸYñÏàñU¢ÝZ²ÛkË‹{œ|®:ˆäÇUÉ8=T’Gp|žÚâC5Æ“ªÛ47Ð.h$$ŒvÎä‚ ò+—Ft«,GÄŽ|E)S©í¨÷ÏM°Ñ¬íô……tõŒ<–Ü¬§Á¿‹9Îã’IÉ$œÖxg†|Qsàk¿²]4—óò‚ÍjÇ’Ê:‘œîQÉå†C{\)soöÒC4¨xåI2®§AAë^½
+Ð­h•±©Äœô®3Ç>‡ÅV«wlËm¬Û/ú=ÆßË“”É8=T’GRgÚŠÑÅIY—(©+3æéµQcowe­Û47–ÙŽh%É uÇ±#‚ ž	ÑÓ>üGŸN†m?Z“H´ŠÉõàhÁ$ó)
+OÞ#¨Ï89{âOü–ÿ Ü?ÿ JÞ½ÄtË†ÂBŒ¥ËÔä£‡Œ±ÿÙ_4http://www.brokenthorn.com/Resources/images/left.jpgO‚bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_4http://www.brokenthorn.com/Resources/images/left.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl!¢8 ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Fri, 24 Jul 2009 23:29:22 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1540_Upgrade, Keep-Alive_À
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDEwOjEzOjE0IEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDEwOjEzOjE0IEdNVKEfVDE1NDChIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QEyI2MDQtNDZmN2JmOTViMTg4MCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyMiBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCyALQAtwC5AM4A0ADbAN0A5ADmAQYBCAEaARwBPAE+AUMBRQFbAV0BcwF1AXsBfQAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGd_"604-46f7bf95b1880"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$)4=CFOXZ\ckv…‡‰‹‘“•—™›Ÿ¡°²´¶¸º¼¾ÀÂÄÆÈÊÌÎÛãîü-8AFKYdg|œ£ÃÕõúÔêõû ',@DX             ~              fÔ()*OdÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      )       Â                     È                     Ø       è       ð          (       =                 õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  % " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? eÕíçuKCR¸’ÖêÙÊZÚFJ›&S‘Ø6íÀdðI¦ à¯>¥/ö&¶-b1”|anÔÿ µÆHöÈèÁ[ã>©'öÞˆ«µÓ -Úáoö°8cØ {à#0x‚×ky–º…«äVX$RGÔ`ŽG\Ž ŠñëU«…­Ï-`ÿ Ëœêaê^Z¦{ÖáŒçŠ+„ðWŒßPŸû\Û±ù¢Ý¨þ!þß#ñ^
+W«
+‘œy¢zPœf®ŽÞkˆm­äžâdŠÔ¼’Hvª($“ÐÞ¼7VÕm¼Mã6Ö4ËakeˆÚà‚­wâuÎ FìNpªž/ñœž1»û£<:NS”k¶‡aÙsÈSþñç2mÍþ©¨C¡hP—¼¶HXTpYˆûª23ß$–â¼Ü]gWýž’½÷<üMgUû:h»©üC«Ùèº,mQ[Í[…b¿fÚFX¸åœsë€l
++×¼!àë/éf¶ýõÔ¸k«¶Pf8þ;Tp9êI$®¼.4)(^çM?³®yÅ=×Áwö÷:Qhíµ¥²ŽM¹Ùè§xã.ë¾ð…‡„´Ãkl|Û™6µÍÓ(3ÇÂ£«Ðdõ$’Q[Ó„T¤Ò*Š›i=QVnÿÙ_5http://www.brokenthorn.com/Resources/images/right.jpgO0bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_5http://www.brokenthorn.com/Resources/images/right.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl!ª“ ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpeg_timeout=2, max=98_Fri, 24 Jul 2009 23:29:24 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1380ZKeep-Alive_”
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDlppbWFnZS9qcGVnoRBfEBF0aW1lb3V0PTIsIG1heD05OKESWlVzZXItQWdlbnShFFZBcGFjaGWhFl8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRhfEA9tYXgtYWdlPTI1OTIwMDChGl8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoRxUMTM4MKEeWktlZXAtQWxpdmWhIF8QEyI1NjQtNDZmN2JmOTc5OWQwMCKhIlVieXRlc6EkXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyNCBHTVQACAAhAC4AOQA+AEUATQBbAGAAbwB6AH8AjQCbAJ0AqACqAL4AwADLAM0A1ADWAPYA+AEKAQwBLAEuATMBNQFAAUIBWAFaAWABYgAAAAAAAAIBAAAAAAAAACUAAAAAAAAAAAAAAAAAAAGC_"564-46f7bf9799d00"ZUser-AgentUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë#(3<BENWY[bjuƒ…‡‰‹‘“•—™›«­¯±³µ·¹»½¿ÁÃÅÇÔßíôü
+)27<JUi‰°ÂâçòŠ «±¶ÌÐÝâöú             z                          1   <   N   d   ‚   ‘   ¨  Ïv  Ï€  Ï†  Ïº  Ï»  ÏÂ  ÏË  Ïá  Ú”  Ú  ÚØ  ã“  ãœ      G (÷ )  TÈ TÓ U ]š ]£ ÀÊ Á  Éa Éj Ïr Ï© Ø/ Ø8 Ý  ÝØ             +             æ

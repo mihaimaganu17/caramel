@@ -1,0 +1,1295 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameO­õ<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"><!-- saved from url=(0056)http://www.gamedev.net/reference/articles/article290.asp --><html><head><title>Operating Systems Development Series</title> 
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><link href="Files/reference.css" type="text/css" rel="stylesheet"> 
+<meta content="MSHTML 6.00.6000.16441" name="GENERATOR"></head> 
+<body text="#000000" vlink="#666699" alink="#000000" link="#666699" bgcolor="#ffffff" leftmargin="0" background="Files/watermark.gif" topmargin="0" marginheight="0" marginwidth="0"> 
+
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+ 
+        <div id="ad_main"> 
+ 
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+//-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+ 
+     </td> 
+  </tr> 
+</tbody></table> 
+
+<table cellspacing="0" cellpadding="3" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td class="tblhdr">Operating Systems Development Series</td> 
+</tr> 
+  <tr> 
+ 
+    <td align="middle" colspan="2"></td></tr></tbody></table> 
+<table cellspacing="0" cellpadding="5" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td> 
+ 
+ 
+<!-- Title --> 
+ 
+      <center><span class="title">Operating Systems Development - Prepare for the Kernel part 2</span> 
+ 
+<br><span class="author">by Mike, 2008</span></center> 
+ 
+      <p>This series is intended to demonstrate and teach operating system development from
+	the ground up.</p> 
+ 
+	<h1>Introduction</h1> 
+	Welcome! :)<p> 
+ 
+	In the previous tutorial, we talked about basic VGA programming in protected mode, and
+	even built a 1337 demo too!
+ 	</p><p> 
+	This is the tutorial you have been waiting for. It builds directly on the all of the previus code,
+	and loads our Kernel at te 1 MB mark, and executes our Kernel.
+	</p><p> 
+ 
+	The Kernel is the most important part of our OS. The Kernel...We have talked a little about this
+	mysterous foe before, havn't we? We will talk about the Kernel alot more in the next few tutorials,
+	including design, structure, and development.
+	</p><p> 
+	Right now, we already have everything set up... It's time to load the Kernel and say good bye to Stage 2!
+	</p><p> 
+	<b>Note: This tutorial requires a basic understanding of the Bootloaders 3 and 4 tutorials. We cover everything
+	in detail here, but all of the concepts are explained in depth in the Bootloaders 3 and 4 Tutorials. If you
+	have not read those tutorials, Please look at those tutorials first.</b> 
+	</p><p> 
+	<a href="OSDev5.html">OS Development Series Tutorial 5: Bootloaders 3</a></p><p> 
+	<a href="OSDev6.html">OS Development Series Tutorial 6: Bootloaders 4</a></p><p> 
+ 
+	If you have read them, this tutorial should not be that hard.
+	</p><p> 
+	<i>Ready?</i> 
+ 
+	</p><h1>A Basic Kernel Stub</h1> 
+ 
+	This is the Kernel we will load:
+ 
+      <blockquote><pre><div class="code">; We are still pure binary. We will fix this in the next few tutorials :)
+ 
+org	0x10000			; Kernel starts at 1 MB
+bits	32			; 32 bit code
+ 
+jmp	Stage3			; jump to stage 3
+ 
+%include "stdio.inc"		; Our stdio.inc file we developed from the previous tutorial
+ 
+msg db  0x0A, 0x0A, "Welcome to Kernel Land!!", 0x0A, 0
+ 
+Stage3:
+ 
+	;-------------------------------;
+	;   Set registers		;
+	;-------------------------------;
+ 
+	mov		ax, 0x10		; set data segments to data selector (0x10)
+	mov		ds, ax
+	mov		ss, ax
+	mov		es, ax
+	mov		esp, 90000h		; stack begins from 90000h
+ 
+	;---------------------------------------;
+	;   Clear screen and print success	;
+	;---------------------------------------;
+ 
+	call		ClrScr32
+	mov		ebx, msg
+	call		Puts32
+ 
+	;---------------------------------------;
+	;   Stop execution			;
+	;---------------------------------------;
+ 
+	cli
+	hlt</div></pre></blockquote> 
+ 
+	Okay, there is nothing much here. We will build on this program heavily in the next section.
+	<p> 
+ 
+	Notice that it is all 32 bit. Sweet, huh? We are going to be out of the 16 bit world completely here.
+	</p><p> 
+	For now, we just hault the system when we get to the Kernel.
+	</p><p> 
+	Please note that we will not be using this file probably at all in the rest of the series. Rather,
+	we will be using a 32 bit C++ compilier. After we load the kernel image in memory, we can parse the file
+	in memory for the kernel entry routine and call the C main() routine directly from our 2nd stage boot loader.
+	Cool, huh? In other words, we will go from our 2nd stage boot loader directly into the C++ world without
+	any stub file or program. However, we need a starting point. Because of this, we will use a basic
+	stub file in this tutorial to help test and demenstrate it working.
+	</p><p> 
+	In the next few tutorials we will be getting our compiliers up and working and use that instead. But now we
+	are getting ahead of ourselves here ;)
+ 
+	</p><h1>The floppy interface</h1> 
+ 
+	Yey! Its time to finish off stage 2! In oder to load the Kernel we need to traverse FAT12 again.
+	But before that, we have to get sectors off disk.
+	<p> 
+	This code is EXACTALLY the same from our bootloader, and uses the BIOS INT 0x13 to load sectors off disk.
+	</p><p> 
+	Because this tutorial is also a complete review, lets break each routine into sections and describe exactally
+	what is going on.
+ 
+	</p><h2>Reading a sector - BIOS INT 0x13</h2> 
+ 
+	We talked about everything requarding loading sectors in our <b>Bootloaders 3</b>. Looking back at the tutorial,
+	remember that we can use the <b>BIOS Interrupt 0x13 function 2</b> to read a sector. Okay, then. The problem
+	here is that <b>We have to load sectors before going into protected mode.</b> If we attempt to call a BIOS interrupt
+	from protected mode, the processor will triple fault, remember?
+	<p> 
+	Anyways, what was the interrupt? Right....
+ 
+</p><p><b>INT 0x13/AH=0x02 - DISK : READ SECTOR(S) INTO MEMORY</b><br> 
+	AH = 0x02<br> 
+ 
+	AL = Number of sectors to read<br> 
+	CH = Low eight bits of cylinder number<br> 
+	CL = Sector Number (Bits 0-5). Bits 6-7 are for hard disks only<br> 
+ 
+	DH = Head Number<br> 
+	DL = Drive Number (Bit 7 set for hard disks)<br> 
+	ES:BX = Buffer to read sectors to</p><p> 
+ 
+	Returns:<br> 
+	AH = Status Code<br> 
+	AL = Number of sectors read<br> 
+ 
+	CF = set if failure, cleared is successfull</p><p> 
+ 
+	This is not THAT hard. Remember from the Bootloaders tutorial though. That is, we need to keep track of the
+	sector, track, and head number, and insure we don't load attempt to load a sector beyond the track. That is,
+	<b>Remember that there are 18 sectors per track? Setting the sector number greater then 18 will cause
+	the controller to fail, and processor to triple fault.</b> 
+ 
+	</p><p> 
+	Okay...18 sectors per track. Remember that each sector if 512 bytes. Also, remember that there are
+80 tracks per side.
+	</p><p> 
+	Okay then! All of this information... Sectors per track, the number of tracks, number of heads,
+	the size of a sector, completely depend on the disk itself. Remember that a sector does not NEED to be
+	512 bytes?
+	</p><p> 
+	We describe everything in the OEM Parameter Block:
+      </p><blockquote><pre><div class="code">bpbOEM			db "My OS   "
+bpbBytesPerSector:  	DW 512
+bpbSectorsPerCluster: 	DB 1
+bpbReservedSectors: 	DW 1
+bpbNumberOfFATs: 	DB 2
+bpbRootEntries: 	DW 224
+bpbTotalSectors: 	DW 2880
+bpbMedia: 		DB 0xf0  ;; 0xF1
+bpbSectorsPerFAT: 	DW 9
+bpbSectorsPerTrack: 	DW 18
+bpbHeadsPerCylinder: 	DW 2
+bpbHiddenSectors: 	DD 0
+bpbTotalSectorsBig:     DD 0
+bsDriveNumber: 	        DB 0
+bsUnused: 		DB 0
+bsExtBootSignature: 	DB 0x29
+bsSerialNumber:	        DD 0xa0a1a2a3
+bsVolumeLabel: 	        DB "MOS FLOPPY "
+bsFileSystem: 	        DB "FAT12   "</div></pre></blockquote> 
+	This should look familiar! Each member has been described in Tutorial 5--Please see that tutorial for a full
+	detailed explination of everything here.
+	<p> 
+	Now, all we need to have is a method so that we can load any number of sectors from disk to some location in memory.
+	We immediately run into a problem though. Okay--<b>We know what sector we want to load</b>. However, <b>BIOS INT 0x13
+	does not work with sectors.</b> Okay, it does--but it also works with cylinders (Remember that a cylinder is just a head?) and tracks.
+	</p><p> 
+ 
+	So what does this have to do with anything? Imagine if we want to load sector 20. We cannot directly use this number,
+	because <b>there are only 18 sectors per track</b>. Attempting to read from the 20th sector on the current track
+	will cause the floppy controller to fail, and processor to triple fault, as that sector does not exist. <b>In order
+	to read the 20'th sector, we have to read Track 2 Sector 2, Head 0</b> We will verify this later.
+	</p><p> 
+	What this means as that, if we want to specify a sector to load, we need to convert our linear sector number into
+	the exact cylinder, track, and sector location on disk.
+	</p><p> 
+	Wait for it...Aha! Remember our <b>CHS to LBA</b> conversition routines?
+ 
+	</p><h3>Converting LBA to CHS</h3> 
+ 
+	This should sound familiar, doesn't it? <b>Linear Block Addressing (LBA)</b> simply represents an indexed location
+	on disk. The first block being 0, the second block being 1. In other words, LBA simply represents the sector number,
+	beginning with 0, where each "block" is a single "sector".
+	<p> 
+	Anywhoo...We have to find a way to convert this sector number (LBA) to the exact cylinder/head/secor location on
+	disk. <b>Remember this from Bootloaders 4 tutorial?</b> 
+	</p><p> 
+	Some of our readers exclaimed this code was fairly tricky--and I am to admit it is. So, I am going to
+	excplain it in detail here.
+	</p><p> 
+	First, lets look at the forumlas again:
+      </p><blockquote><pre><div class="code">absolute sector 	= 	(logical sector / sectors per track) + 1
+      absolute head   	= 	(logical sector / sectors per track) MOD number of heads
+      absolute track 	= 	 logical sector / (sectors per track * number of heads)</div></pre></blockquote> 
+ 
+	Okay! This is pretty easy, huh? The "logical sector" is the actual sector number we want.
+	Note that the <b>logical sector / sectors per track</b> is inside of all of the above equations.
+	<p> 
+	Because this division is inside of all of these equations, we can store it's result and use it for
+	the other two expressions.
+	</p><p> 
+	Lets put this into an example. We already said the 20th sector should be Track 2, Sector 2, remember?
+	Lets try to put this formula to the test then:
+ 
+      </p><blockquote><pre><div class="code">absolute sector 	= 	(logical sector / sectors per track) + 1
+ 
+	2.1111111111111111111111111111111	=	20 / 18 (sectors per track) + 1</div></pre></blockquote> 
+	We only keep the absolute number (2)--Aha! Sector 2! Note that we need to add 1 here because LBA addressing
+	begins from 0.
+ 
+	Remember that the basic formula "logical sector / sectors per track" is in ALL of these formulas.
+	It is simply 1.1111111111111111111111111111111 in this example (Note in the above formula, we added 1 more).
+	Because we are working with whole numbers, this is simply 1.
+      <blockquote><pre><div class="code">absolute head   	= 	(logical sector / sectors per track) MOD number of heads
+ 
+				(1) MOD Number of heads (2)
+				= Head 1</div></pre></blockquote> 
+ 
+	Remember from the OEM Block that we specified 2 heads per cylinder. So far, this indicates sector 2 on Head 1.
+	Great--but what track are we on?
+ 
+      <blockquote><pre><div class="code">absolute track 	= 	 logical sector / (sectors per track * number of heads)
+ 
+				(1) * Number of heads (2)
+				= Track 2</div></pre></blockquote> 
+	Notice that this is the exact same formula as above. The ONLY difference is that simple operation.
+	<p> 
+	Anywhoo... following the formula we have: <b>Logical Sector 20 is on Sector 2 Track 2 Head 0</b>. Compare this with
+	what we originally said in the previous section, and notice how this forumla works ;)
+	</p><p> 
+	Okay, so now lets try to apply these formulas in the code:
+	</p><p> 
+	<b>LBACHS Explanation: Detail</b> 
+ 
+	</p><p> 
+	Okay, this routine takes one parameter: AX, which contains the logical sector to convert into CHS.
+	Note the formula <b>(logical sector / sectors per track)</b> is part of all three formulas. Rather
+	then recalculating this over and over, it is more efficiant to just calculate it <b>once</b>,
+	and use that result in all of the other calculations... This is how this routine works.
+ 
+      </p><blockquote><pre><div class="code">LBACHS:
+          xor     dx, dx                              ; prepare dx:ax for operation
+          div     WORD [bpbSectorsPerTrack]           ; calculate</div></pre></blockquote> 
+ 
+	Now AX contains the logical sector / sectors per track operation.
+	<p> 
+	Begin with sector 1 (Remember the + 1 in logical sector / sectors per track ?)
+ 
+      </p><blockquote><pre><div class="code">          inc     dl                                  ; adjust for sector 0
+          mov     BYTE [absoluteSector], dl</div></pre></blockquote> 
+ 
+	Clear DX. AX still contains the result of logical sector / sectors per track
+      <blockquote><pre><div class="code">          xor     dx, dx                              ; prepare dx:ax for operation</div></pre></blockquote> 
+	Now for the formulas...<p> 
+ 
+      absolute head   	= 	(logical sector / sectors per track) MOD number of heads
+	</p><p> 
+      absolute track 	= 	 logical sector / (sectors per track * number of heads)
+	</p><p> 
+	The multiplication results into a <b>division</b> by the number of heads. So the only difference
+	between these two is the operation--one is division, and one is the remainder of that division (The Modulus).</p><p> 
+ 
+	Okay, lessee...What instruction can we use that could return both the remainder (MOD) and
+	division result? DIV!
+	</p><p> 
+	Remember that (logical sector / sectors per track) is still in AX, so all we need to do is divide
+	by number of heads per cylinder...
+      </p><blockquote><pre><div class="code">          div     WORD [bpbHeadsPerCylinder]          ; calculate</div></pre></blockquote> 
+	The equtions for absolute head and absolute track are very simular. The only actual difference is
+	the operation. <b>This simple DIV instruction sets both DX and AX. AX Now stores the DIVISION
+	of HeadsPerCylinder; DX now contains the REMAINDER (Modolus) of the same operation)</b> 
+ 
+      <blockquote><pre><div class="code">          mov     BYTE [absoluteHead], dl
+          mov     BYTE [absoluteTrack], al
+          ret</div></pre></blockquote> 
+ 
+	I hope this clears things up a bit. If not, please let me know ;)
+ 
+	<h3>Converting CHS to LBA</h3> 
+	This is alot more simpler:
+ 
+      <blockquote><pre><div class="code">ClusterLBA:
+	; LBA	=	(cluster - 2 ) * sectors per cluster
+ 
+          sub     ax, 0x0002                          ; subtract 2 from cluster number
+          xor     cx, cx
+          mov     cl, BYTE [bpbSectorsPerCluster]     ; get sectors per cluster
+          mul     cx                                  ; multply</div></pre></blockquote> 
+ 
+	<h3>Reading in sectors</h3> 
+ 
+	Okay, so now we have everything to read in sectors. This code is also exactally the same from the bootloader.
+ 
+      <blockquote><pre><div class="code">;************************************************;
+; Reads a series of sectors
+; CX=&gt;Number of sectors to read
+; AX=&gt;Starting sector
+; ES:BX=&gt;Buffer to read to
+;************************************************;
+ 
+ReadSectors:
+     .MAIN
+          mov     di, 0x0005                          ; five retries for error</div></pre></blockquote> 
+ 
+	Okay, here we attempt to read the sectors 5 times.
+ 
+      <blockquote><pre><div class="code">     .SECTORLOOP
+          push    ax
+          push    bx
+          push    cx
+          call    LBACHS                              ; convert starting sector to CHS</div></pre></blockquote> 
+ 
+	We store the registers on the stack. The starting sector is a linear sector number (Stored in AX).
+	Because we are using BIOS INT 0x13, We need to convert this to CHS before reading from the disk.
+	So, we use our LBA to CHS coversition routine. Now, <b>absoluteTrack</b> contains the track number,
+	<b>absoluteSector</b> contains the sector within the track, and <b>absoluteHead</b> contains the head number.
+	All of this was set by our LBA to CHA conversition routine, remember?
+ 
+      <blockquote><pre><div class="code">          mov     ah, 0x02                            ; BIOS read sector
+          mov     al, 0x01                            ; read one sector
+          mov     ch, BYTE [absoluteTrack]            ; track
+          mov     cl, BYTE [absoluteSector]           ; sector
+          mov     dh, BYTE [absoluteHead]             ; head
+          mov     dl, BYTE [bsDriveNumber]            ; drive
+          int     0x13                                ; invoke BIOS</div></pre></blockquote> 
+ 
+	Now we set up to read a sector, and envoke the BIOS to read it. For simplicity, lets take another look
+	at the BIOS INT 0x13 routine that we are executing:
+<p><b>INT 0x13/AH=0x02 - DISK : READ SECTOR(S) INTO MEMORY</b><br> 
+	AH = 0x02<br> 
+	AL = Number of sectors to read<br> 
+	CH = Low eight bits of cylinder number<br> 
+	CL = Sector Number (Bits 0-5). Bits 6-7 are for hard disks only<br> 
+	DH = Head Number<br> 
+ 
+	DL = Drive Number (Bit 7 set for hard disks)<br> 
+	ES:BX = Buffer to read sectors to</p><p> 
+	</p><p> 
+	Compare this with how we execute the code above--fairly simple, huh?
+	</p><p> 
+	Remember that the buffer to write to is in ES:BX, which INT 0x13 refrences as the buffer. We passed
+	ES:BX into this routine, so that is the location to load the sectors to.
+ 
+      </p><blockquote><pre><div class="code">          jnc     .SUCCESS                            ; test for read error
+          xor     ax, ax                              ; BIOS reset disk
+          int     0x13                                ; invoke BIOS
+          dec     di                                  ; decrement error counter
+          pop     cx
+          pop     bx
+          pop     ax
+          jnz     .SECTORLOOP                         ; attempt to read again</div></pre></blockquote> 
+	The BIOS INT 0x13 function 2 sets the Carry Flag (CF) is there is an error.
+	If there is an error, decrement the counter (Remember we set up the loop to
+	try 5 times?), and then try again!
+	<p> 
+ 
+	If all 5 attemps failed (CX=0, Zero flag set), then we fall down to the INT 0x18 instruction:
+      </p><blockquote><pre><div class="code">          int     0x18</div></pre></blockquote> 
+	...Which reboots the computer.
+	<p> 
+	If the Carry Flag was NOT set (CF=0), then the <b>jnz</b> instruction jumps here, as it indicates
+	that there was no error. The sector was read successfully.
+      </p><blockquote><pre><div class="code">     .SUCCESS
+          pop     cx
+          pop     bx
+          pop     ax
+          add     bx, WORD [bpbBytesPerSector]        ; queue next buffer
+          inc     ax                                  ; queue next sector
+          loop    .MAIN                               ; read next sector
+          ret</div></pre></blockquote> 
+ 
+	Now, just restore the registers, and go to the next sector. Not to hard :) Note that, because ES:BX
+	contains the address to load the sectors to, we need to increment BX by the bytes per sector to go to
+	the next sector.
+	<p> 
+	AX contained the <b>starting sector</b> to read from, so we need to increment that too.
+	</p><p> 
+	I guess thats all for now. Please refrence <b>Bootloaders 4</b> for a full explaination of this routine.
+	</p><p> 
+	</p><h3>Floppy16.inc</h3> 
+ 
+	In the example demo, all of the floppy access routines are inside of <b>Floppy16.inc</b>.
+ 
+ 
+	<h1>FAT12 Interface</h1> 
+ 
+	Yey--We can load sectors. Woohoo... :( As you know, we cannot really do much with that. What we need to do
+	next is create a basic definition of a "file" and what a "file" is. We do this by means of a <b>Filesystem</b>.
+	<p> 
+	Filesystems can get quite complex. Please refrence <b>Bootloaders 4</b> while I explain this code to fully
+	understand how this code works.
+ 
+	</p><h2>Constants</h2> 
+ 
+	During parsing Fat12, we will be needing a location to load the root directory table
+	and the FAT table. To make things somewhat easier, lets hide these locations behind
+	constants:
+ 
+      <blockquote><pre><div class="code">%define ROOT_OFFSET 0x2e00
+%define FAT_SEG 0x2c0
+%define ROOT_SEG 0x2e0</div></pre></blockquote> 
+ 
+	We will be loading our root directory table to 0x2e00 and our FAT to 0x2c00. FAT_SEG
+	and ROOT_SEG are used for loading into segment registers.
+ 
+	<h2>Traversing FAT12</h2> 
+ 
+	As you know, some OS code can simply get ugly. Filesystem code, in my opinion, is one of them. This is one of the
+	reasons why I decided to go over this code in this review-like tutorial. The FAT12 code is basically the same
+	as the bootloaders, but I decided to modify it to decrease dependencies with the main program. Because of this,
+	I decided to describe it in detail here.
+	<p>Please note, I will not be going over FAT12 in detail here. Please see the <b>Bootloaders 4</b> tutorial
+	for complete details.
+	</p><p> 
+	Anywhoo, as you know, in order to traverse FAT12 the first thing we need to load is the <b>Root Directory Table</b>,
+	so lets look at that first.
+ 
+	</p><h3>Loading the Root Directory Table</h3> 
+<i>Disk structure:</i><table border="2"> 
+ 
+<tbody><tr bgcolor="#CCCCCC"> 
+ 
+	<td>Boot Sector</td> 
+	<td>Extra Reserved Sectors</td> 
+	<td>File Allocation Table 1</td> 
+	<td>File Allocation Table 2</td> 
+	<td bgcolor="#AAAAAA">Root Directory (FAT12/FAT16 Only)</td> 
+	<td>Data Region containng files and directories.</td> 
+ 
+</tr> 
+</tbody></table><p> 
+	Remember that the Root Directory Table is located right after the FAT's and Reserved sectors?
+	</p><p> 
+	In loading the root directory table, we need to find a location in memory that we do not currently need
+	and copy it there. For now, I chose 0x7E00 (Real mode: 0x7E0:0). This is right above our bootloader,
+	which is <b>still in memory</b> because we have never overwritten it.
+	</p><p> 
+	There is an important concept here. Notice that we have to load everything at absolute memory locations.
+	This is very bad, as we have to physically keep track of where things are located. This is where a <b>Low
+	level memory manager</b> comes into play. More later...
+ 
+      </p><blockquote><pre><div class="code">;*******************************************
+; LoadRoot ()
+;	- Load Root Directory Table
+;*******************************************
+ 
+LoadRoot:
+ 
+	pusha						; store registers
+	push	es</div></pre></blockquote> 
+	We first store the current state of the registers. Not doing so will
+	effect the rest of the program that uses it, which is very bad.
+	<p> 
+	Now we get the size of the root directory table, so that we know the number
+	of sectors to load.
+	</p><p> 
+	Remember from <b>Bootloaders 4</b>: Each entry is 32 bytes in size. When we add a new
+	file in a FAT12 formatted disk, Windows automatically appends to the root directory
+	for us, and adds to the <b>bpbRootEntries</b> byte offset varable of the <b>OEM Parameter Block</b> 
+ 
+	</p><p> 
+	See...Windows is nice :)
+	</p><p> 
+	So...lessee, knowing each entry is 32 bytes in size, <b>multiplying 32 bytes by the number of root directories
+	will tell us how many bytes there are in the Root Directory Table</b>. Simple enough, but we need the number
+	of <b>sectors</b>--so we need to divide this result by the number of sectors:
+ 
+      </p><blockquote><pre><div class="code">     ; compute size of root directory and store in "cx"
+     
+	xor     cx, cx					; clear registers
+ 	xor     dx, dx
+	mov     ax, 32					; 32 byte directory entry
+	mul     WORD [bpbRootEntries]			; total size of directory
+	div     WORD [bpbBytesPerSector]		; sectors used by directory
+	xchg    ax, cx					; move into AX</div></pre></blockquote> 
+	OKAY, so now AX=number of sectors the root directory takes. Now, we have to find the starting location.
+	<p> 
+ 
+	Remember from <b>Bootloaders 4: The Root Directory table is Right after both FAT's and reserved sectors on the disk.</b> 
+	Please look at the above disk structure table to see where the root directory table is located.
+	</p><p> 
+	So...All we need to do is get the amount of sectors for the FAT's, and add that to the reserved sectors to get the
+	exact location on disk:
+      </p><blockquote><pre><div class="code">     ; compute location of root directory and store in "ax"
+     
+	mov     al, byte [bpbNumberOfFATs]		; number of FATs
+	mul     word [bpbSectorsPerFAT]			; sectors used by FATs
+	add     ax, word [bpbReservedSectors]		; adjust for bootsector
+	mov     word [datasector], ax			; base of root directory
+	add     word [datasector], cx</div></pre></blockquote> 
+ 
+	Now that we have the number of sectors to read in, and the exact starting sector, lets read it in!
+ 
+      <blockquote><pre><div class="code">     ; read root directory
+ 
+	push	word ROOT_SEG
+	pop	es
+	mov     bx, 0x0					; copy root dir
+	call    ReadSectors				; read in directory table
+	pop	es
+	popa						; restore registers and return
+	ret</div></pre></blockquote> 
+ 
+	Notice that we set the seg:offset location to read into ROOT_SEG:0.
+	<p> 
+	Next up, loading the FAT!
+ 
+	</p><h3>Loading the FAT</h3> 
+ 
+	Okay...Remember from <b>Bootloaders 4</b>, we talked about the disk structure of a FAT12 formatted disk.
+	Going Back in Time(tm), lets take another look:<p> 
+<i>Disk structure:</i> 
+<table border="2"> 
+<tbody><tr bgcolor="#CCCCCC"> 
+ 
+	<td>Boot Sector</td> 
+	<td>Extra Reserved Sectors</td> 
+	<td bgcolor="#AAAAAA">File Allocation Table 1</td> 
+	<td bgcolor="#AAAAAA">File Allocation Table 2</td> 
+	<td>Root Directory (FAT12/FAT16 Only)</td> 
+	<td>Data Region containng files and directories.</td> 
+ 
+</tr> 
+</tbody></table></p><p> 
+	Remember that there are either one or two FATs? Also notice that they are <b>right after</b> the reserved
+	sectors on disk. <b>This should look familar!</b> 
+ 
+      </p><blockquote><pre><div class="code">;*******************************************
+; LoadFAT ()
+;	- Loads FAT table
+;
+;	Parm/ ES:DI =&gt; Root Directory Table
+;*******************************************
+ 
+LoadFAT:
+ 
+	pusha				; store registers
+	push	es</div></pre></blockquote> 
+ 
+	First we need to know how many sectors to load. Look back at the disk structure again. We store
+	the number of FATs (and the sectors per FAT) in the OEM Parameter Block. So to get the total sectors,
+	just multiply them:
+ 
+      <blockquote><pre><div class="code">     ; compute size of FAT and store in "cx"
+     
+	xor     ax, ax
+	mov     al, BYTE [bpbNumberOfFATs]		; number of FATs
+	mul     word [bpbSectorsPerFAT]			; sectors used by FATs
+	mov     cx, ax</div></pre></blockquote> 
+ 
+	Now, we need to take the reserved sectors into coinsideration, as they are before the FAT...
+      <blockquote><pre><div class="code">     ; compute location of FAT and store in "ax"
+ 
+	mov     ax, word [bpbReservedSectors]</div></pre></blockquote> 
+ 
+	Yippe! Now, CX contains the number of sectors to load, so call our routine to load the sectors!
+      <blockquote><pre><div class="code">     ; read FAT into memory (Overwrite our bootloader at 0x7c00)
+ 
+	push	word FAT_SEG
+	pop	es
+	xor	bx, bx
+	call  ReadSectors
+	pop	es
+	popa		; restore registers and return
+	ret</div></pre></blockquote> 
+	Thats all there is to it ;)
+ 
+ 
+	<h3>Searching for a file</h3> 
+	In searching for a file, we need the filename to search with. Remember that DOS uses 11 byte file
+	names followng the common 8.3 naming convention (8 byte file name, 3 character extension.) Because
+	of the way the enteries in the Root directory is structured, <b>This MUST be 11 bytes--no exceptions</b>.
+	<p> 
+ 
+	Remember the format of the Root Directory Table: The filename is stored within the <b>first</b> 11 bytes of
+	an entry. Lets take another look at the format of each directory entry:
+</p><p> 
+</p><ul> 
+	<li><b>Bytes 0-7 : DOS File name (Padded with spaces)</b></li> 
+	<li><b>Bytes 8-10 : DOS File extension (Padded with spaces)</b></li> 
+ 
+	<li><b>Bytes 11 :</b> File attributes. This is a bit pattern: </li> 
+ 
+	<ul> 
+		<li><b>Bit 0 :</b> Read Only</li> 
+		<li><b>Bit 1 :</b> Hidden</li> 
+ 
+		<li><b>Bit 2 :</b> System</li> 
+ 
+		<li><b>Bit 3 :</b> Volume Label</li> 
+		<li><b>Bit 4 :</b> This is a subdirectory</li> 
+		<li><b>Bit 5 :</b> Archive</li> 
+ 
+		<li><b>Bit 6 :</b> Device (Internal use)</li> 
+ 
+		<li><b>Bit 6 :</b> Unused</li> 
+	</ul> 
+	<li><b>Bytes 12 :</b> Unused</li> 
+ 
+	<li><b>Bytes 13 :</b> Create time in ms</li> 
+ 
+	<li><b>Bytes 14-15 :</b> Created time, using the following format: </li> 
+	<ul> 
+		<li><b>Bit 0-4 :</b> Seconds (0-29)</li> 
+ 
+		<li><b>Bit 5-10 :</b> Minutes (0-59)</li> 
+ 
+		<li><b>Bit 11-15 :</b> Hours (0-23)</li> 
+	</ul> 
+	<li><b>Bytes 16-17 :</b> Created year in the following format:</li> 
+ 
+	<ul> 
+		<li><b>Bit 0-4 :</b> Year (0=1980; 127=2107</li> 
+ 
+		<li><b>Bit 5-8 :</b> Month (1=January; 12=December)</li> 
+		<li><b>Bit 9-15 :</b> Hours (0-23)</li> 
+ 
+	</ul> 
+	<li><b>Bytes 18-19 :</b> Last access date (Uses same format as above)</li> 
+ 
+	<li><b>Bytes 20-21 :</b> EA Index (Used in OS/2 and NT, dont worry about it)</li> 
+	<li><b>Bytes 22-23 :</b> Last Modified time (See byte 14-15 for format)</li> 
+ 
+	<li><b>Bytes 24-25 :</b> Last modified date (See bytes 16-17 for format)</li> 
+	<li><b>Bytes 26-27 :</b> <b>First Cluster</b></li> 
+ 
+	<li><b>Bytes 28-32 :</b> <b>File Size</b></li> 
+</ul> 
+<p></p> 
+	All <b>Bolded</b> entrys are the important ones. We must compare the <b>first 11 bytes</b> of
+	each entry, as they contain the filename.
+	<p> 
+	Once we find a match, <b>We need to refrence byte 26 of the entry to get it's current cluster</b>.
+	All of this should sound familiar.
+	</p><p> 
+ 
+	Now...On to the code!
+ 
+      </p><blockquote><pre><div class="code">;*******************************************
+; FindFile ()
+;	- Search for filename in root table
+;
+; parm/ DS:SI =&gt; File name
+; ret/ AX =&gt; File index number in directory table. -1 if error
+;*******************************************
+ 
+FindFile:
+ 
+	push	cx				; store registers
+	push	dx
+	push	bx
+	mov	bx, si				; copy filename for later</div></pre></blockquote> 
+	We first store the current register states. We need to use SI, so
+	we need to save the current filename somewhere...BX, perhaps?
+	<p> 
+	Remember that we need to parse the Root Directory table to find the
+	image name. To do this, we need to check the first 11 bytes of each
+	entry in the directory table to see if we found a match. Sounds simple, huh?
+	</p><p> 
+	To do this, we need to know how many entries there are...
+      </p><blockquote><pre><div class="code">     ; browse root directory for binary image
+ 
+	mov     cx, word [bpbRootEntries]	; load loop counter
+	mov     di, ROOT_OFFSET			; locate first root entry
+	cld					; clear direction flag</div></pre></blockquote> 
+	Okay, so CX now contains the number of entries to look in. All we need to do now
+	is loop and compare the 11 byte character filename. Because we are using string
+	instructions, we want to first insure the direction flag is cleared, which is
+	what <b>cld</b> does.
+	<p> 
+ 
+	DI is set to the current offset into the directory table. This is the location of the
+	table. i.e., ES:DI points to the starting location of the table, so lets parse it!
+ 
+      </p><blockquote><pre><div class="code">.LOOP:
+	push    cx
+	mov     cx, 11				; eleven character name. Image name is in SI
+	mov	si, bx				; image name is in BX
+ 	push    di
+	rep  cmpsb				; test for entry match</div></pre></blockquote> 
+ 
+	If the 11 bytes match, the file was found. Because DI contains the location of the entry
+	within the table, we immediately jump to .Found.
+	<p> 
+	If it does not match, we need to try the next entry in the table. We add <b>32 bytes</b> onto DI.
+	(<b>Remember that each entry is 32 bytes?</b>)
+ 
+      </p><blockquote><pre><div class="code">	pop     di
+	je      .Found
+	pop     cx
+	add     di, 32				; queue next directory entry
+	loop    .LOOP</div></pre></blockquote> 
+ 
+	If the file was not found, restore only the registers that are still on the stack,
+	and return -1 (error)
+      <blockquote><pre><div class="code">.NotFound:
+	pop	bx				; restore registers and return
+	pop	dx
+	pop	cx
+	mov	ax, -1				; set error code
+	ret</div></pre></blockquote> 
+ 
+	If the file was found, restore all of the registers. AX contains the entry location within
+	the  Root Directory Table so that it can be loaded.
+      <blockquote><pre><div class="code">.Found:
+	pop	ax				; return value into AX contains entry of file
+	pop	bx				; restore registers and return
+	pop	dx
+	pop	cx
+	ret</div></pre></blockquote> 
+	Yey! Now that we can find the file (and get it's location within the Root Directory Table), lets load it!
+ 
+	<h3>Loading a file</h3> 
+ 
+	Now that everything is finally set up, it is finally time to load the file!
+	<p> 
+	Most of this is pretty easy, as it calls our other routines. It is here that we loop,
+	and insure that all of the file's clusters are loaded into memory.
+ 
+      </p><blockquote><pre><div class="code">;*******************************************
+; LoadFile ()
+;	- Load file
+; parm/ ES:SI =&gt; File to load
+; parm/ BX:BP =&gt; Buffer to load file to
+; ret/ AX =&gt; -1 on error, 0 on success
+; ret/ CX =&gt; Number of sectors loaded
+;*******************************************
+ 
+LoadFile:
+ 
+	xor		ecx, ecx
+	push		ecx</div></pre></blockquote> 
+	Here we just save the registers. We need to keep a copy of the buffer to write to somewhere,
+	so we keep that on the stack as well. CX is used to keep track of how many sectors we have loaded.
+	We store this on the stack for later.
+	<p> 
+	In loading the file, we will need to first find it (Kind of obvious, don't you think? ^^) We
+	can easily use our FindFile routine here. FindFile sets AX to -1 on error, <b>or the starting
+	entry location within the Root Directory Table upon success</b>. We can use this index to get
+	anything we ever wanted to know about the file.
+      </p><blockquote><pre><div class="code">.FIND_FILE:
+ 
+	push	bx	; BX=&gt;BP points to buffer to write to; store it for later
+	push	bp
+ 
+	call	FindFile			; find our file. ES:SI contains our filename
+ 
+	cmp	ax, -1				; check for error
+	jne	.LOAD_IMAGE_PRE			; No error :) Load the FAT
+	pop	bp				; Nope :( Restore registers, set error code and return
+	pop	bx
+	pop	ecx
+	mov	ax, -1
+	ret</div></pre></blockquote> 
+ 
+	Okay, so if we get here, the file was found. ES:DI contains the location of the first root entry, which was set
+	by FindFile(), so by refrencing ES:DI we effectivly get the file's entry.
+	<p> 
+	<b>Look back at the entry description table above in the previous section.</b> Notice that we can offset 0x1A bytes
+	to get to byte 26 (The starting cluster number), so store it...
+      </p><blockquote><pre><div class="code">.LOAD_IMAGE_PRE:
+ 
+	sub	edi, ROOT_OFFSET
+	sub	eax, ROOT_OFFSET
+ 
+	; get starting cluster
+ 
+	push	word ROOT_SEG
+	pop	es
+	mov     dx, word [es:di + 0x001A]; ES:DI points to file entry in root directory table.
+	mov     word [cluster], dx	; Refrence the table for file's first cluster
+	pop	bx			; get location to write to so we dont screw up the stack
+	pop	es
+	push    bx			; store location for later again
+	push	es</div></pre></blockquote> 
+	The above is messy, I know. Remember that AX was set to the entry number by the call to FindFile? We need
+	to store that here, but need to keep the buffer to write to on the <b>top</b> of the stack still. This
+	is why I played with the stack a little here :)
+	<p> 
+	Anyways, next we load the FAT. This is incredably easy...
+      </p><blockquote><pre><div class="code">	call	LoadFAT			; Load the FAT to 0x7c00</div></pre></blockquote> 
+ 
+	OKAY then! Now that the FAT is loaded, and that we have the starting file cluster, it is
+	time to actually read in the file's sectors.
+ 
+      <blockquote><pre><div class="code">.LOAD_IMAGE:
+ 
+	mov     ax, WORD [cluster]		; cluster to read
+	pop	es
+	pop     bx
+	call    ClusterLBA			; convert cluster to LBA
+ 	xor     cx, cx
+	mov     cl, BYTE [bpbSectorsPerCluster]	; sectors to read
+	call    ReadSectors			; Read in cluster
+ 
+	pop	ecx				; increment sector count
+	inc	ecx
+	push	ecx
+ 
+	push    bx				; save registers for next iteration
+	push    es
+ 
+	mov	ax, FAT_SEG
+	mov	es, ax
+	xor	bx, bx</div></pre></blockquote> 
+ 
+	This code is not that bad. Remember that, for FAT12, <b>each cluster is just 512 bytes</b>? i.e., each cluster
+	simply represents a "sector". We first get the starting cluster/sector number. We cannot do much with
+	just a cluster number though, as it is a <b>linear</b> number. That is, it is the sector number in <b>CHS</b> 
+	Not <b>LBA</b> format--It assumes we have the track and head information. Because our ReadSectors() requires
+	an LBA linear sector number, <b>We convert this CHS to an LBA address</b>. Then, get the sectors per cluster,
+	and read it in!
+	<p> 
+ 
+	Note that we pop ES and BX--They were pushed on the stack from the beginning. <b>ES:BX points to the ES:BP buffer
+	that was passed to this routine--It contains the buffer to load the sectors into.</b> 
+	</p><p> 
+	OKAY, so now that a cluster was loaded, we have to check with the FAT to determin if the end of file is
+	reached. However, <b>Remember that each FAT entry is 12 bytes?</b> We found out from <b>Bootloaders 4</b> 
+	that there is a <b>pattern</b> when reading the FAT:
+	</p><p> 
+ 
+	<b>For every even cluster, take the low twelve bits; for every high cluster take the heigh twelve bits</b> 
+	</p><p> 
+	Please see <b>Bootloaders 4</b> to see this in detail.</p><p> 
+	To determin if it is even or odd, just divide by 2:
+      </p><blockquote><pre><div class="code">     ; compute next cluster
+ 
+	mov     ax, WORD [cluster]	; identify current cluster
+	mov     cx, ax			; copy current cluster
+	mov     dx, ax			; copy current cluster
+	shr     dx, 0x0001		; divide by two
+	add     cx, dx			; sum for (3/2)
+ 
+	mov     bx, 0			; location of FAT in memory
+	add     bx, cx			; index into FAT
+	mov     dx, WORD [es:bx]	; read two bytes from FAT
+	test    ax, 0x0001
+	jnz     .ODD_CLUSTER
+ 
+     .EVEN_CLUSTER:
+	and     dx, 0000111111111111b	; take low twelve bits
+	jmp     .DONE
+ 
+     .ODD_CLUSTER:
+	shr     dx, 0x0004		; take high twelve bits
+          
+     .DONE:
+	mov     WORD [cluster], dx	; store new cluster
+	cmp     dx, 0x0FF0		; test for end of file marker (0xFF)
+	jb      LOAD_IMAGE		; No? Go on to next cluster then
+ 
+     DONE:
+	pop	es			; restore all registers
+	pop	bx
+	pop     ecx
+	xor     ax, ax			; return success code
+	ret</div></pre></blockquote> 
+	Thats all there is too it! Granted a little complex, but not to hard, I hope ;)
+ 
+	<h3>Fat12.inc</h3> 
+ 
+	Great! All of the FAT12 code is in <b>Fat12.inc</b>.
+ 
+	<h1>Finishing Stage 2</h1> 
+ 
+	<h2>Back to Stage 2 - Loading and Executing the Kernel</h2> 
+	Now that the messy code is over, all we need to do is load our Kernel image into memory from Stage 2,
+	and execute our kernel. The problem is: Where?
+	<p> 
+	While we do want to load it to 1MB, we cannot do this directly yet. The reason is
+	that we are still in real mode. Because of this, we will first need to load the image
+	to a lower address first. After we switch into protected mode, we can copy our
+	kernel to a new location. This can be 1MB, or even 3GB if paging is enabled.
+ 
+      </p><blockquote><pre><div class="code">	call	LoadRoot		; Load root directory table
+ 
+	mov	ebx, 0			; BX:BP points to buffer to load to
+   	mov	ebp, IMAGE_RMODE_BASE
+	mov	Esi, ImageName		; our file to load
+	call	LoadFile		; load our file
+	MOV	dword [ImageSize], ecx	; size of kernel
+	cmp	ax, 0			; Test for success
+	je	EnterStage3		; yep--onto Stage 3!
+	mov	si, msgFailure		; Nope--print error
+	call	Puts16
+	mov	ah, 0
+	int     0x16                    ; await keypress
+	int     0x19                    ; warm boot computer
+	cli				; If we get here, something really went wong
+	hlt</div></pre></blockquote> 
+ 
+	Now our kernel is loaded to IMAGE_RMODE_BASE:0. ImageSize containes the number of
+	sectors loaded (The size of the kernel).
+	<p> 
+	To execute inside of protected mode, all we need to do is jump or call it. Because we want
+	our kernel at 1MB, we first need to copy it before we execute it:
+ 
+      </p><blockquote><pre><div class="code">bits 32
+ 
+Stage3:
+ 
+	mov	ax, DATA_DESC		; set data segments to data selector (0x10)
+	mov	ds, ax
+	mov	ss, ax
+	mov	es, ax
+	mov	esp, 90000h		; stack begins from 90000h
+ 
+; Copy kernel to 1MB (0x10000)
+ 
+CopyImage:
+  	 mov	eax, dword [ImageSize]
+  	 movzx	ebx, word [bpbBytesPerSector]
+  	 mul	ebx
+  	 mov	ebx, 4
+  	 div	ebx
+   	 cld
+   	 mov    esi, IMAGE_RMODE_BASE
+   	 mov	edi, IMAGE_PMODE_BASE
+   	 mov	ecx, eax
+   	 rep	movsd                   ; copy image to its protected mode address
+ 
+	  call	CODE_DESC:IMAGE_PMODE_BASE; execute our kernel!</div></pre></blockquote> 
+ 
+	There is a little problem here, though. This assumes the Kernel is a <b>pure binary file</b>. We cannot have this,
+	because C does not support this. We need the Kernel to be a binary format that C supports, and we will need to parse
+	it in order to load the Kernel using C. For now, we will keep this pure binary, but will fix this within the next few
+	tutorials. Sound cool?
+ 
+	<h1>Demo</h1> 
+	<p></p><center> 
+	<img src="images/Krnl1.gif"> 
+ 
+	</center><p> 
+	Our pure uber-1337 32 bit Kernel executing.
+	</p><p> 
+	<a href="Demos/Demo4.zip">DOWNLOAD DEMO HERE</a> 
+ 
+	</p><h1>Conclusion</h1> 
+	<p> 
+	W00t! It's Kernel time!! :)</p><p> 
+ 
+	This tutorial covered alot of new code. Most of the concepts in tis tutorial we have went over before,
+	so I hope this tutorial was not that hard ;)
+	</p><p> 
+	In this tutorial, we covered these concepts in a new perspective, however. This may help understanding
+	these topics a little bit more, and to see them being implimented into seperate routines.
+	</p><p> 
+	We have developed code to load sectors off disk, and parse FAT12 to load our Kernel at whatever location
+	we want. Cool, huh? In this Series, we are loading the Kernel at 1 MB.
+	</p><p> 
+	With a basic full 32 bit Kernel finally loaded and executing, we can finally start focusing our attention
+	to the most important part of any operating system -- The Kernel.
+	</p><p> 
+	In the next few tutorials, we will cover Kernel Theory, Revolutions, and Designs. We will then start covering
+	<b>Low Level C Programming</b>, and Low level programming with high level language concepts and theory.
+	</p><p> 
+ 
+	There are <b>Alot</b> of freedom when programming C at Kernel Level, that most other programming fields
+	do not allow. For example, There still is no such thing as an "Access Violation", so you still have direct
+	control over every byte in memory. The bad news: There is also no such thing as a "standard library" either.
+	To add more bad news, you still have to remember that you are programming a <b>low level envirement</b>, just
+	with another abstraction layer that is C.
+	</p><p> 
+	We will cover everything within the next few tutorials, and setting up C to work with our Kernel. I cannot wait!
+	</p><p> 
+	<i>See you there.... ;)</i> 
+	</p><p> 
+ 
+	Until next time,
+	</p><p>
+	~Mike<br>
+	<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2/">Neptune Operating System</a></i>
+
+	<br><br>
+	<i>Questions or comments? Feel free to <a href="mailto:neon6000@aol.com">Contact me</a>.</i>
+
+	<br><br>
+	Would you like to contribute and help improve the articles? If so, please <a href="mailto:neon6000@aol.com">let me know!</a>
+
+<br><br> 
+<table width="100%" border="0"> 
+<tbody><tr> 
+<td><p align="left"> 
+<a class="anchor" href="OSDev10.html"> 
+<img src="images/left.jpg" border="0"></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev10.html"> 
+<font size="4">Chapter 10</font> 
+</a> 
+ 
+</p></td> 
+<td> 
+<p align="center"> 
+<font size="4"><a class="anchor" href="OSDevIndex.html">Home</a></font> 
+</p> 
+</td> 
+<td><p align="right"> 
+<a class="anchor" href="OSDev12.html"><font size="4">Chapter 12</font></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev12.html"><img src="images/right.jpg" border="0"></a> 
+</p></td> 
+</tr> 
+</tbody></table> 
+ 
+ 
+ </p></td></tr></tbody></table></body></html>Ytext/htmlUUTF-8_1http://www.brokenthorn.com/Resources/OSDev11.htmlP¥$Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþkÙë€, ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþkÙë‰j ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔO!ÆGIF89a†Ý÷     €   € €€   €€ € €€€€€ÀÀÀÿ   ÿ ÿÿ   ÿÿ ÿ ÿÿÿÿÿ                                                                             3  f  ™  Ì  ÿ 3  33 3f 3™ 3Ì 3ÿ f  f3 ff f™ fÌ fÿ ™  ™3 ™f ™™ ™Ì ™ÿ Ì  Ì3 Ìf Ì™ ÌÌ Ìÿ ÿ  ÿ3 ÿf ÿ™ ÿÌ ÿÿ3  3 33 f3 ™3 Ì3 ÿ33 33333f33™33Ì33ÿ3f 3f33ff3f™3fÌ3fÿ3™ 3™33™f3™™3™Ì3™ÿ3Ì 3Ì33Ìf3Ì™3ÌÌ3Ìÿ3ÿ 3ÿ33ÿf3ÿ™3ÿÌ3ÿÿf  f 3f ff ™f Ìf ÿf3 f33f3ff3™f3Ìf3ÿff ff3fffff™ffÌffÿf™ f™3f™ff™™f™Ìf™ÿfÌ fÌ3fÌffÌ™fÌÌfÌÿfÿ fÿ3fÿffÿ™fÿÌfÿÿ™  ™ 3™ f™ ™™ Ì™ ÿ™3 ™33™3f™3™™3Ì™3ÿ™f ™f3™ff™f™™fÌ™fÿ™™ ™™3™™f™™™™™Ì™™ÿ™Ì ™Ì3™Ìf™Ì™™ÌÌ™Ìÿ™ÿ ™ÿ3™ÿf™ÿ™™ÿÌ™ÿÿÌ  Ì 3Ì fÌ ™Ì ÌÌ ÿÌ3 Ì33Ì3fÌ3™Ì3ÌÌ3ÿÌf Ìf3ÌffÌf™ÌfÌÌfÿÌ™ Ì™3Ì™fÌ™™Ì™ÌÌ™ÿÌÌ ÌÌ3ÌÌfÌÌ™ÌÌÌÌÌÿÌÿ Ìÿ3ÌÿfÌÿ™ÌÿÌÌÿÿÿ  ÿ 3ÿ fÿ ™ÿ Ìÿ ÿÿ3 ÿ33ÿ3fÿ3™ÿ3Ìÿ3ÿÿf ÿf3ÿffÿf™ÿfÌÿfÿÿ™ ÿ™3ÿ™fÿ™™ÿ™Ìÿ™ÿÿÌ ÿÌ3ÿÌfÿÌ™ÿÌÌÿÌÿÿÿ ÿÿ3ÿÿfÿÿ™ÿÿÌÿÿÿ,    †Ý ÿ ý	(£ Á‚8*Ì‘Ã‡#JœH±¢Å‹3jÜÈ±£Ç CŠI²¤É“(Sª\É²¥Ë‰e$”‘cÆAƒ3l¤–ªgª‚ÇJ´¨Ñ£H“*]Ê´©Ó§P£JJµªÕ«X³jÝÊµ«×¯`ÃŠ;†aA<ýø¡‘¬Û·pãÊK·®Ý»xóê+QO 2¾L¸°áÃˆ+^Ì¸±ãÇaL8ðÂÈ˜3kÞÌ¹³çÏ CWTHº4Ž›cüDXZ´ë×°cËžM;ò¡mrëÞÍûÁ!ˆ]ÅZE¼¸ñã\HßîÍ\·¡›+¶æhººõëØ³kßÎ½»÷ïàÃ‹ÿO¾¼ùóèÓ«_Ï¾½û÷	U;D¿‹ýûøïs™ŸË¡üúq! €§qaHr8‚<êSÌƒFXÌ/¿ƒÏsÅ°BMg| †(âˆ$–hâ‰(¦¨âŠïù¶ÊpôÅ(ãö	¸MB«t!T€ö( VrÚðÄc$<Hª£¤’Æ8ø …Û¤F ‡¬q×‹Xf©å–\véå—`Šè[,0Î(£~2<€cp4òè#©2¤:FÆƒd’K6á/š< %•–Y'c¤“Ð•a&ªè¢Œ6êè£âàâ*fÖ—V¨‰CŽ vñæ€qô vâÙ¤“þ²‰ŸNÙ!5°Æÿ*k¬°é­¸æªë®¼êê[¥Ö˜éš÷©bì±Èªò£ªˆjÌø<Ð¤„ÜóäªRJ×\oB’–n¹åƒàvßæó]¹‘Ò]±ˆ›Pæ&ÔÈ€ÌÈvèª»â·éò»›¾òV£ÐºÅ‹Þ·{»»_úp¯Güålž¬§ÃnŠ_²/ÛlšÅÜ©µ¹]Ëª1 í¶»	Ñ6øÀÌëÂhv7C@tÝåëP,øXáÌ+4âÏø>0ÊÍ&~«ó
+3ÀLÀÔ;ËÄo3VoãŒÌZ§çt ßèJ3-ñÙhŸHñŒ\Œ±¦œÚÇq²31+jÈª3òƒºUÿ8!¶­®Ìrn.Cd3»b“kswF`6v_ó«.ÁÇÈ¤aÒKï»ÖCãs³¿œ'¤2âBŸ÷µÂ‰ƒ‰næi·îúˆk[|1¦po|iÉyš«Ü§1#÷Máß'§Ü¡¤ƒ.ØC‡îï3Å.îàæV
+CÒçDóæýó-,}>-Á43CãÝo¿M5º]ýn£Ì ~»¸§Qöùt‘ýÛ#ÉæØâ<ˆP”H™—›ý!,~éÞäW= †/hákàü´÷²ìU]p øÊÅt]ï—Wg¿Ú¸ð…´‰]ŒÜö6†Ä­ª ÐCtWÞlIÓâÍ„ÿ(D!ÀDeÉAò”÷2ÝÄŒ&Û È½…U  EØž°‚Xøc«#€!ž‘Æà[R¤¢äpð¶”ÐzH>ªá9 ­€]G[ºøEv= STù‚!ƒtß:ÙF!F2
+kœÞCd’@î= r/“¢¤œ¡G>î!)3Ú'7·3/ºƒZ#À&Ã8Æ—á£
+dsFÈ¦ÅTªñp«[d#¿µµM–Pi-„¡0‡ùZjvi²¡íò³Ã†ôpHÅ0“œ´·!R¨OÙJâP8æÅ‹ \ñA9¶Ä jžËÁêÖG7F0â:¡&ƒ`†±hÆüÿˆm`Ò‹sMVç´;®.ž0C'Áªt€ŸtgH*)µ©I´’!>ž`O„â$úr3ŠÈQ.lVð(DspQ¬•“r©:•¶RÄt¦õ#¦NwŠŠUìcpœ Ìbu*wfáCð &éIˆÖü…/N&$Zm›Ý¼ a´€†m‘öÄ¥ Éö€þ•1]Õê!Ò®Í=° ö¨@qZNœ¦U F«†3Æ€;æ€¬f}$Ó9ŒòkieäçÄ:
+‚mm‘‘s:­ ÁÜx°¸3œK/9ÊÝÕfŒýëô*û€t”§¨Mmb|Z± ^lH6ÌQu˜Uÿ$uKõÛ©‚—›t¤ƒB¾˜êA¢%.1«sÍdÃvRÃ™V9˜å8É=xB´„•ºüWéáãŽ9¸E›3ûôºžC_IqÉèÆ’$? hv!ßöæ`^Í /DÂH50VœóZ/$)7YþZÔ½Ó}ÙfÑÙK.»!-)‚aàÑVµÎ0KXKVÞàg’DÍngËÌÚÞ6·^ÉŠ‘Ý¤CÁªM
+BÜbuyZ½¯ Ý*N˜]!¼U|nI÷W_w¦µ¾8õï|é[Zƒ^’-âhh·Gœ:-É[¼/wíGdÃ~¤È9–˜sÀNÇ‰fdÞõ„Œ®c„÷ÿ’‘/\af…øâ#Í¸ë²}‹Là“ò¸lt~óÓÜŒ°áù—Ö°¢=Öv9÷ylE,[¹ÕÄ5QªýVŒjúV70îrBcƒ€2¨NµªSû+7y¸ãHóÛžsÊ–}‚‘óHfÝÐz­†Ãä´W†Dy®E ýzZßWØßMs®%ê‘1›Ðän™œ®qFØ!tk÷¨cNŽ”ç×FÝÈgÎöÙ×²æÍz§}n¶\˜ÑøÎwFiûH:™”.ÖÜŽÅ›lûœŽV„|Ûâ{„ZÆ¤®±¤]]‰à€j;{È¨&iªÙïâæ¼ãÅiœãÿE..iýFWä*7yÊ©ÞO"1Ð8[F®r‘Ô·… _9€ŽñŒGÄæàúËAiÑ¡ó¼ç)cÒÂs‰^Ü~—ús`ó­sã0'ùÔ­ï²›}"D¥¡¿©ðX0$X1øR}Ái	±Ø·âuŸrb‰Ÿ½6?ÿûIî-øÂ+:í4„ˆ¨°÷ÚJDîJ¤{Ý%$Õûbï/ˆ=ïšøæfÛœÿ¸úÒótpúHSL1ä7™ñ¶·!U"Ú¸–îªø^UÍ›þ5#wùï3üá_˜òj–¤ù¼ý»c>jþóz|ðIØÏ¾&rùMàã¼GâÿæOþò›ÿü,9Ä6s³Ø¿Lð?üCý‡¨ýíç»MÄoôûÿÿ €°LúW€½'}7q×€Ø€ø€8Xx˜¸Øø ‚"8‚$‚ûW‚(˜‚*¸‚,Ø‚.ø‚0ƒ28ƒ4XƒÑÑ>‘ƒ:¸ƒ<Øƒ>øƒ@„B8„DX„Fx„H˜„J¸„LØ„Nø„P…R8…TX…Vx…X(„(3:È³~^ø…`†b8†dX†fx†h˜†j¸†lØ†nø†p‡r8‡t˜[H80z¸‡|Ø‡~ø‡€ˆ‚8ˆ„Xˆ†xˆˆ˜ˆŠ¸ˆŒØˆŽÿøˆ‰’8‰”X‰–x‰˜˜‰ƒx‡¡‰žø‰ Š¢8Š¤XŠ¦xŠ¨˜ŠªhŠœØ…qèt‹s(‹rè~‹¸8‹¹X‹»øŠ«ø‹À¸Š­ø š˜
+°XŒÇ˜‰ÆHŒÊh‹}ÈŒ˜¸ŒÈ—(ÍH–hÑ˜ŒÛŒÞø¢8ŒÓ8Ž×ˆŒ·HŽÛˆ•¨ÕÈí¨Ž”ÈŽÙèŒàXöH‰âhˆ €ˆÖ¸  YˆþØ”8Éè’hçXŽ™Žˆ{ˆò¸Žî8ð8‰Æx¹‘˜„¸9ˆÚ’|è$Ù‡É'©‡é ¹’‘’Ð“1ù’-ù‡)ÿ¹1É’a“5Ù’>É‡É’/ÉˆC”8)’Eé’&É”Pù”NiÔH“€x“BY‘‘C‰‘ôÈ‘`–è‘ƒ’=©”Uy•7	“\éŽlÉ“.é‡m™–(i“v)—z˜‘Ï—;—ù—}™—Zy–x”g	”@ù“~H}‰fi–;	™éìh—–‰•=Ù”YY•š™ˆ!9’Y˜_)–¤Yšþ@–‚š‚(oé—I)˜Ø¸’i’(¹‡¬Y’²I’Ÿ9šA—Y’€éšÑ•Âé”Šé—+i˜5¹œ™¹–}šÈ¹œ’ù˜Ñ)“Dy™–‘ª)·éšX©™ˆ©™•ÿÙ˜ˆÉœÎ‰•zišê–¨©–ÆYœ‹©•²ù›Ài›òY›„©››YŸÌ)—³™•:)œŽ¹–M‰”°ùš¿I›´ùœƒé“
+š˜w¹Ÿ‡™q9™Ô© Ãé–Ø™×™œ¹  
+˜ŽiŸti¡ÞIŸÑÉ¼¹ž,
+Ží‰“ i•$ŠŸÚI“'©œÚyœ|y ü‰™=Ê úŸ"š£ñy‘J¡˜3ÊŸ)J¡VÙPY¡Q9•Iúž-Y™ºÊ£‘ù”àé¥‰¹¤R˜:•ajŸ-š¦öø¢^y‘2Ê¤\œY¤5š¥¸	Ÿ*¤;Š¢]Ê Fj¦VJ 
+!• ê£*ú§rjˆãÿÙœV¹¥Z¢Jš¢úéš#9¤Æ¹ {š§jÚ©Áø¢Yª7Ú ¢º¡~Š fj 0‰¥„I¤Íù‡é¹‡±ù¥‚ª©$IœWI£bú‘o§jÉ¡«9˜?ù¨ÛI™*¥Tš¬:úž‰º¬Ì:™Éªš±ê©ÔzŠ Z¬¸‰¨G‰­uzªI‰¨™
+ˆ*•|Ê¬@º—9¬—Ùª›Ú¬	­Áª¨“Ê®°*¬€ú«ƒŠŽíX­üj­ÆÓ„Ú¥vª©¾Jž¥J°‘úŽêœâê–TZ”ëªçÊ‡òêˆÝ©«×Y¯òz—Àª±£à: ¡IœÚ­Þê©Ù±ÁÚ¯,;Š :¯x‰§Ê	¯‰°îÿŠ—ª±{˜Sª³}Ÿ‰sY³Š§héŸ˜™´Åz©Ø™« +œ$Ë­÷*¡(£¦ª”-›µŸx­†Ú´%»­]»®_k¯O›>KµR
+²EKžõ´‰™§…ˆ£2:¢TûŸÜ
+­“µàê¨tš®ÙZ¨RË©Z[¸–Èµ½:¶„
+ž=º]9wZ¥h[¶=«¤«º¢þP±ù·<[¶Š8³›+³KÙ¹)[£7¸ÿ¸´ö‰|kµ+k¸°;‰ˆ›ªbë¸¤¶fk»[¥*™'›¶Ë”Å	®ÓÚ›[¹³ôÚ®G[Ÿ‰³Pš»jÛ³{º&kµùªü(¬}K”X¼±û½Šÿ8»e©»u™´“ª¸µé»š¤£š–+½u9±²úˆ4y›A9¸œË“»¶Kz’`Ú»üÉ·ÄJ¼«¹Œz»¦›±m¾¼ˆ³+ªS[°€
+Áè;¤Ó	¡Mš°ùÙª1
+£ Š®Ù°±É¼ŸÛ ŠØ¾0û´¦[¨~)À©KÀšK»½º­ÙjÀòÛÀ8Lˆâ›²Úz»ºùÃ=¬Že:¦J³¬êž®›¡:¹¿ë«v›¼„ˆ£‡ˆÂ2,¼´+°êÂøš¿ø¡Ý+Ÿ>š³}ë½9\Æ}øÀ¡ÁÜ­L¾5Ë¾Õ	Ç·ê°NÛ«„;¿0{ÂN,ÃiÛ´¿K¯iÅÏ;½ÛÁÑÛ”Zl½\ÿÜÅ%»«ý©À‹¦f<É¸Ã/LÅÕ{¤~‹¶N:¦™)Ç“û–VŒµ \¦¦,¹Ô¹Æy,¹rK½ç‹ªTlª§Œ»WJ¶RÛÈ¸ú¥¯úÅBì¿ˆ:Æ˜KÉ“ŒÆëÆlœÆ¬¿püÆ©§­™Á»ÄBëÄ›ª¬,Á,LÈí:È;¢êÇ‰\¾Æ\¾|9¸ùËè¼ÀÂ¼Îñ¯’"Î¼Äðl´`úÇrÆÂkÄJ£ûÅÒ|¼ª\–¨ŠÍ‹º£±\»'úÍYlË}ëÇ¼Ë5ÌË6ÑÜ´ìÌÎˆËÄò¸Éê»ÜÌªì¿r*£d<“ <Ë ÐåLºgKÐú[¹‚¼”fÿûÑD¼®Æj¤­>šË!»½®ŒÎ¾¬ÎMÉ­Ñö\ÅMÌÉq\ÏË<Çœ¹¨æÍ¥ÜÉCœÐJJ²pùÌŽüÊ1ë¼4ÝÍ6ý˜8ÎÛÓ«[¬æÆ@Ñ7\Ôe|ÔLœÔÌ1m³^*º¾™Â­¬ÄU­Ò€µiMÈ
+Ã«¶ËzÐ5=Ë‡\Ë:­ß	Õ¿Š´ñ¿	\Ñ×ÃìÎ‹[×½°HÍÔD¬®ª×˜=Ô}m¬ÿØÀI°¸ºÕ$L×M°Š-Ö€]Öm£Û<Ø¹iÒÉÎ*ÉšmÆrÒ^ŒÍ‹Í¾ÇÍÒHŠÏH:¹×üÜ}ÇzˆÒÍ¬üÚd
+È‹<¼Üÿ=Ó3	½ÆÍÇ®¼È"ìŸãëÏÃMÜœ-Î]«ÜãÚÖLÖóí¤ÿ+•4›ÓÜKÒýÖÒ)Ê*Ø1ŒÅ/ÍÜÙ\Óàí´ã]¿žÛ­³#[À\Ù”áTÝÞ9\Ü…|ÅLíµùLÞk·Î}¢»zÝ¹*Üx|ÏÚ¬ÒÌ½â«àÓm¹IÝ¹
+m´§+¤žl¢×ËÈ;ÝÕšÉDÍá|ÔõÝÇŸ}ÈI½Å·ÞéÅ,ìÌ·­°‚ùÏôûÐÖ‹Ó¢-¸WÖŠÚØ	žâ-ãã’øÚèÍÞFÞÀl*Þö=Î"û¾
+] ÎlÙÕzáVNÝÆKÚžÝ™Úm±&ì™7¾ÕÿêÛ{íÍÒYà®¯[Ô,ÞæßË¦lÜÆìå·Í¸7k£\N£—:Í~àN‘nZ×Ýç’Îß
+lçÏ×ZÎº,š”îæï­È¦¼ÜîêË#çß¹ë	ì“¨ üŽ¥nÞ1¬²é¸¦nŽµ¾–.ë^ÂÓžˆƒÞˆ'}ìmªíi>ë„^íÙî‡HÆÏÞ²Ã˜…Ëˆî°¨î î·Èîðž…ë.ïíNïñŽ…Á\îýÚŠjÑïþþï ð?ð_ððŸð
+¿ðþî‡ÿðñ?ñ_ñññú»­¸ñÿñ òÂèÎ"_ò&ò(ÿˆ­è,ßò.ÿò0ó2ÿ?ó4_ó6ó8Ÿó:¿ó<ßó>Oó­ØB?ôD_ôFôHŸôJ¿ôLßôNÿôPõR?õT_õVõXŸõZ¿õ\ßõ^ÿõ`öb?öJôdöhŸöj¿ölßönÿöp÷r?÷noöt÷xŸ÷z¿÷|ß÷~ÿ÷€övø„_ø†øˆŸøŠ¿øx?øŒÿøù’?ù”_ùrïø–Ÿùš¿ùœßùž¯ø˜ÿù¢?ú¤_ú¦úRú¨¿ú¬ßú®ÿúˆ¯ú°?û´_û¶û]/û¸¿û¼ßû¾_ûºÿûÂ?üÄ_ü“üÆŸüÊ¿üÌ?÷ÈßüÐýÒ?ýWÿüÔýØŸý×oýÚÿßýÞÿý¾Ïýà?þä_þ§/þæŸþê¿þ’þìÿþðÿ}ïþò_ÿöÿjOÿø¿ÿüßÿÕïÎ ÑCà@‚D˜PáB†>„QâDŠ-^Ä˜QãFŽ=~RäH…2b‘I–-]¾„SæLš5mÞÄIÓ$J•9}þTèP¢E¹3åJ¤M>…UêTªA•ö¬šUëV®]½~õy•)X²eÍžE›6«XµmÝ¾…W.F¶síÞÅ›W¯Öº{ýþXpÒ“KFœXñâ}?†YòWÇ“-_Æœ9la¬š=šceÑ¥MŸFMuÔ­[tý:aÿì]×¬ÍvEÙ«}æ<ö7ÔÞ¯‹çFh¹ÆÞ1›'Gþü¡ôáÕ%ª¶^ôxí³sSç½&x‚Ý³Ÿo‰}ÐîäÊ†[`så·Ë/ßÍ½¶}þßåë×Ï¿ÿ¼3(¿úîÃoÀüÖN=}2Ï>…âp¾ý4¯B)¶9ÌpÂÔpÃè.„M¼MspE<T1Eï[ˆBK„‘¾g´Åý³pF‡â3H!o,Ñ»]|¬E&i
+1É÷€”NGòF²C%¤ÑÄˆ”;¼(-ŒñIÐœ4Ó¹ÇäÅ©,ÓË,{Ô’:¥|SF;Ëd3Ë4ECóO—¶ëSK?ÿ»SÇ#³¾+$4ÎHÛ„nQ9ý,PLYúpÀ0=]GP%ì´?C;õ3ÀüÏS2O$ÕÕM1ÓtVÄÜ³5×›jÕ50\{&^ƒÕKVbuiXd—e6;e›…6ÚÒž•¶Zk-£öZm·E,[n¿7/oÃ%·Ü¶Æ57]u½Bw]wßª]xç¥w(yëÅ7ßšîÕ·_Iâ÷_Ö(`‚F"ƒf¸aƒv8b†!–¸â)¶8c}1Ö¸ãy9ö8duAöMÑRq=9Î ¹”Re2Sýˆå7CùS‘›"yµþb½4Ï ½3É_!u9£_ƒŽ9Æ¡oÞ5¸j\óQÝÿTtiŸW…9é©aii¦…Ê5¨)ýR<”TõÕ³M4µmDŸ;z?!ë|›Q¹ä9V7¿NÖiiåùå©á.:TÂbµM7éL5nEý9êÆ•N0ò¬ù&Œ'ášµRêË+ý|ÊÉEÖVíŽ|É¸¹›’HùªDÏÇÁÄóÂ>­ó¹C'}é ßÚê–á$k›³†}ô«‰fÞöôüŽVwËy§ÑëßÍ.šù=}¦ýx¹~yªcßžRáÿwÓ¤‡¼v/&{÷µ4ùöÿ¾ùî÷_¼rüé§ú
+=h™ŒU2kë¨6aOe¦ZÙÝzw·Šh7Ô¢DUÁÿ9QP€ #àmå5ND}%\ÌùPH—®ðIÆr!5CŽ¬…5Ä¡¶N˜C®f‡=" nD"ë‡ED"¶†˜D&
+êˆM„bbžE*fŠUÄ¢^®˜E.Îe‹]£[¾F2žE,9*c=sF$©Ñ“ãåH•8ÎÑŽO©ãõh”<îÑVYâ)®@Òréã!)¬B.Ò‘flä#%I™HNÒ’|©ä%5)•DnÒ“éä'EùPŽÒ”%Éä)U™“R®Ò•Iå+eÉÈÎÒ–?iå-E™K]z’—½Ôä/iIaS’Å4¦#‘™LE.“™†tæ3Miúÿ‘šÕÔã5±iGmnSŽÝô¦ÁÎ4Ž“œd4ç9Á˜Nur‘íÄâ;áIEyÎŠõ´'ñ™O$î“ŸDôç?Pò ÅáAJC….Ô…u(
+!QN”¢´èE—QbŽ£ýÚGAz3‘Ž4d%5iÇPšÒŒ­”¥séK#S™6Œ¦5MØMqz0îôb±ôé'{T•¨êQ/iT¥Ö‹©MýXR¡úÈ§NÕ]Uµªk™ÕUb•«åòêWÃV±~‹¬eÝÖYÑz-µ®µZmuk´à×fÍ•®Ë²ë]•W½Qª}}#_«+ÁÖV…5ì¦›X'þ•±ÿa\ìcÍYÉ2‰²•]Ñe1Ë Ín=õ¬³Ú(‚–´íiõ™ZÕö“µ­èka;PÙÎÖ µµmBq›[†î–·õío%\áV”¸ÅÅèq‘»Qå.×£ÍunH¡]’N—º'µîuUš]í¶”»Ý…éwÁ;SñŽ×¦å5oNÑ›^ž®—½?Ýê{c_ùÒ–¾õ½í}ñ«[ýî··ýõ/pàá˜ÀÆ5ð“›`3—Á~îƒ!,]	O¸º¶0v1œáín˜ÃÞõð‡Ãb“—Ä%>ï‰Q¬^¯¸½-v1|ãÏ˜Æ¶ñ/œck˜Ç=îðb!yÄE6ÿ²‰‘œä/™É,vò“_e)Ë¸3UVò•±Üd-oÊ]öò”Áf+oŽÌ3í™9é^5–ÍmVì›áÜXÏ9­r¶ódñœgËî™Ï™õóŸ9hA–Ð…m]×C/µŠv4²Òi\6šÒ©±ô¥Y”iMÒ&,§A)QZ3“6õLPê˜¬šÕ/qõ«Ÿ÷iY§)ÖµÎ•q-éRïºI½öõbnl›ØÀ¡õ±×cleg„ÙÍ¾È³¡]iOÛ„À¶ö_ªm…a›ÛZôö·ñ²mq3„ÜåFe²Ñ½iu¯ÛÓºv7 ÛoRÏ›Þ§÷½Ï•o}§åÜý†¥½ÿG~¼,ÿî7Âõ­ð{3œÞ7ÄÝ-ñuSÝ/7ÆÅ­ñosœÛÏ6È­-òi“Ú&o6Ê•­òc³œØ.6Ì}-ó]Ó×6¯5Îe­óWóœÕ>O5ÐM-ôQÔFï4Ò5­ôK3ÒN4Ô-õESÑV/4Ö­õ?sÏ^Ï3Øí,ö9“Îfo3ÚÕ¬ö3³Ìn3Ü½,÷-ÓËv¯2Þ¥¬÷'óÉ~O2à,ø!È†ï1âu¬ø3žÆŽ1ä],ùSÅ–/1æE¬ùsžÃžÏ0è-,ú	“Â¦o0ê¬ú³žÀ®0ìý+ûýÒ¿¶¯/îå««û÷*E8PÉ„?|âßøÇG~ò•¿|æ7ßùÏ‡~ô¥?}êWßú×Ç~öµ¿}îwßûßøÅ?þãË`'+ˆAúÕ¿~ö·ßýï‡üå?ú×ßþ÷Çþõ¿þ÷ßÿÿÀ À$À4ÀDÀTÀú#€ €„À”À	¤À
+´ÀÄÀÔÀäÀôÀÁÁ$Á4ÁDÁTÁdÁtÁ„A ;Yimage/gif_5http://www.brokenthorn.com/Resources/images/Krnl1.gifOƒbplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_5http://www.brokenthorn.com/Resources/images/Krnl1.gifÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþkÙë‘ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/gifRh2_timeout=2, max=100_Sat, 27 Oct 2007 05:25:20 GMTVApache_Mon, 12 Apr 2021 11:21:23 GMT_max-age=2592000_Sat, 13 Mar 2021 11:21:23 GMTT8646_Upgrade, Keep-Alive_À
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvZ2lmoRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVWlVzZXItQWdlbnShF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTE6MjE6MjMgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTE6MjE6MjMgR01UoR9UODY0NqEhXxATVXBncmFkZSwgS2VlcC1BbGl2ZaEjXxAUIjIxYzYtNDNkNzJiMTdhNzAwMCKhJVVieXRlc6EnXxAdU2F0LCAyNyBPY3QgMjAwNyAwNToyNToyMCBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCxALMAtgC4AM0AzwDaANwA4wDlAQUBBwEZARsBOwE9AUIBRAFaAVwBcwF1AXsBfQAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGd_"21c6-43d72b17a7000"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí%*5>DGPY[]dlw†ˆŠŒŽ’”–˜šœž ¢±³µ·¹»½¿ÁÃÅÇÉËÍÏÜäïý.9BGLZdg|œ£ÃÕõúÔëöü(-AEY             ~              gÔ !"#OÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      ) 1;    Â        ‚     €{    È        €€           Ø       è       ð        „‚(     }=     Ui          õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  ) " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ÷Òq\ï‹|[eáM4\N¾uÔ¹[[Ul4Ì=û(ÈËvÈêHñw‹¬|%¦‹€eº—+mj­†™‡òQ‘–í‘Ô”Ú%Ö¡©KâzQ%üƒ…Æ…Q’œ¼’I$šãÆc#‡™ÍˆÄÆ’Óq.ü?¨ø†9õÝgPhu–Ä°:‹læUSœ¦:Œƒó’r–ÿ /tûxí5Þúî!¶K•Ô<7Ð”Bœc88ÎH p-XY_üBÕÂÊWµÐíŸwŠ9r9Ø™±È=Â‚	çjŸbÓtÛ=NƒO°·ö°.Ô9¹$žI$’I$’I$šÃ.Ž!§R³ßdc„]e'¹óùºÔ5^\x:ëhÛX ä"‘´g#wI&Ÿ¬Kæ\ÙÁ{<öúD’(ºžÝ’(Ï?/_NÇœ66ŸYñÏàñU¢ÝZ²ÛkË‹{œ|®:ˆäÇUÉ8=T’Gp|žÚâC5Æ“ªÛ47Ð.h$$ŒvÎä‚ ò+—Ft«,GÄŽ|E)S©í¨÷ÏM°Ñ¬íô……tõŒ<–Ü¬§Á¿‹9Îã’IÉ$œÖxg†|Qsàk¿²]4—óò‚ÍjÇ’Ê:‘œîQÉå†C{\)soöÒC4¨xåI2®§AAë^½
+Ð­h•±©Äœô®3Ç>‡ÅV«wlËm¬Û/ú=ÆßË“”É8=T’GRgÚŠÑÅIY—(©+3æéµQcowe­Û47–ÙŽh%É uÇ±#‚ ž	ÑÓ>üGŸN†m?Z“H´ŠÉõàhÁ$ó)
+OÞ#¨Ï89{âOü–ÿ Ü?ÿ JÞ½ÄtË†ÂBŒ¥ËÔä£‡Œ±ÿÙZimage/jpeg_4http://www.brokenthorn.com/Resources/images/left.jpgO‚bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_4http://www.brokenthorn.com/Resources/images/left.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþkÙë˜| ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Fri, 24 Jul 2009 23:29:22 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1540_Upgrade, Keep-Alive_À
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDEwOjEzOjE0IEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDEwOjEzOjE0IEdNVKEfVDE1NDChIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QEyI2MDQtNDZmN2JmOTViMTg4MCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyMiBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCyALQAtwC5AM4A0ADbAN0A5ADmAQYBCAEaARwBPAE+AUMBRQFbAV0BcwF1AXsBfQAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGd_"604-46f7bf95b1880"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$)4=CFOXZ\ckv…‡‰‹‘“•—™›Ÿ¡°²´¶¸º¼¾ÀÂÄÆÈÊÌÎÛãîü-8AFKYdg|œ£ÃÕõúÔêõû ',@DX             ~              fÔ%!&'OdÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      )       Â                     È                     Ø       è       ð          (       =                 õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  % " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? eÕíçuKCR¸’ÖêÙÊZÚFJ›&S‘Ø6íÀdðI¦ à¯>¥/ö&¶-b1”|anÔÿ µÆHöÈèÁ[ã>©'öÞˆ«µÓ -Úáoö°8cØ {à#0x‚×ky–º…«äVX$RGÔ`ŽG\Ž ŠñëU«…­Ï-`ÿ Ëœêaê^Z¦{ÖáŒçŠ+„ðWŒßPŸû\Û±ù¢Ý¨þ!þß#ñ^
+W«
+‘œy¢zPœf®ŽÞkˆm­äžâdŠÔ¼’Hvª($“ÐÞ¼7VÕm¼Mã6Ö4ËakeˆÚà‚­wâuÎ FìNpªž/ñœž1»û£<:NS”k¶‡aÙsÈSþñç2mÍþ©¨C¡hP—¼¶HXTpYˆûª23ß$–â¼Ü]gWýž’½÷<üMgUû:h»©üC«Ùèº,mQ[Í[…b¿fÚFX¸åœsë€l
++×¼!àë/éf¶ýõÔ¸k«¶Pf8þ;Tp9êI$®¼.4)(^çM?³®yÅ=×Áwö÷:Qhíµ¥²ŽM¹Ùè§xã.ë¾ð…‡„´Ãkl|Û™6µÍÓ(3ÇÂ£«Ðdõ$’Q[Ó„T¤Ò*Š›i=QVnÿÙ_5http://www.brokenthorn.com/Resources/images/right.jpgO0bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_5http://www.brokenthorn.com/Resources/images/right.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþkÙëŸÜ ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpeg_timeout=2, max=98_Fri, 24 Jul 2009 23:29:24 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1380ZKeep-Alive_”
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDlppbWFnZS9qcGVnoRBfEBF0aW1lb3V0PTIsIG1heD05OKESWlVzZXItQWdlbnShFFZBcGFjaGWhFl8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRhfEA9tYXgtYWdlPTI1OTIwMDChGl8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoRxUMTM4MKEeWktlZXAtQWxpdmWhIF8QEyI1NjQtNDZmN2JmOTc5OWQwMCKhIlVieXRlc6EkXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyNCBHTVQACAAhAC4AOQA+AEUATQBbAGAAbwB6AH8AjQCbAJ0AqACqAL4AwADLAM0A1ADWAPYA+AEKAQwBLAEuATMBNQFAAUIBWAFaAWABYgAAAAAAAAIBAAAAAAAAACUAAAAAAAAAAAAAAAAAAAGC_"564-46f7bf9799d00"ZUser-AgentUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë#(3<BENWY[bjuƒ…‡‰‹‘“•—™›«­¯±³µ·¹»½¿ÁÃÅÇÔßíôü
+)27<JUi‰°ÂâçòŠ «±¶ÌÐÝâöú             z                          1   <   N   d   ‚   ‘   ¨  ®¡  ®«  ®±  ®å  ®æ  ®ì  ®õ  ¯  ¹¾  ¹Ç  º  Â½  ÂÆ  ÿ5  ÿ?  ÿq ! * )ô )þ *6 2½ 2Æ 8Î 8Ù 9 A– AŸ G G?             (             Os

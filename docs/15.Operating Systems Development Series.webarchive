@@ -1,0 +1,1907 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameOîÆ<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"><!-- saved from url=(0056)http://www.gamedev.net/reference/articles/article290.asp --><html><head><title>Operating Systems Development Series</title> 
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><link href="Files/reference.css" type="text/css" rel="stylesheet"> 
+<meta content="MSHTML 6.00.6000.16441" name="GENERATOR"></head> 
+<body text="#000000" vlink="#666699" alink="#000000" link="#666699" bgcolor="#ffffff" leftmargin="0" background="Files/watermark.gif" topmargin="0" marginheight="0" marginwidth="0"> 
+
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+ 
+        <div id="ad_main"> 
+ 
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+//-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+ 
+     </td> 
+  </tr> 
+</tbody></table> 
+
+<table cellspacing="0" cellpadding="3" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td class="tblhdr">Operating Systems Development Series</td> 
+</tr> 
+  <tr> 
+ 
+    <td align="middle" colspan="2"></td></tr></tbody></table> 
+<table cellspacing="0" cellpadding="5" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td> 
+ 
+ 
+<!-- Title --> 
+ 
+      <center><span class="title">Operating Systems Development - Errors, Exceptions, Interruptions</span> 
+ 
+ 
+<br><span class="author">by Mike, 2008</span></center> 
+ 
+ 
+      <p>This series is intended to demonstrate and teach operating system development from
+	the ground up.</p> 
+ 
+<i>Please note: This tutorial covers software interrupt handling, not hardware interrupt handling. If you are looking for hardware interrupts,
+please see our 8259A PIC tutorial. The software side of handling hardware interrupts is discussed here.</i> 
+<p> 
+ 
+	</p><h1>Introduction</h1> 
+ 
+	Welcome back! :)<p> 
+ 
+	
+	In the last tutorial we have covered the ground basics and design of our system. Yes, pretty basic and
+	easy so far, right?
+	</p><p> 
+ 
+	You might be wondering when we will start getting into the system-level code again. Well.... *ahem* ...welcome back :)
+	</p><p> 
+	This tutorial will cover a very important concept: <b>Error Handling</b>. Error Handling involves alot more then
+	simply handling problems, but <b>catching</b> them as well. This is where <b>Exception Handling</b> comes in.
+	Because <b>Exception Handling</b> requires <b>interrupts</b>, we will also cover <b>interrupt handling</b> as well.
+	</p><p> 
+ 
+	Interrupts are architecture dependent. Because of this, we will be developing an interface for managing interrupts
+	through our uber 1337, yet very empty (at the moment) <b>Hardware Abstraction Layer</b>, and interfacing with our
+	Kernel to install our own <b>Trap Gates</b> which will be used to catch processor exception errors, and allow us to
+	prevent triple faults now, and forever, while remaining completely hardware independent.
+	</p><p> 
+	Sound fun? So, heres whats up:
+ 
+	</p><p> 
+	</p><ul> 
+	<li>Error Handling</li> 
+ 
+	<li>Exception Handling</li> 
+ 
+	<li>IRs, IRQs, ISRs</li> 
+	<li>Gates: Traps, Interrupts, Tasks</li> 
+	<li>IDTs and IVTs</li> 
+	<li>IDTR processor register</li> 
+	<li>LIDT and SIDT instructions</li> 
+ 
+	<li>FLIHs and SLIHs</li> 
+ 
+	<li>How interrupts work, stack, error codes</li> 
+	<li>Developing a kernel panic error screen. ie, BSoD</li> 
+	</ul> 
+ 
+	<p> 
+	...Alot of stuff going on here, so lets get started, shall we?
+ 
+	</p><h1>Errors, Errors, Errors</h1> 
+ 
+Okay, lets face it: No one is perfect. With computers, this is even truer. As we are working in the wonderful world of kernel land, things are even worse as a simple error can cause unpredictable software to hardware problems.
+ 
+<p> 
+I am sure a lot of our readers have already experienced this through Triple Faults. In applications programming, we are not working directly with the hardware. Because of this, there are less problems that can result to errors. In kernel land, things are a bit different. Triple faults are caused do to errors with our instructions or data. If there is a problem that the processor cannot resolve, it reboots the system before it gets worse.
+</p><p> 
+Triple faults and no error handling is very bad in OS development, as the problems can get much worse?rom data corruption to hardware failures, to even completely destroying the system. Knowing the importance of error handling is critical in resolving these, and insuring that our system stays stable to its end release.
+ 
+</p><h1>Exception Handling</h1> 
+ 
+?xception Handling comes in two flavors: A programming language construct (For example, standard C++? try/catch/throw keywords. Some compilers also include additional keywords like _except; or mechanisms like SEH, or VEH). The other flavor is the one we are interested in: Hardware mechanisms that are designed to change (?nterrupt? the current flow of execution. The condition that changes this flow of execution is called an exception. Exceptions should only be used to signal error (exceptional) conditions, and not for conditionals that are used for normal operation.
+<p> 
+When an exception occurs, the flow of execution changes as a subroutine (the ?xception handler? is executed. This allows the subroutine to handle the error condition in some way. Normally, the current state will be saved before the handler is called. This will allow the handler to continue execution later, if possible.
+</p><p> 
+Remember that exceptions are designed from the hardware. i.e., They are hardware mechanisms. This is similar to hardware interrupts, and the bases of interrupt handling, as they are related.
+</p><p> 
+Because of this, in order to understand exception handling from the hardware, we need to look at interrupts. Lets look at that next.
+ 
+</p><h1>Interrupt Handling</h1> 
+ 
+<h2>Interrupts</h2> 
+ 
+An Interrupt is an external asynchronous signal requiring a need for attention by software or hardware. It allows a way of interrupting the current task so that we can execute something more important.
+<p> 
+Not to hard. Interrupts provide a way to help trap problems, such as divide by zeros. If the processor finds a problem with the currently executing code, it provides the processor alternative code to execute to fix that problem.
+</p><p> 
+Other interrupts may be used to provide a way to service software as routines. These interrupts can be called by any software from within the system. This is used alot for System API's, which provide a way for ring 3 applications to execute ring 0 level routines.
+</p><p> 
+Interrupts provide alot of use, especially as a way of receiving information from hardware that may change its state at asynchronous times.
+ 
+</p><h2>Interrupt Types</h2> 
+ 
+There are two types of interrupts: Hardware Interrupts and Software Interrupts. In the 8259A PIC tutorial, we have covered hardware interrupts. This tutorial focuses on software interrupts.
+ 
+<h3>Hardware Interrupts</h3> 
+ 
+A hardware interrupt is an interrupt triggered by a hardware device. Normally, these are hardware devices that require attention. The hardware Interrupt handler will be required to service this hardware request.
+ 
+<p> 
+ 
+This tutorial does not cover hardware interrupt handling, as that is hardware specific. For the x86 architecture, hardware interrupts are handled by programming the 8259A Programmable Interrupt Controller (PIC). Please see our 8259A PIC tutorial for more information on hardware interrupt handling.
+</p><p> 
+<b>Spurious Interrupt</b> 
+</p><p> 
+This is a hardware interrupt generated by electrical interference in the interrupt line, or faulty hardware. We do NOT want this!
+ 
+</p><h3>Software Interrupts</h3> 
+ 
+This is where the fun stuff is at!
+ 
+ <p> 
+ 
+Software Interrupts are interrupts implemented and triggered in software. Normally, the processor's instruction set will provide an instruction to service software interrupts. For the x86 architectures, these are normally INT imm, and INT 3. It alsu uses IRET and IRETD instructions.
+ 
+ 
+</p><p> 
+ 
+ 
+INT imm and INT 3 instructions are used to generate an interrupt, while the IRET class of instructions are used to return from Interrupt Routines (IRs).
+</p><p> 
+For example, here we generate an interrupt through a software instruction:
+ 
+ 
+      </p><blockquote><pre><div class="code">int     3              ; generates software interrupt 3</div></pre></blockquote> 
+ 
+ 
+These instructions may be used to generate software interrupts and execute Interrupt Routines (IR)'s through software.
+<p> 
+As you know, software interrupts were available in real mode. However, as soon as we made the jump to protected mode, the Interrupt Vector Table (IVT) became invalid. Because of this, we cannot use interrupts. Instead, we have to make our own.
+</p><p> 
+We will cover software interrupt handling in this tutorial.
+ 
+</p><h2>Interrupt Routines (IRs)</h2> 
+ 
+An Interrupt Routine (IR) is a special function used to handle an Interrupt Request (IRQ).
+<p> 
+ 
+When the processor executes an interrupt instruction, such as INT, it executes the Interrupt Routine (IR) at that location within the Interrupt Vector Table (IVT).
+ 
+</p><p> 
+This means, it simply executes a routine that we define. Not to hard, huh? This special routine determins the Interrupt Function to execute normally based off of the value in the AX register. This allows us to define multiple functions in an interrupt call. Such as, the DOS INT 21h function 0x4c00.
+</p><p> 
+Remember: Executing an interrupt simply executes an interrupt routine that you created. For example, the instruction INT 2 will execute the IR at index 2 in the IVT. Cool?
+</p><p> 
+IRs are commonly also referred to as <b>Interrupt Requests (IRQs)</b>. However, the naming convention of IRs are still used within
+the ISA bus, so understanding both names is important.
+ 
+</p><h2>Interrupt Requests (IRQs)</h2> 
+ 
+<b>An Interrupt Request (IRQ) refers to the act of interrupting an event by signaling the system either
+through the Control Bus IR line or through one of the 8259A Programmable Interrupt Controller (PIC) IR lines.</b> 
+<p> 
+For systems with a single 8259 PIC, there are 8 IRQ lines, labeled IR0  IR7. For systems with 2 8259 PICs, there are 16 possible IRQ? labeled IR0  IR15. On the system ISA bus, These lines are labeled as IRQ0  IRQ15.
+</p><p> 
+ 
+Newer intel based systems integrate an Advanced Programmable Interrupt Controller (APIC) device that allows 255 IRQs per controller.
+ 
+</p><p> 
+For more information about IRQs, please see either the 8259A PIC tutorial or the APIC tutorial.
+</p><p> 
+What this means is that the 8259A PIC can signal the processor to generate a software interrupt call through a hardware
+device by activating the processors IR line, and the processor to execute the correct interrupt handler. <b>This allows us to handle hardware device requests through software.</b> 
+Please see the 8259A PIC tutorial for more information on this...It is very important to understand this.
+ 
+</p><h2>Interrupt Service Routines (ISRs)</h2> 
+ 
+Interrupt Service Routines (ISRs) is an Interrupt Handler. These are important to understand, so lets look closer.
+ 
+<h3>Interrupt Handlers</h3> 
+ 
+An interrupt handler is an IR for handling interrupts and IRQs. In other words, they are callback methods that we define for handling both hardware and software interrupts.
+<p> 
+ 
+There are two types of ISRs: <b>FLIH</b>, and <b>SLIH</b>.
+ 
+</p><p> 
+<b>First Level Interrupt Handler (FLIH)</b> 
+</p><p> 
+A FLIH is considered to be part of the lower half of a device driver or kernel. These interrupt handlers are platform specific, and usually service hardware requests, executing similar to Interrupt Routines (IRs) and Interrupt Requests (IRQs). They have short execution time. Their primary duty is to service the interrupt, or to record platform specific information which is only available at the time of the interrupt (As it is running in a lower level.) It may also schedule or execute a SLIH, if needed.
+</p><p> 
+<b>Second Level Interrupt Handler (SLIH)</b> 
+</p><p> 
+These interrupt handlers are longer lived then FLIHs. In this way, it is similar to a task or process. SLIHs are normally executed and managed by a kernel program, or by FLIHs.
+</p><p> 
+<b>Nested Interrupt Handlers</b></p><p> 
+ 
+When an interrupt handler is executed and the Interrupt Flag (IF) is set, interrupts can still be executed during the current interrupt. This is known as a nested interrupt.
+ 
+</p><h1>Interrupts in Real Mode</h1> 
+ 
+Interrupts in Real Mode are handled through the Interrupt Vector Table (IVT). The Interrupt Vector Table (IVT) is a list of Interrupt Vectors. There are 256 Interrupts in the IVT.
+ 
+<h2>IVT Map</h2> 
+ 
+The IVT is located in the first 1024 bytes of physical memory, from addresses 0x0 through 0x3FF. Each entry inside of the IVT is 4 bytes, in the following format:
+ 
+<ul> 
+    <li>Byte 0: Offset Low Address of the Interrupt Routine (IR)</li> 
+    <li>Byte 1: Offset High Address of the IR</li> 
+ 
+    <li>Byte 2: Segment Low Address of the IR</li> 
+    <li>Byte 3: Segment High Address of the IR</li> 
+ 
+</ul> 
+ 
+Notice that each entry in the IVT simply contains the address of the IR to call. This allows us to create a simple function anywhere in memory (Our IR). As long as the IVT contains the addresses of our functions, everything will work fine.
+<p> 
+Okay, Lets take a look at the IVT. The first few interrupts are reserved, and stay the same.
+ 
+	</p><p> 
+	</p><center> 
+	<table border="1" bgcolor="CCCCCC"> 
+ 
+	<tbody><tr><th colspan="5" bgcolor="FFFFFF">x86 Interrupt Vector Table (IVT)</th> 
+	</tr><tr bgcolor="AAAAAA"> 
+	<td>Base Address</td><td>Interrupt Number</td><td>Description</td> 
+ 
+	</tr> 
+ 
+	<tr><td bgcolor="ffffff">0x000</td><td>0</td><td colspan="4">Divide by 0</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x004</td><td>1</td><td colspan="4">Single step (Debugger)</td></tr> 
+	<tr><td bgcolor="ffffff">0x008</td><td>2</td><td colspan="4">Non Maskable Interrupt (NMI) Pin</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x00C</td><td>3</td><td colspan="4">Breakpoint (Debugger)</td></tr> 
+	<tr><td bgcolor="ffffff">0x010</td><td>4</td><td colspan="4">Overflow</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x014</td><td>5</td><td colspan="4">Bounds check</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x018</td><td>6</td><td colspan="4">Undefined Operation Code (OPCode) instruction</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x01C</td><td>7</td><td colspan="4">No coprocessor</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x020</td><td>8</td><td colspan="4">Double Fault</td></tr> 
+	<tr><td bgcolor="ffffff">0x024</td><td>9</td><td colspan="4">Coprocessor Segment Overrun</td></tr> 
+	<tr><td bgcolor="ffffff">0x028</td><td>10</td><td colspan="4">Invalid Task State Segment (TSS)</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x02C</td><td>11</td><td colspan="4">Segment Not Present</td></tr> 
+ 
+ 
+	<tr><td bgcolor="ffffff">0x030</td><td>12</td><td colspan="4">Stack Segment Overrun</td></tr> 
+	<tr><td bgcolor="ffffff">0x034</td><td>13</td><td colspan="4">General Protection Fault (GPF)</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x038</td><td>14</td><td colspan="4">Page Fault</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x03C</td><td>15</td><td colspan="4">Unassigned</td></tr> 
+	<tr><td bgcolor="ffffff">0x040</td><td>16</td><td colspan="4">Coprocessor error</td></tr> 
+	<tr><td bgcolor="ffffff">0x044</td><td>17</td><td colspan="4">Alignment Check (486+ Only)</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x048</td><td>18</td><td colspan="4">Machine Check (Pentium/586+ Only)</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">0x05C</td><td>19-31</td><td colspan="4">Reserved exceptions</td></tr> 
+	<tr><td bgcolor="ffffff">0x068 - 0x3FF</td><td>32-255</td><td colspan="4">Interrupts free for software use</td></tr> 
+	</tbody></table> 
+ 
+	</center> 
+<p> 
+Not to hard. Each of these interrupts are located at a base address within the IVT.
+ 
+ 
+</p><h1>Interrupts in Protected Mode</h1> 
+ 
+As we are developing a protected mode operating system. This will be important to us. As you know, we cannot access the IVT in protected mode do to a lot of reasons. Because of this, we cannot access or use any more interrupts. So, instead, we need to create our own.
+<p> 
+...And it all starts with the Interrupt Descriptor Table.
+ 
+</p><h1>Interrupt Descriptor Table (IDT)</h1> 
+ 
+The Interrupt Descriptor Table (IDT) is a special table used by the processor for the management of IRs. Its use depends on the mode of the processor.
+The IDT itself is an array of 256 <b>descriptors</b>, simular to the LDT and GDT.
+ 
+<h2>Real Mode</h2> 
+ 
+In Real Mode, The IDT is also known as the IVT. Please see the description of the IVT in the above sections for more information.
+ 
+<h2>Protected Mode</h2> 
+ 
+The way the IDT works in protected mode is very different then that of Real Mode (This is one of the many reasons why we cannot use the IVT in protected mode.) The IVT is still used, however.
+<p> 
+The IDT is an array of 256 8 byte descriptors stored consecutively in memory and indexed by an interrupt vector within the IVT. We will take a look at these descriptors, descriptor types, and the details of the IDT next.
+ 
+</p><h2>Interrupt Descriptor: Structure</h2> 
+ 
+A descriptor for an IDT takes the following formats. Some of the format changes depending on what type of descriptor this is.
+ 
+<ul> 
+<li>Bits 0...15:</li> 
+<ul> 
+<li><b>Interrupt / Trap Gate:</b> Offset address Bits 0-15 of IR</li> 
+ 
+<li><b>Task Gate:</b></li> Not used.
+</ul> 
+<li>Bits 16...31:</li> 
+<ul> 
+<li><b>Interrupt / Trap Gate:</b> Segment Selector (Useually 0x10)</li> 
+<li><b>Task Gate:</b> TSS Selector</li> 
+</ul> 
+<li>Bits 31...35: Not used</li> 
+ 
+<li>Bits 36...38:</li> 
+<ul> 
+<li><b>Interrupt / Trap Gate:</b> Reserved. Must be 0.</li> 
+<li><b>Task Gate:</b> Not used.</li> 
+</ul> 
+<li>Bits 39...41:</li> 
+<ul> 
+<li><b>Interrupt Gate:</b> Of the format 0D110, where D determins size</li> 
+ 
+<ul> 
+<li><b>01110</b> - 32 bit descriptor</li> 
+<li><b>00110</b> - 16 bit descriptor</li> 
+</ul> 
+<li><b>Task Gate:</b> Must be 00101 </li> 
+<li><b>Trap Gate:</b> Of the format 0D111, where D determins size</li> 
+ 
+<ul> 
+<li><b>01111</b> - 32 bit descriptor</li> 
+<li><b>00111</b> - 16 bit descriptor</li> 
+</ul> 
+</ul> 
+<li>Bits 42...44: Descriptor Privedlge Level (DPL)</li> 
+<ul> 
+<li><b>00:</b> Ring 0</li> 
+ 
+<li><b>01:</b> Ring 1</li> 
+<li><b>10:</b> Ring 2</li> 
+<li><b>11:</b> Ring 3</li> 
+</ul> 
+<li>Bit 45: Segment is present (1: Present, 0:Not present)</li> 
+<li>Bits 46...62:</li> 
+ 
+<ul> 
+<li><b>Interrupt / Trap Gate:</b> Bits 16...31 of IR address</li> 
+ 
+<li><b>Task Gate:</b> Not used</li> 
+</ul> 
+</ul> 
+<p> 
+Thats it!? Yep--Thats all there is to it ;)
+</p><p> 
+All we need to do is fill in our IDT, and install it, just like what we done with the GDT. The IDT is
+alot more simpler then the IDT, so its even easier :)
+ 
+The above list is the complete descriptor format. We only need to worry about developing an interrupt gate for now,
+so we will only focus on that.
+ 
+</p><h2>Interrupt Descriptor: Example</h2> 
+ 
+Just like with the GDT, we will create an example at the bit level to help describe exactally how everything works.
+ 
+<p> 
+First, lets look at an example interrupt descriptor. This is going to be in shown in assembly so we can get
+a better view of everything.
+ 
+     </p><blockquote><pre><div class="code">idt_descriptor:
+   .m_baseLow     	dw   0 
+   .m_selector      	dw   0x8
+   .m_reserved     	db   0 
+   .m_flags      	db   010001110b
+   .m_baseHi      	dw   0</div></pre></blockquote> 
+Yep--Thats all there is to a descriptor. Thats not that hard, is it?
+<p> 
+Lets see how this relates to our table above by breaking it down and seeing each bit:
+     </p><blockquote><pre><div class="code">00000000 00000000 00000000 00001000 00000000 10001110 00000000 00000000</div></pre></blockquote> 
+This is our descriptor, but in binary form. For the most part this is easy as most of it is all 0's.
+<p> 
+The first two bytes is our <b>m_baseLow</b> member shown in the above code. Looking at the table above, we can
+see that this is the first 16 bits of the descriptor. <b>Because this is an interrupt gate, this represents bits 0-15
+of the base address of the IR</b>. This means, if this was our field, our IR would be located at address 0. (This normally
+would NOT be the case, as the location of the IR varies. This works for this example, though.)
+ 
+ 
+</p><p> 
+The next 2 bytes is our <b>m_selector</b> field. This is bytes 16-31 of the descriptor. Looking at our table, we can
+see that this represents our segment selector. Our interrupt handler containes code, so it should be using one of our
+code selectors. This is defined at offset 0x8 within the GDT, so that is our segment selector.
+ 
+</p><p> 
+The next few bits are not used. We can see that bits 31-35 are not used, while bits 36-38 must be 0 for interrupt gates.
+Because of this, we can saftley say bits 31-38 are 0. This is the size of a byte, which is our <b>m_reserved</b> member.
+</p><p> 
+The next byte is where the interesting stuff happens. Lets break it down, bit by bit--literally:
+      </p><blockquote><pre><div class="code">10001110</div></pre></blockquote> 
+Okay...Right now we are at bit 39. Looking at our table above, we can see <b>bits 39-41 must be 0D110. If the D bit is
+set, this is a 32bit descriptor.</b> It is equal to 01110, so it is indeed a 32bit descriptor.
+ 
+<p> 
+The next two bits (00 above) are bytes 42-45 of the descriptor, which represents the privledge level (DPL). It is 00,
+so the DPL is to execute at ring 0.
+</p><p> 
+The final two bytes within our example are the last two bytes within the above table. This is the high 16 bits of the IR
+base address (Which, in our case, is 0.) This is the <b>m_baseHi</b> member displayed above.
+ 
+</p><p> 
+As you can see, there really is not that much going on here. The selector is always going to be that of the code selector
+within the GDT (0x8 for our needs); then all we need to do is set the flag bits and the IR base address within <b>m_baseLow</b> 
+and <b>m_baseHi</b>. We will see a complete example a little later which will help in understanding everything.
+ 
+</p><h2>IDTR Processor Register</h2> 
+ 
+The IDTR register is the processor register that stores the base address of the IDT.
+<p> 
+The IDTR register has the following format:
+ 
+	</p><center> 
+	<table border="1" bgcolor="CCCCCC"> 
+	<tbody><tr><th colspan="5" bgcolor="AAAAAA">IDTR Register</th> 
+ 
+	</tr><tr> 
+	<td bgcolor="ffffff">Bits 16...46 (IDT Base Address)</td> 
+	<td bgcolor="ffffff">Bits 0...15 (IDT Limit)</td></tr> 
+ 
+	</tbody></table> 
+	</center> 
+<p> 
+Simple enough, huh? Notice that the <b>base address</b> of our created IDT is stored in this register.
+The processor uses this register to determin where our IDT is located at.
+ 
+ 
+</p><p> 
+Knowing this format is very important, as it containes <b>both</b> the limit and base address. Because of this,
+simply giving it the base address of our idt will NOT work. This is useually resolved by creating a new structure
+in the format shown above like this:
+      </p><blockquote><pre><div class="code">idt_ptr:
+	.limit	dw idt_end - idt_start	; bits 0...15 is size of idt
+	.base	dd idt_start		; base of idt
+ 
+; load register with idt_ptr</div></pre></blockquote> 
+ 
+<p> 
+Oh, wait...How do we even access this register? Oh right...
+ 
+</p><h2>LIDT Instruction - Loading our IDT</h2> 
+ 
+This instruction is used to store a new address of an IDT into the IDTR register. This instruction can only be used if the Current Protection Level (CPL) is 0 (Ring 0). It is very easy to use:
+ 
+  
+      <blockquote><pre><div class="code">lidt [idt_ptr]</div></pre></blockquote> 
+ 
+Thats all there is to it. As long as idt_base is the base address of the IDT, this will copy the address into IDTR.
+ 
+<h2>SIDT Instruction - Storing our IDT</h2> 
+ 
+This instruction is used to store the value in IDTR into a 6 byte memory location. This instruction may be used in both ring 0 and ring 3 applications.
+ 
+ 
+      <blockquote><pre><div class="code">sidt [idt_ptr]</div></pre></blockquote> 
+ 
+<h2>How Interrupts Work: Detail</h2> 
+ 
+<h3>Finding the interrupt procedure to call</h3> 
+ 
+When an interrupt or exception is fired, the processor uses the exception or interrupt number as an index into the IDT.
+As you know, our IDT is nothing more then an array of 256 descriptors of the format shown above. The processor performs
+the calculation <b>IDTR.baseAddress + index * 8</b>, where 8 is the size of a descriptor (Remember that descriptors
+are 8 bytes in size?), and index is the interrupt number.
+IDTR.baseAddress is the base address of the IDT stored within the upper bits of IDTR. This allows the processor to retrieve
+the base address of the descriptor index for the interrupt handler. <b>If the value of the calculation is greater then
+the IDT limit size (stored in IDTR.limit), the processor will execute a General Protection Fault (GPF)</b> as this will result into
+a call beyond the size of the IDT.
+ 
+<p> 
+Remember that the descriptor is either an interrupt, trap, or task gate. If the index points to an interrupt or trap gate,
+the processor calls the exception or interrupt handler. This is done simular to CALLing a call gate. If the index points
+to a task gate, the processor executes a task switch to the exception or interrupt handler task simular to a CALL to a task gate.
+ 
+</p><p> 
+The information and addresses for the handler are stored within this descriptor. When the processor performs the switch:
+ 
+</p><h3>Executing the handler</h3> 
+ 
+<ul> 
+<li>If the handler is going to be executed at a lower privilege level (bits 42-45 of descriptor), a stack switch occurs.</li> 
+<ol> 
+<li>The segment selector and stack pointer for the stack to be used by the handler are abtained from the TSS for the currently
+executing task. The processor pushes the stack segment selector and stack pointer of the interrupt handler on this new stack.</li> 
+<li>The processor saves the current state of EFLAGS,CS, and EIP on the new stack</li> 
+<li>If an exception causes an <b>error code</b> to be saved, <b>the error code is pushed on the new stack after EIP</b></li> 
+ 
+</ol> 
+ 
+<li>If the handler is going to be executed at the same privilege level (current privilege level (cpl) is the same as (bits 42-45 of descriptor)</li> 
+<ol> 
+<li>The processor saves the current state of EFLAGS, CS, EIP on the <b>current stack</b>.</li> 
+<li>If an exception causes an error code to be saved, <b>the error code is pushed on the current stack after EIP</b></li> 
+</ol> 
+ 
+</ul> 
+ 
+<p> 
+ 
+<b>It is very important to know how the stack is pushed when our interrupt handler is called, and what exceptions also push error
+codes.</b> We will look at this next.
+ 
+</p><h3>Inside of our interrupt handler</h3> 
+ 
+Because the location of our interrupt handler is stored within the descriptor, the processor is now able to execute our handler.
+<p> 
+As you know, when the processor executes our handler, it pushes some extra information on the stack. If our handler is running in
+the same ring level as ours (As it will be), then we must remember that <b>the processor will push EFLAGS, CS, EIP</b> and an <b>Error code</b> 
+on <b>our current</b> stack. This allows us to continue execution if we are able to.
+ 
+ 
+ 
+</p><p> 
+<b>Putting all of this together, when our handler is called, our stack will be set up like this:</b> 
+     </p><blockquote><pre><div class="code">+---------------+ -- Bottom of stack
+|   EFLAGS      |
++---------------+
+|   Return CS   |
++---------------+
+|  Return EIP   |
++---------------+
+|   Error Code  |
++---------------+ -- ESP points here when handler is executed.
+                    If there is no error code, ESP points to return EIP</div></pre></blockquote> 
+We use this information to return back from our handler, and to determin what caused the exception (If there
+is an error code.)
+ 
+<h3>Inside of our interrupt handler: Error code format</h3> 
+ 
+If an error code is pushed on the stack when our handler is called, we can use its information to help in determing
+the error.
+ 
+<p>It has the following format:
+ 
+</p><p> 
+</p><ul> 
+<li>Bit 0: External event</li> 
+<ul> 
+ 
+<li>0: Internal or software event triggered the error.</li> 
+<li>1: External or hardware event triggered the error.</li> 
+</ul> 
+<li>Bit 1: Description location</li> 
+<ul> 
+<li>0: Index portion of error code refers to descriptor in GDT or current LDT.</li> 
+<li>1: Index portion of error code refers to gate descriptor in IDT.</li> 
+</ul> 
+<li>Bit 2: GDT/LDT. Only use if the descriptor location is 0.</li> 
+<ul> 
+ 
+<li>0: This indicates the index portion of the error code refers to a descriptor in the current GDT.</li> 
+ 
+<li>1: This indicates the index portion of the error code refers to a segment or gate descriptor in the LDT.</li> 
+</ul> 
+<li>Bits 3-15: Segment selector index. This is an index into the IDT, GDT, or current LDT to the segment or gate
+selector bring refrenced by the error code.</li> 
+<li>Bits 16-31: Reserved</li> 
+</ul> 
+ 
+<p> 
+<b>Error codes are not pushed on the stack for exceptions that are generated externally (via the INTR,LINT0,LINT1 pins),
+or INT n instruction.</b> 
+ 
+</p><p> 
+ 
+The error code format is different for page fault exception errors. We will look at that in the next section.
+ 
+</p><h3>Returning from a handler</h3> 
+ 
+All handlers must use either <b>IRET</b> or <b>IRETD</b> instructions to return. IRET is simular to RET except that it restores
+the saved EFLAGS (that was pushed on the stack when the handler was getting executed), and the IOPL field in EFLAGS is only set to
+0 if the current protection level (CPL) is 0. The IF flag is also changed only if the CPL is less then or equal to the IOPL.
+<p> 
+If a stack switch occured when executing the handler, IRET switches back to the interrupted procedures stack as well.
+ 
+</p><h1>x86 Exceptions</h1> 
+ 
+<h2>Exceptions: Listing</h2> 
+ 
+All of the exceptions are defined as the first few interrupts within the IVT or IDT. Here is the complete list of
+generated exceptions from the x86 class of processors.
+ 
+ 
+<p> 
+</p><ul> 
+<li><b>Fault</b> - the return address (Return CS:EIP that was pushed on stack when handler was called. See <b>Inside of our interrupt handler</b> for more information.) points to the instruction that caused the exception. The exception handler may fix the problem and then restart the program, making it look like nothing has happened. </li> 
+<li><b>Trap</b> - the return address points to the instruction after the one that has just completed. </li> 
+<li><b>Abort</b> - the return address is not always reliably supplied. A program which causes an abort is never meant to be continued. </li> 
+ 
+</ul> 
+	<p> 
+	</p><center> 
+	<table border="1" bgcolor="CCCCCC"> 
+	<tbody><tr><th colspan="5" bgcolor="FFFFFF">x86 Processor Exceptions</th> 
+	</tr><tr bgcolor="AAAAAA"> 
+	<td>Interrupt Number</td><td>Class</td><td>Description</td><td>Error Code</td> 
+ 
+	</tr> 
+ 
+	<tr><td bgcolor="ffffff">0</td><td>Fault</td><td>Divide by 0</td><td>None</td></tr> 
+	<tr><td bgcolor="ffffff">1</td><td>Trap or Fault</td><td>Single step (Debugger)</td><td>None. Can be retrived from debug registers</td></tr> 
+	<tr><td bgcolor="ffffff">2</td><td>Unclassed</td><td>Non Maskable Interrupt (NMI) Pin</td><td>Not applicable</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">3</td><td>Trap</td><td>Breakpoint (Debugger)</td><td>None</td></tr> 
+	<tr><td bgcolor="ffffff">4</td><td>Trap</td><td>Overflow</td><td>None</td></tr> 
+	<tr><td bgcolor="ffffff">5</td><td>Fault</td><td>Bounds check</td><td>None</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">6</td><td>Fault</td><td>Unvalid OPCode</td><td>None</td></tr> 
+	<tr><td bgcolor="ffffff">7</td><td>Fault</td><td>Device not available</td><td>None</td></tr> 
+	<tr><td bgcolor="ffffff">8</td><td>Abort</td><td>Double Fault</td><td>Always 0</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">9</td><td>Abort (Reserved, do not use)</td><td>Coprocessor Segment Overrun</td><td>None</td></tr> 
+	<tr><td bgcolor="ffffff">10</td><td>Fault</td><td>Invalid Task State Segment (TSS)</td><td>See error code below</td></tr> 
+	<tr><td bgcolor="ffffff">11</td><td>Fault</td><td>Segment Not Present</td><td>See error code below</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">12</td><td>Fault</td><td>Stack Fault Exception</td><td>See error code below</td></tr> 
+	<tr><td bgcolor="ffffff">13</td><td>Fault</td><td>General Protection Fault (GPF)</td><td>See error code below</td></tr> 
+	<tr><td bgcolor="ffffff">14</td><td>Fault</td><td>Page Fault</td><td>See error code below</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">15</td><td>-</td><td>Unassigned</td><td>-</td></tr> 
+	<tr><td bgcolor="ffffff">16</td><td>Fault</td><td>x87 FPU Error</td><td>None. x87 FPU provides own error information</td></tr> 
+	<tr><td bgcolor="ffffff">17</td><td>Fault</td><td>Alignment Check (486+ Only)</td><td>Always 0</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">18</td><td>Abort</td><td>Machine Check (Pentium/586+ Only)</td><td>None. Error information abtained from MSRs</td></tr> 
+	<tr><td bgcolor="ffffff">19</td><td>Fault</td><td>SIMD FPU Exception</td><td>None</td></tr> 
+	<tr><td bgcolor="ffffff">20-31</td><td>-</td><td>Reserved</td><td>-</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">32-255</td><td>-</td><td>Avilable for software use</td><td>Not applicable</td></tr> 
+	</tbody></table> 
+	</center> 
+<p> 
+ 
+</p><h3>IRQ 0 and the System Timer</h3> 
+ 
+As you know, if we enter protected mode all interrupts must be disabled. If we have not done this,
+our system will triple fault immediately on the next clock tick. Why is this?
+ 
+<p> 
+ 
+The <b>System Timer</b>, useually a form of the <b>8253 Programmable Interval Timer (PIT)</b> uses
+<b>IRQ 0</b> to let us know when a clock tick happens. This device is configured this way by the
+system BIOS.
+</p><p> 
+But WAIT! *looks at above table*, Isn't that the <b>Divide by 0</b> error? <b><i>Bingo.</i></b> 
+ 
+</p><p> 
+ 
+Because the tables are now invalid because we switched to protected mode, Who knows where this
+will lead us. Because of this, an immediate triple fault on the next system tick, and the reason we must disable interrupts
+before switching.
+</p><p> 
+We should also note that the <b>8253 Programmable Interval Timer (PIT)</b> is a <b>hardware device</b>.
+Notice how, using the table above, it will fire an exception (IRQ 0)? How will we know its an actual
+error, or just a simple tick?
+</p><p> 
+Lets take a look closer...
+ 
+</p><h3>Remapping the 8259A Programmable Interrupt Controller (PIC)</h3> 
+ 
+The 8259A PIC is a standard controller used to control hardware interrupts. Hardware microcontrollers
+signal the PIC on their respective IR line that connects to the PIC. This allows the PIC to "know" a
+hardware device needs attention, and to signal the processor to fire an interrupt to handle the devices
+request.
+ 
+<p> 
+ 
+In our above example, the 8253 PIT was signalling the 8259A PIC to handle a system tick in this manner,
+which caused IRQ 0 (Remember that the 8253 PIT uses IRQ 0) to fire--which caused a triple fault as it was
+also a) a divide by 0 exception, and b) invalid code as we have not written it yet.
+</p><p> 
+ 
+To resolve this problem, we will need to reprogram the 8259A PIC Microcontroller to remap the hardware
+devices to use different IRQs.
+</p><p> 
+Please keep in mind that we *can* still use software interrupts if the IF is 0 (interrupts disabled), as
+IF only applies to hardware interrupts. However, if we want to re-enable hardware interrupts, we must
+reprogram the PIC.
+</p><p> 
+The 8259A PIC is a fairly complex microcontroller to program. Luckly, most of its modes do not apply to us.
+</p><p> 
+The demo at the end reprograms the PIC and re-enable interrupts. In order to completely get the most out
+of this tutorial, it is recommended to read our <a href="OSDevPic.html">8259A Programmable Interrupt Controller</a> 
+tutorial.
+ 
+</p><h1>Demo</h1> 
+ 
+<a href="#DEMOCONSLUDION">SKIP TO DEMO CONCLUSION</a><p> 
+ 
+<i>Note: These images have been scaled down to better fit the screen.</i> 
+</p><center> 
+<table border="0" width="80%"><tbody><tr><td><img width="80%" src="images/intStarting.jpg"></td> 
+<td><img width="80%" src="images/intGen.jpg"></td></tr></tbody></table> 
+</center> 
+<p> 
+<i>The first screenshot displays the kernel initializing the HAL. The second screenshot displays what happens
+when an interrupt is fired. Notice how our default handler catches the interrupt.</i> 
+</p><p> 
+ 
+This demo is fairly complex, as we have covered a lot of material in this tutorial.
+</p><p> 
+This demo installs a new Global Descriptor Table (GDT) for the kernel to use and an Interrupt Descriptor Table (IDT).
+It also creates a nice interface that we can use to handle software interrupts. Note that we do NOT cover hardware interrupts
+yet. In the next tutorial, we will be adding both <b>8259A PIC</b> and <b>8253 PIT</b> microcontroller interfaces to the HAL.
+This will allow us to catch hardware interrupts, enable hardware interrupts, and provide ourself with a system timer. It will
+be fun :)
+ 
+</p><p> 
+Lets cover the demo a little more so that we can see everything working.
+ 
+</p><p> 
+</p><h2>Hardware Abstraction</h2> 
+ 
+This demo includes alot of extra files that we have not seen until now. Because of this, it is kind of like a code
+dump, which is what I want to avoid here. Alot of it is very simple and things that we have looked at and even implimented
+in our bootloader. Some of it (Inside <b>idt.h</b> and <b>idt.cpp</b> may be new to you, and covers what we have learned here:
+The <b>Interrupt Descriptor Table (IDT)</b>.
+<p> 
+This is also the beginning of our <b>Hardware Abstraction Layer (HAL)</b>!
+ 
+</p><p> 
+As you know, I have been stressing hardware abstraction, and the importance of it, sense this series begun. You will see
+why soon as we continue to build on the Hal. You might even see the pluses of keeping the Hal completely independent of the
+kernel here!
+</p><p> 
+Without further ado, lets look at the beginnings of the primary interface for the HAL.
+ 
+</p><h2>Hal - include/hal.h - Platform independent interface for the HAL</h2> 
+ 
+This is the interface between the HAL and the kernel. It is part of the standard include directory, and is completely
+separate from its implimentation. All routines are declared <b>extern</b> as the header file is meant to be used by any
+implimentation that defines the routines inside of it. The implimentations are architecture specific, but the interface
+is in no way coupled to any specific implimentation, making it completely hardware independent.
+<p> 
+While the implimentations themselves are architecture specific, we can simply build the implimentations for different
+architectures. Because each implimentation uses this common interface, and we can support dynamic loading (like hal.dll),
+we can either a)link what static hal implimentation to use when building for different architectures, or b)Build the different
+Hals independently, and choose which HAL to use at startup. Because they all use the same interface (Hal.h), we dont need
+any changes in the kernel to use different implimentations (and hence different hardware setups.) Cool?
+</p><p> 
+There are currently only two functions in it. We will add more when we need to:
+ 
+   </p><blockquote><pre><div class="code">//! Initialize and shutdown hal
+extern int Hal_Initialize ();
+extern int Hal_Shutdown ();</div></pre></blockquote> 
+ 
+I will most likley change the prototypes of these routines to allow startup and shutdown paramaters. In any case,
+these are very generic routines that is meant to provide a way to setup and shutdown the hardware, if needed, for
+the implimentation.
+<p> 
+There are a couple of very simple layers of software within the hal for the gdt, idt, and cpu, and hal.cpp. Because all
+they do is initialize the layer below it (Hal.cpp calls the cpu initialize routine, which calls the gdt and idt initialize
+methods), I am not going to post it here as it may add more complexity in this tutorial then is required.
+</p><p> 
+Instead, lets focus on the bulk of the hal: The gdt setup code, The idt setup code (This containes the bulk of what we looked
+at in this tutorial), and the kenrel's main() routine. Cool?
+ 
+</p><p> 
+We will not cover the GDT in detail. Plaese see  <a href="OSDev8.html">Tutorial 8</a> for a complete description of it.
+ 
+</p><h2>Hal - hal/gdt.h - global descriptor table</h2> 
+ 
+<h3>Descriptor Tables ...again!</h3> 
+ 
+Yes, the GDT has come back to haunt you!!! ...yes, YOU!!
+<p> 
+Anywhoo... the GDT is quite a complex structure, huh? As you know, a GDT is an array of descriptors. What was the format
+of a GDT descriptor again? Right, okay then...
+ 
+	</p><ul> 
+ 
+ 
+		<li><b>Bits 56-63:</b> Bits 24-32 of the base address</li> 
+		<li><b>Bit  55:</b> Granularity</li> 
+ 
+		<ul> 
+			<li><b>0:</b> None</li> 
+			<li><b>1:</b> Limit gets multiplied by 4K</li> 
+		</ul> 
+		<li><b>Bit  54:</b> Segment type</li> 
+ 
+		<ul> 
+			<li><b>0:</b> 16 bit</li> 
+			<li><b>1:</b> 32 bit</li> 
+		</ul> 
+		<li><b>Bit  53:</b> Reserved-Should be zero</li> 
+ 
+		<li><b>Bits 52:</b> Reserved for OS use</li> 
+		<li><b>Bits 48-51:</b> Bits 16-19 of the segment limit</li> 
+		<li><b>Bit  47</b> Segment is in memory (Used with Virtual Memory)</li> 
+		<li><b>Bits 45-46:</b> Descriptor Privilege Level</li> 
+ 
+		<ul> 
+			<li><b>0:</b> (Ring 0) Highest</li> 
+			<li><b>3:</b> (Ring 3) Lowest</li> 
+		</ul> 
+		<li><b>Bit  44:</b> Descriptor Bit</li> 
+ 
+		<ul> 
+			<li><b>0:</b> System Descriptor</li> 
+			<li><b>1:</b> Code or Data Descriptor</li> 
+		</ul> 
+		<li><b>Bits 41-43:</b> Descriptor Type</li> 
+ 
+		<ul> 
+			<li><b>Bit 43:</b> Executable segment</li> 
+				<ul> 
+				<li><b>0:</b> Data Segment</li> 
+				<li><b>1:</b> Code Segment</li> 
+ 
+				</ul> 
+			<li><b>Bit 42:</b> Expansion direction (Data segments), conforming (Code Segments)</li> 
+			<li><b>Bit 41:</b> Readable and Writable</li> 
+			<ul> 
+				<li><b>0:</b> Read only (Data Segments); Execute only (Code Segments)</li> 
+ 
+				<li><b>1:</b> Read and write (Data Segments); Read and Execute (Code Segments)</li> 
+			</ul> 
+		</ul> 
+		<li><b>Bit  40:</b> Access bit (Used with Virtual Memory)</li> 
+		<li><b>Bits 16-39:</b> Bits 0-23 of the Base Address</li> 
+ 
+		<li><b>Bits 0-15:</b> Bits 0-15 of the Segment Limit</li> 
+	</ul> 
+	*runs off screeming in horror*
+	<p> 
+	Okay, okay I'll stop now :) But serously, Intel could have made the structure more nicer, don't you think? :)
+ 
+</p><h3>Building the C structure</h3> 
+ 
+	We can hide this structure behind a nice C style structure using C's built in types. Knowing that the first
+	15 bits is the segment limit (Size of an uint16_t), <b>thats data member one</b>. The next 16 bits is bits 0-23
+	of the base address, and that can be either expressed as 1 uint16_t or 2 uint8_t's. <b>Thats data member two and/or three</b>.
+	The next 16 bits (bits 41-56 of GDT) is 16 bits. This is the bulk of the ugly structure that containes flag values,
+	and can be represented, of course, using either 2 uint8_t's or 1 uint16_t. <b>Thats the next data member.</b> The
+	last byte is our base address. <b>Thats the last data member!</b> 
+ 
+	<p> 
+	Looking at the above, that ugly structure can be represented in 4 to 5 nice members within a structure. Here
+	is our structure. Try to compare this structure with the above description and table to see where everything fits in.
+	Also, remember that this structure is packed to 1 byte, so it is guaranteed to be 64 bits in size.
+ 
+   </p><blockquote><pre><div class="code">#ifdef _MSC_VER
+#pragma pack (push, 1)
+#endif
+ 
+//! gdt descriptor. A gdt descriptor defines the properties of a specific
+//! memory block and permissions.
+ 
+struct gdt_descriptor {
+ 
+	//! bits 0-15 of segment limit
+	uint16_t		limit;
+ 
+	//! bits 0-23 of base address
+	uint16_t		baseLo;
+	uint8_t			baseMid;
+ 
+	//! descriptor bit flags. Set using bit masks above
+	uint16_t		flags;
+ 
+	//! bits 24-32 of base address
+	uint8_t			baseHi;
+};
+ 
+#ifdef _MSC_VER
+#pragma pack (pop, 1)
+#endif</div></pre></blockquote> 
+ 
+Easy enough! There are alot of bit flags that can be set to help build the flags bytes within the structure.
+Please see the header file to see them all, and notice how they work. Basically, we would bitwise OR the bit flags
+that we want to set. You will see us do this in the next section.
+ 
+<h3>gdtr abstraction</h3> 
+ 
+Remember from <a href="OSDev8.html">tutorial 8</a>, we have covered protected mode, the gdt, and gdtr? gdtr Is the
+processors internal register used to point to the GDT to be used. It is a 48 bit pointer that must follow the
+following format:
+ 
+<ul> 
+	<li><b>Bits 0-15:</b> size of entire gdt</li> 
+ 
+	<li><b>Bits 16-48:</b> base address of gdt</li> 
+</ul> 
+ 
+Okay...This one is an easy one to convert to a C struct. Notice how it follows the above format:
+ 
+   <blockquote><pre><div class="code">#ifdef _MSC_VER
+#pragma pack (push, 1)
+#endif
+ 
+//! processor gdtr register points to base of gdt. This helps
+//! us set up the pointer
+struct gdtr {
+ 
+	//! size of gdt
+	uint16_t		m_limit;
+ 
+	//! base address of gdt
+	uint32_t		m_base;
+};
+ 
+#ifdef _MSC_VER
+#pragma pack (pop, 1)
+#endif
+ 
+// Global Descriptor Table (GDT)
+static struct gdt_descriptor			_gdt [MAX_DESCRIPTORS];
+ 
+//! gdtr data
+static struct gdtr				_gdtr;
+</div></pre></blockquote> 
+Here you can also see our new GDT and _gdtr, which will be used for refrence when setting up the processors GDTR register.
+ 
+<h3>gdt_install(): Installs a gdt into gdtr</h3> 
+ 
+This routine is a very simple one. All it does is use the lgdt instruction to load GDTR with our gdtr pointer.
+We do not need to do any far jumps here, though, as CS should never change.
+   <blockquote><pre><div class="code">//! installs gdtr
+static void gdt_install () {
+#ifdef _MSC_VER
+	_asm lgdt [_gdtr]
+#endif
+}</div></pre></blockquote> 
+ 
+<h3>gdt_set_descriptor(): Sets up a new descriptor in the gdt</h3> 
+ 
+This routine is used to install a new descriptor in the GDT. For the most part, it is not too hard;
+the ugly code is when we get to setting up the flags.
+ 
+<blockquote><pre><div class="code">//! Setup a descriptor in the Global Descriptor Table
+void gdt_set_descriptor(uint32_t i, uint64_t base, uint64_t limit, uint8_t access, uint8_t grand)
+{
+	if (i &gt; MAX_DESCRIPTORS)
+		return;
+ 
+	//! null out the descriptor
+	memset ((void*)&amp;_gdt[i], 0, sizeof (gdt_descriptor));
+ 
+	//! set limit and base addresses
+	_gdt[i].baseLo	= base &amp; 0xffff;
+	_gdt[i].baseMid	= (base &gt;&gt; 16) &amp; 0xff;
+	_gdt[i].baseHi	= (base &gt;&gt; 24) &amp; 0xff;
+	_gdt[i].limit	= limit &amp; 0xffff;
+ 
+	//! set flags and grandularity bytes
+	_gdt[i].flags = access;
+	_gdt[i].grand = (limit &gt;&gt; 16) &amp; 0x0f;
+	_gdt[i].grand |= grand &amp; 0xf0;
+ 
+}</div></pre></blockquote> 
+ 
+ 
+ 
+<h3>i86_gdt_initialize() - initializes the gdt</h3> 
+ 
+This brings everything together. All it does is set up our GDTR structure, installs some default descriptors
+into our GDT, and finally installs the GDT. To make things easier, this GDT is the same one we have used for
+our bootloader. The base address is 0, the limit (Maximum addressable address) is 4GB (0xffffffff). All of the flags
+are defined in <b>gdt.h</b>. They are defined to increase readability and to get rid of ugly magic numbers. It should
+be much easier to see what the descriptors are for with the flags!
+ 
+<blockquote><pre><div class="code">//! initialize gdt
+int i86_gdt_initialize () {
+ 
+	//! set up gdtr
+	_gdtr.m_limit = (sizeof (struct gdt_descriptor) * MAX_DESCRIPTORS)-1;
+	_gdtr.m_base = (uint32_t)&amp;_gdt[0];
+ 
+	//! set null descriptor
+	gdt_set_descriptor(0, 0, 0, 0, 0);
+ 
+	//! set default code descriptor
+	gdt_set_descriptor (1,0,0xffffffff,
+		I86_GDT_DESC_READWRITE|I86_GDT_DESC_EXEC_CODE|I86_GDT_DESC_CODEDATA|I86_GDT_DESC_MEMORY,
+		I86_GDT_GRAND_4K | I86_GDT_GRAND_32BIT | I86_GDT_GRAND_LIMITHI_MASK);
+ 
+	//! set default data descriptor
+	gdt_set_descriptor (2,0,0xffffffff,
+		I86_GDT_DESC_READWRITE|I86_GDT_DESC_CODEDATA|I86_GDT_DESC_MEMORY,
+		I86_GDT_GRAND_4K | I86_GDT_GRAND_32BIT | I86_GDT_GRAND_LIMITHI_MASK);
+ 
+	//! install gdtr
+	gdt_install ();
+ 
+	return 0;
+}</div></pre></blockquote> 
+ 
+ 
+<h2>Hal: Interrupt Descriptor Table</h2> 
+ 
+THIS is where the fun stuff is at! The IDT interface is within the idt.h and idt.cpp source files.
+ 
+<h3>hal.h - idt_descriptor</h3> 
+ 
+This is the structure for an interrupt descriptor. Compare this format with the descriptor format we looked at in this
+tutorial, and you should notice that they follow exactally the same format:
+ 
+   <blockquote><pre><div class="code">#ifdef _MSC_VER
+#pragma pack (push, 1)
+#endif
+ 
+//! interrupt descriptor
+struct idt_descriptor {
+ 
+	//! bits 0-16 of interrupt routine (ir) address
+	uint16_t		baseLo;
+ 
+	//! code selector in gdt
+	uint16_t		sel;
+ 
+	//! reserved, shold be 0
+	uint8_t			reserved;
+ 
+	//! bit flags. Set with flags above
+	uint8_t			flags;
+ 
+	//! bits 16-32 of ir address
+	uint16_t		baseHi;
+};
+ 
+#ifdef _MSC_VER
+#pragma pack (pop, 1)
+#endif</div></pre></blockquote> 
+ 
+Lets look at what each member represents, and where at within the interrupt descriptor:
+<ul> 
+<li><b>baseLo</b> - This is the first 16 bits of the base address of the interrupt routine (IR)</li> 
+<ul> 
+<li>This is bits 0-15 within the overall interrupt descriptor. Compare this with the table listed in <b>Interrupt Descriptor: Structure</b></li> 
+</ul> 
+<li><b>sel</b> - Segment Selector</li> 
+ 
+<ul> 
+<li>This is bits 16-31 within the overall interrupt descriptor.</li> 
+</ul> 
+<li><b>reserved</b> - er... very usefull information here ;)</li> 
+<ul> 
+<li>This is bits 31-38 within the overall interrupt descriptor.</li> 
+</ul> 
+<li><b>flags</b> - Where the fun stuff is at!</li> 
+<ul> 
+ 
+<li>Interrupt Descriptor Bits 39-41. This is where the bit flags are at </li> 
+<li>Interrupt Descriptor Bits 42-45. This is the Descriptor Priveldge Level (DPL)</li> 
+</ul> 
+<li><b>baseHi</b> - Bits 16-31 of base address of the IR</li> 
+<ul> 
+<li>This is bits 46-64 within the overall interrupt descriptor.</li> 
+</ul> 
+</ul> 
+Simple enough! Notice how this struct directly matches how the interrupt descriptor is laid out.
+ 
+So, now that we have the description for an interrupt descriptor, lets take a look at installing a IDT!
+ 
+<h3>idt.cpp - idtr</h3> 
+ 
+Simular to how we set up the gdtr structure, we also have one for idtr. Notice how this structure followes
+the exact structure for the idtr register.
+   <blockquote><pre><div class="code">#ifdef _MSC_VER
+#pragma pack (push, 1)
+#endif
+ 
+//! describes the structure for the processors idtr register
+struct idtr {
+ 
+	//! size of the interrupt descriptor table (idt)
+	uint16_t		limit;
+ 
+	//! base address of idt
+	uint32_t		base;
+};
+ 
+#ifdef _MSC_VER
+#pragma pack (pop, 1)
+#endif
+ 
+ 
+//! interrupt descriptor table
+static struct idt_descriptor	_idt [I86_MAX_INTERRUPTS];
+ 
+//! idtr structure used to help define the cpu's idtr register
+static struct idtr				_idtr;</div></pre></blockquote> 
+ 
+Okay... Remember that the IDT is nothing more then an array of interrupt descriptors? With this, _idtr is here
+for refrence; it stores the current information in the processors IDTR register for our use. Basically, all we need
+to do from here is to set up the IDT, and _idtr; then install the IDT! Not to hard :)
+ 
+<h3>idt_install() - installs a new IDT</h3> 
+This is used to install the IDT into IDTR, no more, and no less. It is a helper method used to abstract the inline assembly
+language (Which is compiler dependent) behind a common interface to help with portability between compilers.
+ 
+   <blockquote><pre><div class="code">//! installs idtr into processors idtr register
+static void idt_install () {
+#ifdef _MSC_VER
+	_asm lidt [_idtr]
+#endif}</div></pre></blockquote> 
+ 
+<h3>i86_default_handler() - default interrupt handler</h3> 
+ 
+Our IDT interface will provide a way to install our own interrupt handling routines directly into the IDT,
+which is as cool as it can get! Because there are 256 interrupts, there are 256 interrupt handlers. Odds are,
+we will not be using every one of them early on. So, what happens if an interrupt is generated that the kernel
+does not yet handle?
+<p> 
+ 
+That is what this is for! This is a basic unhandled exception handler that our IDT interface will install (You
+will see this later on.) All it does is, if being built for debug mode, prints out an error. It then halts the system.
+   </p><blockquote><pre><div class="code">//! default handler to catch unhandled system interrupts.
+void i86_default_handler () {
+ 
+#ifdef _DEBUG
+	DebugClrScr (0x18);
+	DebugGotoXY (0,0);
+	DebugSetColor (0x1e);
+	DebugPrintf ("*** [i86 Hal] i86_default_handler: Unhandled Exception");
+#endif
+ 
+	for(;;);
+}</div></pre></blockquote> 
+ 
+<p><b>Returning from an interrupt...</b></p><p> 
+C and C++ automatically pops the values off the stack and issues a RET instruction when returning from an IR. This is bad! Because
+of this, we need to issue our own way of returning through an IRET instruction.
+ 
+</p><h3>geninterrupt() - generrate interrupt call</h3> 
+ 
+This is a little tricky. This is another helper method provided to abstract the inline assembly language behind
+a common interface for better portability for more compiliers. However, it also hides the challenge of generating
+an abritary interrupt call.
+<p> 
+The problem is that of the OPCode for an interrupt (INT instruction) only has one format: 0xCDimm, where imm is an intermediate
+value. Because of this, we cannot use any registers nor memory locations in the INT instruction; as there is no OPCode form
+that accepts that (Invalid instruction.) So, how do we fix this? There are alot of different ways, of course. I opted to use
+a fast and small solution: self modifying code.
+</p><p> 
+Basically, all we need to do is modify the second byte of the INT OPCode. Knowing it is always two bytes (First being 0xCD,
+second is the interrupt number to call) it is quite an easy solution:
+   </p><blockquote><pre><div class="code">//! generate interrupt call
+void geninterrupt (int n) {
+#ifdef _MSC_VER
+	_asm {
+		mov al, byte ptr [n]
+		mov byte ptr [genint+1], al
+		jmp genint
+	genint:
+		int 0	// above code modifies the 0 to int number to generate
+	}
+#endif
+}
+</div></pre></blockquote> 
+ 
+<h3>i86_install_ir () - installs interrupt handler into IDT</h3> 
+ 
+This is a little tricky, but not too hard. Remember that the <b>baseLo</b> and <b>baseHi</b> members of our
+structure contain the high and low bits of our <b>Interrupt Routine (IR)</b>? So, all we need to do is get
+the address of the IR function, and store its high and low bits. This is done here by means of a <b>function pointer</b>.
+<p> 
+We pass in a function pointer as a parameter. This routine gets
+the address of the function the pointer points to, and masks out the low and high bits, storing it into the structure
+at <b>_idt [i]</b>, where i is the descriptor offset (the Interrupt number) in the IDT.
+ 
+   </p><blockquote><pre><div class="code">//! installs a new interrupt handler
+int i86_install_ir (uint32_t i, uint16_t flags, uint16_t sel, I86_IRQ_HANDLER irq) {
+ 
+	if (i&gt;I86_MAX_INTERRUPTS)
+		return 0;
+ 
+	if (!irq)
+		return 0;
+ 
+	//! get base address of interrupt handler
+	uint64_t		uiBase = (uint64_t)&amp;(*irq);
+ 
+	//! store base address into idt
+	_idt[i].baseLo		=	uiBase &amp; 0xffff;
+	_idt[i].baseHi		=	(uiBase &gt;&gt; 16) &amp; 0xffff;
+	_idt[i].reserved	=	0;
+	_idt[i].flags		=	flags;
+	_idt[i].sel		=	sel;
+ 
+	return	0;
+}</div></pre></blockquote> 
+ 
+There is some bueaty in this. Remember that, when an interrupt is generated, the processor pushes
+some information on the stack for us? This information will now be in the paramaters list when our routine is called!
+Cool, huh? This also means, however, that we need to be careful as only some interrupts push error codes, others do not.
+ 
+<h3>i86_idt_initialize () - Initialize IDT Interface</h3> 
+ 
+Now, lets bring everything together. The following code sets up IDTR, sets our default interrupt handler to catch all interrupts
+(This is so we only need to define the needed interrupts in the Kernel); and finally installs the IDT using the above methods.
+<p> 
+The bit flags used for setting up the IDT are defined in <b>idt.h</b> and are provided to make the code more
+readable and easier to modify.
+   </p><blockquote><pre><div class="code">//! initialize idt
+int i86_idt_initialize (uint16_t codeSel) {
+ 
+	//! set up idtr for processor
+	_idtr.limit = sizeof (struct idt_descriptor) * I86_MAX_INTERRUPTS -1;
+	_idtr.base	= (uint32_t)&amp;_idt[0];
+ 
+	//! null out the idt
+	memset ((void*)&amp;_idt[0], 0, sizeof (idt_descriptor) * I86_MAX_INTERRUPTS-1);
+ 
+	//! register default handlers
+	for (int i=0; i&lt;I86_MAX_INTERRUPTS; i++)
+		i86_install_ir (i, I86_IDT_DESC_PRESENT | I86_IDT_DESC_BIT32,
+			codeSel, (I86_IRQ_HANDLER)i86_default_handler);
+ 
+	//! install our idt
+	idt_install ();
+ 
+	return 0;
+}</div></pre></blockquote> 
+ 
+<a name="DEMOCONSLUDION"></a> 
+ 
+<h2>Demo Conclusion</h2> 
+ 
+This demo is a bit complex, I am to admit. At least we got the ugly neccessities out of the way! You will see that,
+if you issue any INT instruction, the default handler will be called. If you install your own interrupt handlers,
+try to experiement with them - both the ones with the error codes, and the ones without them. You will see the interrupts
+being fired. Anytime you call geninterrupt() or an INT instruction, you will see that the correct interrupt handler (Or,
+if the interrupt handler was not defined, the default handler) is executed.
+ 
+<p> 
+To keep this tutorial from getting much more complex, I decided to NOT handle hardware interrupts yet. We will cover this
+in the next tutorial, as well as developing the code for the <b>8253 Programmable Interval Timer (PIT)</b> for use as the
+Kernels System Timer as well as for the <b>8259A Programmable Interrupt Controller</b>, which is needed for hardware interrupts.
+</p><p> 
+Study the demo well and how everything works. Modify a few things; try to register your own interrupt handlers
+using <b>i86_install_ir()</b> and generrating the interrupts. To do this, all we need to do is:
+ 
+   </p><blockquote><pre><div class="code">//! our uber 1337 interrupt handler. handles int 5 request
+void int_handler_5 () {
+ 
+	_asm add esp, 12
+	_asm pushad
+ 
+	// do whatever...
+ 
+	_asm popad
+	_asm iretd
+}
+ 
+//! registers our interrupt handler
+i86_install_ir (5, I86_IDT_DESC_PRESENT | I86_IDT_DESC_BIT32,
+	0x8, (I86_IRQ_HANDLER)int_handler_5);
+ 
+//! generates int 5 instruction. You can also use inline assembly, of course
+geninterrupt (5);</div></pre></blockquote> 
+ 
+I decided to leave out the paramater lists for the interrupt handlers as the format may change.
+So, in order to access paramaters, we would need to access it through ESP. I might decide to
+give it paramaters later on to make things easier, though.
+ 
+<p> 
+<a href="Demos/Demo7.zip">Demo Download Here</a> (MSVC++)
+ 
+</p><h1>Conclusion</h1> 
+ 
+A lot of fun stuff this time, huh?
+ 
+We covered a lot of ground in this tutorial. We have looked at a lot of important topics,
+covered exception and interrupt handling, and have re-enabled interrupts in our system.
+This might even be the last time we ever see a triple fault. Woohoo!
+<p> 
+I am to admit this tutorial is a bit complex. <i>Isn't OS programming fun? ^_^</i> 
+</p><p> 
+ 
+In the next tutorial, we will be starting to develop our kernel even more. We will be handling timing through
+the <b>8254 Programmable Interval Timer (PIT) microcontroller</b>, which will be covered simular to the 8259A PIC
+tutorial. Afterwords, we plan on moving onto more memory management and process management. ...We might even develop
+a basic debugging text based console to spice things up a bit ;)
+ 
+	</p><p>
+	Until next time,
+	</p><p>
+	~Mike<br>
+	<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2/">Neptune Operating System</a></i>
+
+	<br><br>
+	<i>Questions or comments? Feel free to <a href="mailto:neon6000@aol.com">Contact me</a>.</i>
+
+	<br><br>
+	Would you like to contribute and help improve the articles? If so, please <a href="mailto:neon6000@aol.com">let me know!</a>
+
+
+<br><br> 
+<table width="100%" border="0"> 
+<tbody><tr> 
+<td><p align="left"> 
+<a class="anchor" href="OSDev14.html"> 
+<img src="images/left.jpg" border="0"></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev14.html"> 
+<font size="4">Chapter 14</font> 
+</a> 
+ 
+</p></td> 
+<td> 
+<p align="center"> 
+<font size="4"><a class="anchor" href="OSDevIndex.html">Home</a></font> 
+</p> 
+</td> 
+<td><p align="right"> 
+<a class="anchor" href="OSDev16.html"><font size="4">Chapter 16</font></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev16.html"><img src="images/right.jpg" border="0"></a> 
+</p></td> 
+</tr> 
+</tbody></table> 
+ 
+ 
+ </p></td></tr></tbody></table></body></html>Ytext/htmlUUTF-8_1http://www.brokenthorn.com/Resources/OSDev15.htmlP¦#'Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl¼SÚ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl¼^5 ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔOwâÿØÿà JFIF  ` `  ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ Õ…" ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ç<) Çq%¤iÉ}©ÝEæ•}¬Yw…
+ä !väžs¸Fv_ð‚k¼'oÿ ~ìÿ øºç~ê¶öŸtÇ½¹‚ÞÝ,À2Lá£ÔœW½ÿ ÂWáßúéøø×_:‚IE?¿ôfM·&¾ïÕ¬iRh,«©èVVÌÀoœÿ w#µV{gŠÈ_Ká±™UapúbˆÈl`îÛŒŒzæ·>3kW¯i.Ÿ{mvŠ •d þó‚AëKu­i©áõ›íÚlñHGgöˆnÕî|üô+qùOs³#'æâ'-tV*1²ÕÜåþÛ§Ï†Ÿÿ €±ÿ …Io-­åÂ[Úèö·¾vÅŠ;6N \ôÖþ§?ƒ¾3>“ýö7û3ìÅ<ÿ +´oòÿ }÷wgÌç8ÇÍŠ›JÔ,¬~!XÜ\Ýx^ÞÁ5Ï²Ëi$I*Û˜œ&óòÂr oùóœqšžb¬rÂ÷M#?`Óÿ ð?ð© –Úîá-ít{[‰ß;"†Å›' .O šÙÐ®ü;xž»Ô¡ÒMÝÅµäWî’[[‹cæ…ŠV‰±¬p
+’GÍ†ÚcxOY´±Ö¼W)¿³d:MâZË,)\9e(MÇÍŒˆñÓŒQÌ%Å”2¼3i–QËt{8Ã)WƒM7ºpþÏÓÏÒÖ?ð­o?ÃŸðŒç~“ö/øG=cûWöžÿ ûý×þökâ.¯`þ)¹²Ò!ÒÆ¶1"‡edá€`Øî0ö˜V,ÎÐZÍ<7$Ë‡™$ÓÕZ5$ XàË×ûÃÖ¤š!oiåÇ‡â†Ö\ysË§*£ädaŠàäs[zWŒôy¼=¡Y^ß<Sj0ÿ cêKÅX-ãIR6%ùRLñ¹nGÈÞ…Mí;]ðÆ¿¬¾§ª>ŒLÞ!™w\„RÖ‹fË0“¥•<n=â—0ìŽ4Þé gìþÇþ$²ÚÛˆÆ‘k–1,~m’.ô=ey×¥jé—ž¼Ñô«Û³£.·6—¨(VXcŒ\«#ÌˆÔí/‚àÇRhjúŽ™ufÂ;­
+m~Â+2Kf$·ž£qòC·®>ï£˜,rßmÓ¿çÃOÿ ÀXÿ Â¶éßóá§ÿ à,á[·ZŸƒSUñ(€i?gÓîûOSnÌ.äòJ4!ŒLQ¶”ßÃÊ¾¯'Œ4ý2ÕtË­!-&s|Æ8ZžBÈ[Ï;f1!E
+ÛˆË»AÌ0>Ù§ÿ Ð?Oÿ ÀXÿ Âµéÿ ô°ÿ ÀHÿ Â¹mBýF§v ž;ˆ|çÙ2Aå,‹¸á‚¸çon•[ûAÿ Ùüª®+¼&+˜§–ÛC‚x­×|ÏžŒ±.	Ë¼_CRÞ[> žÿ Ãkim¡î4ÕIëŒ•ëÁüª‡çi>øáÎ2>Áÿ £MñÄ¿ÄË­¬ÉfËëg2	‰s¸¨*rP#=@"y‡bÂ[<—Ïbžyî{uÓÈƒŽJíÈÌUA{§ö~Ÿƒÿ N±ÿ …tzŽ§ouñKZÔmõ˜N¶û5ÊÃ£)4kŽ=ÎáJ†“†ÀR:‘\ï†µ;Ïk7> K¸’©-Ñ¥A]ßtxûûKî^‡“Š9‚Â}·Mÿ Ÿ?ÿ cÿ 
+>Û§ùpÓÿ ð?ð­CTÑ-´ŸÜÛÛèj‘ÚXy1«Ãv¥ØJTÖ2Û
+î©PFsœãbÎ×ÁÆ:Èký%´ÙnR?³´Ð,I[–2$’zví‰”©Á< Ì+”óZÛÍÆk›–?2ÅzŒ2¼ƒëKq%µÃ[Ýé¶ó¦7E5’#.FFA\Ž5»©jEß‡ ûmÖ‘5¤^Š(±$-r—ãm>hÆyw®{Ö¾¡ªxj÷W¾Ô mþæîþÖE7w–ñ¯Ù<…_›ÎGÚ«†EN‡—'0ìpßmÓ¿çÃOÿ ÀXÿ Â¶éßóá§ÿ à,áV5­ øîK1cex·ïä¢<w/wHv€XyÐ„U°@Àr	~/èÓøm|m,í¤ÿ h&úWÌŸhŠekpCs¸†o—ø×‚ æŒ¶éßóá§ÿ à,áGÛtïùðÓÿ ð?ð®¶sáHµË´Ò$ÐþÜ¶iÍÄ4ahTÉå™NÜo/‘Ì8 *!¼!uªxz[y4a¦ÚÝêKx/$Ž61³1·Ü²Ò¥ppqß\Ã±Ì}·Nÿ Ÿ?ÿ cÿ 
+žÓÊÔ&0Øèp]ÊqK{Ó8Ó‘ùÖ¶“?„¿ƒ›Q}:Õ|Â—¶Œb›Í"6+<’¦]vPcÎ6€„›žº²›â7„–]:ÞèGuö±ÝÅ;åÉ³ÌòcHAûØÛ“ŒnÇ9‚Ç./4ò3ýŸaÿ €‘ÿ …kÓÿ èaÿ €‘ÿ …q¢ýÀÊíÿ gòª¸¬v_kÓÿ èaÿ €‘ÿ …kÓÿ èaÿ €‘ÿ …q¿ÚþÏåGöƒÿ ³ùQp±Ù}¯Oÿ  }‡þGþ}¯Oÿ  }‡þGþÆÿ h?û?•ÚþÏåEÂÇeö½?þöø	øQö½?þöø	øWý ÿ ìþTh?û?•—Úôÿ úØà$áGÚôÿ úØà$á\oöƒÿ ³ùQý ÿ ìþT\,v_kÓÿ èaÿ €‘ÿ …kÓÿ èaÿ €‘ÿ …q¿ÚþÏåGöƒÿ ³ùQp±Ù}¯Oÿ  }‡þGþ}¯Oÿ  }‡þGþÆÿ h?û?•ÚþÏåEÂÇeö½?þöø	øQö½?þöø	øWý ÿ ìþTh?û?•—Úôÿ úØà$áGÚôÿ úØà$á\oöƒÿ ³ùQý ÿ ìþT\,v_kÓÿ èaÿ €‘ÿ …kÓÿ èaÿ €‘ÿ …q¿ÚþÏåGöƒÿ ³ùQp±Ù}¯Oÿ  }‡þGþ}¯Oÿ  }‡þGþÆÿ h?û?•ÚþÏåEÂÇeö½?þöø	øQö½?þöø	øWý ÿ ìþTh?û?•—Úôÿ úØà$áGÚôÿ úØà$á\oöƒÿ ³ùQý ÿ ìþT\,v_kÓÿ èaÿ €‘ÿ …kÓÿ èaÿ €‘ÿ …q¿ÚþÏåGöƒÿ ³ùQp±Ù}¯Oÿ  }‡þGþ}¯Oÿ  }‡þGþÆÿ h?û?•ÚþÏåEÂÇeö½?þöø	øQö½?þöø	øWý ÿ ìþTh?û?•—Úôÿ úØà$áGÚôÿ úØà$á\oöƒÿ ³ùQý ÿ ìþT\,v_kÓÿ èaÿ €‘ÿ …kÓÿ èaÿ €‘ÿ …q¿ÚþÏåGöƒÿ ³ùQp±Ù}¯Oÿ  }‡þGþ}¯Oÿ  }‡þGþÆÿ h?û?•ÚþÏåEÂÇeö½?þöø	øSZîÀà>Àg<ý’>ÀŸîûWý ÿ ìþT¿ož pzcEÂÇWöÝ?þ|m?ðþ"œ—–°YœÖ±zÙG¥-’xì-ÚóXÔRé¢S2 á_pº<g=ÍsºµÍ”œñé7Ïb
+˜žaó—œð½ÉíJèv:6»°8O°Ï?d°'û¾ÔõòC.R2²‹ßºã~ß!=@àôÆµµª"D¶×pˆ„H /AÚ3×ž¹¢áclÜYÄû_M³Rd´‹# ŸîOÖ†»°8O°Ï?d°'û¾ÕÌ_jSItÎò+±–#³§½Wû|„õƒÐ{.;Gcû6ýí8ò3cósŒmýßÍÔtõÙ^ÞÒv†ãJ¶ŠU 4sYF¬228Ú1Çó­	ø†=#AŠÛP× Y®Ü›&ûaæ7÷r[îž™9êØá/®n`¾¸Ž{¨îeîi£H²Ÿ˜0ëœç××šI…@ÓµŸŠh7æ4Àx/îîDqáò„n6Ž ¯ÝWhä®Áúƒ¶î }ÎŸð*)òÅ‹R-áö»ã¥o&–ïçK°ï«p0xÃ/ëZ_ð¤¼aÿ Pÿ ü	ÿ ëW ü'þë3zIàÏ=~µéxoùèï•ÿ 
+Í½KKCç?øR^0ÿ ¨þÿ õ¨ÿ …%ãú‡ÿ àOÿ Z½·^ñU¶ªé™5)|¸þdS÷ãå|Íºd8ãäY9P­·¾kÊŠòƒìmÑmíò’¸a†ŒŒäuqØùßþ—Œ?êÿ ?ýj?áIxÃþ¡ÿ øÿ Ö¯£0ßóÐÿ ß+þcª^Ç AzÑKv<Çk,n‘SÌEÁßŒ/È0vçh$bácÄ¿áIxÃþ¡ÿ øÿ Ö£þ—Œ?êÿ ?ýjú"	’êÞ+‹{•š	P<rGµ•ÔŒ‚ ŽõÎ[ø²i¼iw ½™Ha”@—[Ï'³c0ŸuˆÚ®ÏÆvmË)p±ã_ð¤¼aÿ Pÿ ü	ÿ ëQÿ 
+KÆõÿ ÀŸþµ}¿h·ŠtyBHÔIÆ Œò¬ ©ö Þ³V–sö ^ÞÒ)Ý»Lëü6üûpw l/ÌC„.<+þ—Œ?êÿ ?ýj?áIxÃþ¡ÿ øÿ Ö¯Òd–m"ÍÞV,mâ$œIE$’G'&®á¿ç¡ÿ ¾Wü(¸XùÏþ—Œ?êÿ ?ýj?áIxÃþ¡ÿ øÿ Ö¯i>-VÓ¬/môÍJá5&Å#á®ÄÒ‰FçP¢1ÃnÅEmØÞC©iö×ö—Kk˜–h_`‘€*pFGu¢ácç¿øR^0ÿ ¨þÿ õ¨ÿ …%ãú‡ÿ àOÿ Z½çÄ3Ïk ^MÌ’*`0 ’u§Ýjmg¨ÇÊí'o.+AQ)bn1òîùB¶HfÊœË…ÿ …%ãú‡ÿ àOÿ ZøR^0ÿ ¨þÿ õ«ß5}fÇB´K­FðÅ’¤…‹{Ë#*"*–f>€Á=®V‰ÖûË_xkÅºmª#<·wz9Dª¤’Åw8ë®4\,y½¯Â_ØÁq¥ìðÜ®ÉãŠù‘e\† |Ãð}MUÿ …%ãú‡ÿ àOÿ Z¾„ûm·öö‡Û¡û•çý§ry~^7oÝÓn9ÏLVEÎ§{=¤þTÖ‘OF²²<DŽ]p
+AùO;q»•RácÄ¿áIxÃþ¡ÿ øÿ Ö£þ—Œ?êÿ ?ýjú9~ðúÕ©"j¶šk<û›inU‚.Ð±´jÀ÷Îe\qØþ%ÂÇ€Â’ñ‡ýCÿ ð'ÿ ­Gü)/Ô?ÿ úÕí­â˜Ýb[;+ûÛ™e¹m¡XUöÛËåHùvUÚn>mÇxãƒ‰?á ˜ëi‘é”“›x..~ÌÙegP2H1¾véÆr(¸XðïøR^0ÿ ¨þÿ õ¨ÿ …%ãú‡ÿ àOÿ Z½¶ÇÅ1ÞêlÖWöñKu=½Ô«	Žy¢.T+E!•F®HÞ¡q<:¾—LÞ\†bë€3¶2Fxõíô¢ácÁÿ áIxÃþ¡ÿ øÿ Ö£þ—Œ?êÿ ?ýjú3ÿ =ýò¿áXž+·¸´:Ä79‰f‹S½’Þ8%F !9uÜ¹WÐàñEÂÇ‰Â’ñ‡ýCÿ ð'ÿ ­Gü)/Ô?ÿ úÕï®iqÝÝZ>±f·6‘îai£`]×ª®9<r*äs$Ï*Er®ð¾ÉUv’´6ŽNbz.>wÿ …%ãú‡ÿ àOÿ Z­X|%ñþ•;O§^Ág3.Ã%½óFÅr2 q8ö¯n{‰Ç‰RßÎo(Y—ÛÆEéÏ×ÖgX:8³U´»½žòãìðÃl"[Ëy	&FUlmßÒ‹…ÿ …%ãú‡ÿ àOÿ ZøR^0ÿ ¨þÿ õ«ÚañÆ‡"%ì°È®ÐÉÀIIÕŠµ¾åR­6AÄjY˜`¨e ’hv·¶–—²Á=Ý¼“Åð¥!P/”Ê$.äŠ–ØØÎ9.<[þ—Œ?êÿ ?ýj?áIxÃþ¡ÿ øÿ Ö¯ 4íJßU·i­'”„rŽ’Àb’6À8tu§2„¡&¥=¥ö·+-ÍÊZC¤FFÂHÅQz$`zð(¸XðïøR^0ÿ ¨þÿ õ¨ÿ …%ãú‡ÿ àOÿ Z½ŠËÇ–WÓ[ª[Ýˆ%HYîUí¥Š#,ÏJÍ¸´‘‘òn#q^qø…§››kQk~n$ºkIãQ}’A$1‘!W*~k˜¾ár2A © ¸XòøR^0ÿ ¨þÿ õ¨ÿ …%ãú‡ÿ àOÿ Z½ZˆöóÜéÈºeúÇw+A&ç·2ZÈ$·Œ	\íù®T'z‘Êc‘b?Gs©i6–zmüË¨Ê›%>J‘ÈñÎl•a„)Ã ÅrácÈáIxÃþ¡ÿ øÿ Ö£þ—Œ?êÿ ?ýj÷"â{‰u$ÌÛ/$EÈ*ª`8ê:ä øÙà9­â‘õÙ`w@Í–RBGÝ;PŒŽœ=	¢ácÍ?áIxÃþ¡ÿ øÿ Ö£þ—Œ?êÿ ?ýjõíâƒµíA,4ÿ B×/€‰,MòHTº ÌIQÉô©ü_ãÍÁÙÿ Û3Ü/Û¥1ÇåBjŒnvãî®åÎ2Üð8.<kþ—Œ?êÿ ?ýj?áIxÃþ¡ÿ øÿ Ö¯£0ßóÐÿ ß+þ£ßJÚ ¼¹’W*%‘ÊFds‰¢€Ià`(ÀQp±áð¤¼aÿ Pÿ ü	ÿ ëQÿ 
+KÆõÿ ÀŸþµ{®™âm'VÓå¿µÔ
+ÛEÞæo¶"	bESå÷NÖÁàâ{­sK±ÓáÔ.õ‹;{)öù72ÍG&á¹v±àäF:Š.<þ—Œ?êÿ ?ýj?áIxÃþ¡ÿ øÿ Ö¯ 'Õ,-n%·¸Ôí¡ž+su$rI²B„Bü]+6ÃÅZn½aªM£jPÜ›-èZ7ò@8l¤† °¶’2¤\,xü)/Ô?ÿ úÔÂ’ñ‡ýCÿ ð'ÿ ­^àuÛ}#Ã¶º”×;$H"Ý³ÎÍ#ªã!›%Ž2z’R*Âø‹H)dÏ«ÛBo\Çmî‘<®k F·†;Jã ð@<Qp±àÿ ð¤¼aÿ Pÿ ü	ÿ ëQÿ 
+KÆõÿ ÀŸþµ{çöæ—ÿ A‹?øúûúèÿ ããþxÿ ×OözûT‘ê–$¯§léÇÙee’2mÁ|¶ô|²§œ;Ñp±óÿ ü)/Ô?ÿ úÔÂ’ñ‡ýCÿ ð'ÿ ­^ãªj±ÜxVçQÒµî"d";‹wGSóm;Y}9­Ê.>rÿ …%ãú‡ÿ àOÿ ZøR^0ÿ ¨þÿ õ«èÚ(¸ì|åÿ 
+KÆõÿ ÀŸþµð¤¼aÿ Pÿ ü	ÿ ëWÑ´Qp±ó—ü)/Ô?ÿ úÔÂ’ñ‡ýCÿ ð'ÿ ­_FÑEÂÇÎ_ð¤¼aÿ Pÿ ü	ÿ ëQÿ 
+KÆõÿ ÀŸþµ}E9Â’ñ‡ýCÿ ð'ÿ ­Gü)/Ô?ÿ úÕôm\,|åÿ 
+KÆõÿ ÀŸþµð¤¼aÿ Pÿ ü	ÿ ëWÑ´Qp±ó—ü)/Ô?ÿ úÔÂ’ñ‡ýCÿ ð'ÿ ­_FÑEÂÇÎ_ð¤¼aÿ Pÿ ü	ÿ ëQÿ 
+OÆõÿ ÀŸþµ}E9Â’ñ‡ýCÿ ð'ÿ ­Gü)?Ô?ÿ úÕôm\V>rÿ …'ãú‡ÿ àOÿ ZøR^0ÿ ¨þÿ õ«èÚ(¸ì|åÿ 
+OÆõÿ ÀŸþµð¤üaÿ Pÿ ü	ÿ ëWÑ´QqXùËþ—Œ?êÿ ?ýj?áIøÃþ¡ÿ øÿ Ö¯£h¢ácæI¼;©x6ýôíHCö™"IÇ”û—a,£Ÿ\«~”W]ñcþG˜ÿ ìþšŠ«³9nt?¿äO¹ÿ ¯Öÿ ÑU¿x¿]Ò¼ci£é—:0J–a–ü;\HÓÜ<Y‰Ô8P¡ˆÈÀïU>	ÈŸsÿ _­ÿ ¢ ®Câ‡üœƒ?íÇÿ Jž¦[š-ƒZÖl¼Es=Î«&‰q,ö«g#y–ÉºJªŒ|àõíœq[gÇÚÚÂn4íGÂp½ÅêE<×‰qnhd`ï$“`â ƒpù@<q‰ý»ÿ Qïü­÷æ°|öß‡òÿ §ý«f©mÿ /¿hÛ˜®?éòçnqþÆqüXùdgÐÞÔfÖ</¤jw
+‹=å”7,`…è’N2}jÿ Èûiÿ £^¡ð7ü“ÿ ÿ Ø.×ÿ E-MáùÁÿ m?ôkÓÎ5ßk>ñž³m§O£®˜—{†[´"ÔÜËp±cÄ0†B—f/B?ùZÔººÞèæòWó´–Ìö÷¬gUØ¯±Bî dgç\“Êý¥u)<Ï/e¬­¿~Í¸Ó;·¦>»ÓÞ^¢¤úìÖ·›má°‰ËÝˆµb¬ŒœÆ(Æ¦Æc)r®Czíù÷R{Tø‹¯KM.ó@³±‚ÞQæ<kl®!XXÛÛ¼7R‚å%UJ‘“µƒ¯´ÝÁ®…=½¼I[2GjQBà  Ú¾aø“$/áÇo2I7qF#¸¬jÛ
+¹¸ ü;Æ?º:Ÿ¨µ/ù^×ÿ ÐM4Z/ül¿ëÞ/ýµŸâ/[è^]ºyßËË1yÎ2UY‹6ÖŠ¬îÀ…RÊèh¿ò²ÿ ¯x¿ôZ×Úê3jwW*4—©ž²‚É#\›6>f‹uí¨ØXþîÈG»l­€M]dx´·ÚÇ¾dhåö˜ñ+©	Ðb¢@Fvˆ÷q^›áoØêvâÂ(­m.-SgÙ-¤Ý*…W*„ÜªÈÈ¬„€TBÜoö#Âÿ 	Û'þÃûÚ¾Ãö‹3ìÞ^s·Íû6íŸ7“äyYýßÝù«ëQ›L¸½¸Qd²I<…ˆHÚØÞ4a2K,[¬®†ÀÃ÷w¦=Ûb\€z¿ŠäY¾ÿ pèB²>!jRØh1Æ&òm®n&KÇ[tÍ¼pM<Š‰'ÈY–Ÿ0#æ<V¿ŠäY¾ÿ pèB±> Z­üzŸ";E{ªKi'—»r¤¶·1³+rÈÇ1Q’ êyD0Ó¥Õü;¨jÚßˆ•`Òç¼Ó®ZKF’Ü…x¤…·E‰™ŒµØä–A´µzOÃÏO­X^__ê/&Ÿö(o’[äŠ9-Áiã•ã
+Œ­ÙƒmS†ç§"ø;¡i¶ú}Åæ³t°iºEÍŒò1HÔ¬¢Bòd‚4Üÿ OÊweøK·ÐüJúF /¿³¬íl’ÍîmÌ)$,òFó)ä1‘ä1ŽUrŠø™T ‡}¯P×t›Çòí4Qîlt¯³y+3:qœd•Œ€cl–	³µñÜÓì!þ…Uu½Q:Å¾½ Ü¤ZŒh¶÷×20·¼·NÆÀ%K3+€H$‚<M¬™šÓIk„Hç7¶æDËª¶yˆŒ÷ÀÏ  ÕûãëXš†•wswc©i·[^ÛÁ$ ÜÛ™ãhä1³|ªèwf$ÁÝŒnàä¶¿|}k•ÔüI©YjÏ§iúLkœW2I$ó)ùüì(X ž nN2YTd]øJiô[};ÌÑîP\Mw8Ôô³t4ŽÒ<ÕØ’@,p@Ï˜ßÁ?ñPiúŸÚ,o>Ékmm¿T±ûUÇî]ÛÌI·®É-´ò ûQ'ˆüIýÞ±;7gmÕã}ß38ÅŸ?ê›ë”Æw¦âOø’=û¼?bvnÎÛ«Æû¾fq‹>Õ61×)ŒïMÀ-t=Áìº´º­¬ºÅÌ’Å,e»ó$/²/ùj\f%Ú¥•¶ÿ «Üù«ÿ !ÍþÞ?ôQ®^m[Ä~·Õµ+ýN»¹	%ÔÓÇ}ps
+‰^8ƒ}—`ˆËÀn;Ž_›¨Õä9£ÿ ÛÇþŠ4 eoxŽóF½µµ²ÓRõæ·šá÷I(*±¼I…X¢•˜“0è8 šámÎ¯fVúÛO¶º†ÚÉ<×F±ÜñÛ†A6ž›ð“íFmÊ\Œ²î]¿ˆ“éêÚzjÒ¢[Í¦Ý VkP]¼û6~Óû¢~RpÝ#+‘¶Ô´{É4‘–¶º‚ÜiÑ8Ž].I.ˆ»‡1³Ûìˆª›¤`²Ùà æ/Ú[Qn#žëK?ñå¥C( (²Ko¼Û[Ì($A™6áá¹žÓ¯ì¡Õ.5º2ß^ý¡Eá‡Ï
+!Š<?’<¼æ3¹ùJçœŠÈ·ø£¦Ý=¬Qé—^}ÒDðÀ÷Ö	+‰2~í®Ceƒ) Œò+¢ðÿ ˆ ñµÄÐÛOoäJ±2Êñ>íÑ¤ªÊÑ»«)Y‚'üËÿ ^ûYjYèwvÖ/¯Eö‹{{¯6+_³›>O.EÛåf|+3áFFÍÝÔÒÈÜ¿õáÿ µ–«xž6›SðÌi3Àï©J«,aK!6W_0ÜÈëÈ#ÔqºÝªêzUåÇ…´]SÈ9±†Ý-#™ìÒ;@êÓ±+Äbòˆ`¤*n!ê½Ž—dž²_x{[µ¶òž1‚ÛÊÝ4Ð´l-b,Q‹Å"Ì>YÍýFå<äh«â/k;X?™¥EhÞbF›§T,Ø…ýxÈ¯á&èóëž%6zº=·˜%Ò$•£”L!˜!”U#9ØøB×H²Ñ>Ï£ŒF’·¾É-%óï"XãÚÛJc(	]§A.†¸×u¨¸IcŒŒÇ¤>à‚;T^¡ÔüMÌóºjQ+K PÎE•¯Ìv€2zð ô²|Yÿ  OØ)¿ôžZœÛø“ÁÚ<«3xcÅ"Ñ¢Ã~Ri`ºTg¾ÃNæ-¹Áa¹w0}ªÃ>¶ñU¥†¿áÈÿ ²t›yXÙÁ¨ù×/;)€yŽVäaU­‘2J+v9P¾g?ÄOßÚG`žž×l_g¶šó^¹¹‚ÔeJ“++Æ¬‘±i`8Ó<Z¹–êßC¤ÙÝx­ìµG‚+&Ü"æ@'y$S
+¡†#ßçE½ÞÇ¥é¾¾x5Ø>Ûvû.ìî!’}÷2íÓËÄ³Hw	"²Ã;…;ÀÀ
+äÉá»Ÿê÷ñ[XÑo ¸K‹Xõ"ðHJ«…HÀ•ˆ+K¶#„#ÍÚ¤,›|ÊãQ¹µµ{ÍR÷QÔa°·ŠîÞ+ë×”@Ë*nÙqGe˜ ÆÖï1âQSNøƒ¦ø‹Æ¾…<;:8¿…[íb{Ò…¦”ó>æ6çåÁ$.IPÈì 4/õÚŸýÍü£¯ø¿ðëÃ>ð>Ÿu£Ø¼w†ö;y.$Ý¤_.BIí•€=°8¯mÐ¿×jõÿ 7òŽ¼óö‰ÿ ’aÿ aHÿ ôT´05þ|=ðŸ‡ôv-Ô¦°·§•š\HQº«ªÛ†APíŠâiOù–?íëÿ h×®xþIÿ †ÿ ìkÿ ¢–¼ƒö“ž¸ðÝºÊ†tK—xÃÊ¬c
+Hê*Ø=öŸJ ÷êåìì®õ/Ëea}ö›ˆ¥‰.‚1fW”S¸àçƒƒÎ1]$ÃuoÅ¼©4 xäƒ+©Áw¬¯ÿ Èûiÿ £^€9ù~É-•Í¿ö¢FâÞâŠ)£HŒI+åœ?’™#]Dlx$U¸|<:_•ªy6–{dt‰%<ÆF–R&iKyr±]ñÉæ`ƒ†þ"ñ>á=>;ýnóì¶ÒJ!WòòäÑOå^mâMâ…·Äùm4]ÖâÕl¬à’OÜËôÝ)bÉ™A*»sò†àw°m§ø.;/O¬Ëx÷(÷]Å’N]&uÙ¸þ÷Ê !hÔ´díÉ³e£Üh¾½µ–ÿ íQ$°$!Æ—‘²L’¹b]òB©'4¾x×þ¿
+.¨ö¿f¹ŠSmrŠr†EU%“œí!Áär9ÆOI©È*óþ¸?þ‚hŸ›D¹×44¾H,àMs	‰ËN< Y¡Rw†ä‡Ta‚¼âxÏþ¿Ú<Ú†¥ö=?PµûÍŠÄfžõÉ!T}ÙVs3‰$lçxù‘ŽãÛh¿ò²ÿ ¯x¿ôZ×ðÂÕ¼H—^>ÕÑ'¾Ô®X,›d66ÈÎ‹ ©ÉpqÃÉj æSÄšM…ÄÏâ(¼g¤ØÜ\]=µÕÖœm£³šs;eYŽð³8Rœ³3dvVeðÁ·Óukö¿³´®. –Î#¹ 	%Ë~ìî`pÛJ;¼æ©øÄŸ‰üQãÝ#Z/4ûÓmoo$	µb/2•8Q¸ª>lô÷5'„ÒãÃõ¯#ïÑîm¶4øƒZ“l‘ª…RìH àK1 §Ä°C‡u7Š$G›kÊÊ o•rÞ§
+£'°µnV?ŠäY¾ÿ pèB¶( ¢Š(QE QE QE QE QE QE QE QE QE QE QEâ_?äyþÁ°ÿ èÙ¨£âÇü1ÿ Ø6ý5F2Üè~	ÈŸsÿ _­ÿ ¢ ¯6ý §š×âF™qo+Ã<ZlO‘±VFJAr=ë¼ø?©-—„§Sky97„Ÿ"p?qSÓ±«Ÿ¼+¤øþÒ#.ŸªÙjP`Cz–ÈLä£.Fåä‘ÈÁäu ©nh¶<BKÆó½¤CÆzŠÏwoöˆ£:Æ
+m’\|€/Ka|ÅvI²‡‹ÏŠ-’ÞÓ^×®µ]ÙãŽ[Éd
+ÈÅ2RL=FHàîC‡I}Ž×áÕ•»ØÝ:êRêvëw'K•HVÿ [œŒ&w(.—÷>E?ü0_}•V÷U¶Žß~ÕþÇfÎpEQ…D(éµ8ãVÕ|ÿ $ÿ Ãöµÿ ÑKSx_þ@pÛOýõGC¾]Ãún•öVo±ZÅmæý‰—~Ä»8Î3Œš©Ó¦‰o`aÕ`›íoháÊs±_‚„å~a’8ÚØe|ûñ[Uš×ã³¥_¼3Äñ¢ÜZÌU‘„Ž)È îR> ÔvðšµÑ­<_}–ñGˆ"¼ºÙdDiU*Tù .Ì‡Û„Ü^0þ±ã¿‡zŒÖâÊÃRÑ¯!E‰¤ƒL,’D«…R€¨Ê€  ôäÚGà=59u#¥öÉÓdÒ-˜°8ß÷Ý†X¶âÃ`0yÞyaâEÖm® ³Õõ7½Ú†â0nŒÊ†S½ÈÉà±ä‘Ãðà²²±û2îxn´)î-åI –Ùž9#`ÊêW ‚8 Žõâ^"øR|C¨Gvú–«	H‚mþÇ’Lœ–c–›»3Sœ±w,íéÆàB÷ÂÎÇTŽÚî9Úµ“m7ü´CŸ—vIa‚	ÃåÄ3{Eÿ -—ý{Åÿ ¢Ö¼ªÿ Gÿ „wP·µ'Hí"²D9x¡1¬r‡ ¨m±Z3³…$³ö¥ÀfôK_ìz}µ»éº›<pÆ¬VÑ±ŠçÜf£{eªÛ¬7zF²B8tx¡’)#l”t!”à‘FCÐ‘@}ý­©gù~Lÿ ØÞV~ËåÍö-˜Ï_³lò³ÎÏµù;~O3Êæ‹þ-BâÖã»ˆ³I(å"˜È²J\ ¥¶ËvÈÈ7’ð„Ü–å—_þ]7ûCûCn¹öß7ÏûOö‡™ægvýßfÎìóž¹®«N½²Ò­ÚM#YÜ»¼°É,’6 Ë»’Ìp É'@è  ~)ÿ ‘fûýÁÿ ¡
+Àø‰:Z/†îå‹ÌŽß\²áz$3±9e*¸Æw6Ð¸ÉxÀÞºÞ¦Ú†si™©‰$Pu«ÔéU5Û{]Äº†¯=•¬¢{h ·–³†lMæ)¸Ë¸íÚa5];W¸Ú•ý­½…³™-ìç™Q‹!sçL¤åJ˜e+ûžS3|ëˆ³<15¦¹ãÌm3iukgÇqjƒqo]ƒ9ÚA]†6±R¦4­„ü'Ï/@ñy{vm¹¼vù{qûÞ1äÅO-?º1¯ Á¢xj)“Iðþ«°Hï’»Pˆ¥œ–Úª08€É H'›C¸ŠÆúWšÂWÚ^JÅ™œ,2±ä’pC÷¸Vùö™_â¹¦ÿ ØBý
+£ŸY·º·–ÞãFÔ¦‚T)$rYWR0A‚íYk%Ä‘ÙYuI’+ø¤ŠK«f‘>WrNò9ùŽ	ÜYf ìWï­yŸ‹®æ³×¯ä‚åíÜØX)d”ÆJæûw!ÓŒO< [tXóâô¦q™vÕŽÕ,xô“øW!{—¨^‹ÙôÏGtaHíe¹·ÜŠX¨"7Pp]±ŸS@q?Œ¦Šâ[{<s«”’9/Š2±8 ‚ÈTæ^Ÿ»Æïùe·ý£Óu	îôûã©xŽ{YP	f–RÜ‰ÃªèBçys±v¬rsFÓ{û?Jÿ Ÿ_àÆûÿ QýŸ¥Ï¯Œ?ðc}ÿ Ç¨‘ñ¥w#xšÕï§kak¨ªÄg%8Šã 3‘&[î°Ú|²–^—ªÿ ÈsGÿ ·ýkžŸHÑ.­å·¸Óü[4¡I#’þù•ÔŒA—Ú´ï5ºÔì.NÔ•-ÄÛ÷Z>NèÈÀõþtÓ×"šGŠ­5}(u¨'Ó­w$ï5³™$€(dc1JÄ)ÞpUÎ@&7Öÿ „èªÿ à#Qÿ 	ÿ Ð/Uÿ ÀF 7Ñf–ßIÒC>±5¼Ú¶è­¬õ0–Š(ž
+!fÁ-G :·$îì¼“Æ5å¸ŸÏ_ÅûÃ±¿b¶Û¹efpØÆw1lç8<Uìoÿ Ð…þ	#ÿ âkON»Òô{v·Ó<9we9vŽÛNòÔ¶ É
+ Î çØP©?än_úðÿ ÚËPøƒþC~ÿ °£ÿ éÍW:‹>»öïìíHD¶žV£î-æ+qÇ ?•­Ü:¬P¡ë–·ÒùÖ÷Zñ>ÖB@pÊr®ëó)ûÙ ƒâÿ 4xƒWx$¾YÂÁÂÙ[ÝM$˜{ßycaŸVm™ÆyÁÛ<Óø»D¸]y©~ñ.­o£/)²º%ã¶4Éqå l ¤¿E	¨ørÏX¸[MõûÙÕ,—:%ŒŒ$à¶''sL²ð®›¦Ý¥Ý‚ë–·1çdÐhVëAÃlŽ	 uÞÿ ßŠ¿ì(ŸúGmTµm:ma<Y¦[²,÷–KoHHPÏª	À'>•.•w•ÿ èzåÕÅÌ¾uÅÄöƒ|¯µP*Œ*"üª>îNI$–Ú‹EªßÞ6©l˜Ã±E£îùUÁíŽã¿z`|ý¡ü0ñ†üA¦ëº¶öm7MºŠòî´Âþ\1¸wmªåŽIÀžÂºmS•4(<>ÐÁm{cXÞA!‘ÔJWd¢0U×Í·(ÌL›H“xKßjÿ „èªÿ à#WxƒÀZ&±v'‡G¸U®´©F0 The‰ö€0ÙÂ€(ÁV’º“í÷§O¶“Î»’Öv(¯œùðÉ%Žò>y®“—Ï˜Ï»î.³<ðÆÖ^3Ñoo´”µµµ½ŠâY^ê&Qƒ…bI8Àã©Àæ½_Â^Ò|+¶Xô‹çrPC¦˜ãŒüÃr‚YÙ°Än‘Ü¨f
+QX­ußð/ýõ_üj,h_ëµ?úÿ ›ùG\'ÅH!ñçƒá³Ònö47ñÊ²Ois¶äyräm‰Œüe³a´Î9®·MÔZÍ®ÞM;R>}Ü’ª­£ä)	Œñì*ÌŽÆ, µ…¼L‘Ùº6‹HÉ±
+XóÌ<·dýæóŽs»š ¹á½wGÑü)c§\jp+EŽ{¥E|¬q)Ø)Pß+FêW”Œ0\ËhÔ¼sâ]k\ò.í¯öØÄ×–³DIR‰ÂÈÊámÉóåv‘‘[JãÃúÝ…õ¬ún¾ÿ m·òd›È+ mÓ»J¤µØÜË¸”†Û·i*d}ÃÒE*>ƒªŸ>êâêåÖÏcÜ–te‘”*â@¼äqÏ\€h|2ÓFà-?Jó'’KMë+Ëg-¶]˜ÈB¬ª¬ToÀlsŽÇ jø_þ@pÛOýõ“£ý›H»½½6šååýï–..§±EwT "4E8ÜÜ‘»œ@P,hú‹iÚd6òéÚ“8–™Ž v#ó [ãÞ—}©ü<G²¶yÅê\Ï³’‘äRØê@,3Žƒ' $Sÿ †‰ðýµ¿ûñÿ ¯Dÿ „èªÿ à#Qÿ 	ÿ Ð/Uÿ ÀF à&—}¦|<w½¶xåëÜÁ¿‚ñãPØê*qž£¡ú6¥ÿ  «Ïúàÿ ú	ª?ð/ýõ_üj†ï[SÂšf¨HÙ6Œ‘Š ¿¢ÿ ÈËþ½âÿ Ñk^}àýJ†×>ñ%âYØ‹‡—C½¸p#žÝ‹3#8PªèymÄd mÏaa«ýO¶·}7SgŽÕŠÚ62AûƒPké> ÓÞÃVðíõå³dì–È¤‚7)ê­‚pÃgƒ@ï‡´uøs¬xËÄ^#Õtë}?W½óíØJÛ€3í ¨Ëá¸UÜN*Çƒ-o¼Aã=WÇWhðØÏn,4hÛƒ%¨mÆR¥C ì.yÃ7Q´Õ;/xÂí.¡ðMóH™Àž¦CG(ìTõî=ú×kÿ 	ÿ Ð/Uÿ ÀF Å?ò,ß¸?ô![Ìkz›j5Í¤:f¦$‘@]Ö¬P¥tô QE(¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š ñ/‹ò<Çÿ `ØôlÔQñcþG˜ÿ ìþšŠ£neø×ÏÐço¶j0âum¯çOîcäª8ûã==)úßŠ,<=âHt½Jÿ ^Š	m¼ïµ.³vÁNæJ‡Î>^£<‘Çz—á×ü€'ÿ ¯ÿ ¢b«W:Þøí¯n¬¢ŸL}([·š•¤o ©ç 8Å)nh¶2,¼Y¡á›Íf	õhü«³m7>$ž;…9.ÒmS´“Ž~éä×KzönÏ·x‹Rµó3³Ï×®Sv:ã2óÔ~uÉêÖÂ^%Óâ°i.5^IàU–0EÑƒ’X`|¤c®Hâ¶î-u|e½›<ðI¥ý•¡ŽH„‘?˜æÜáqƒ”žAö%¿%Æ™
+†—Ä·è¦!8-â€<²@þ·î’@¦Me¤0Msâ[øbwBòx‚áDƒƒ•&^G#§¨¬9ô‹Éõ¿
+Î<;½­$ðA$M'ÝÀ%rT€Ä…àô,jX´ðïŠ-ï4½2Y´ÔÓZÑa‚U/™¼ÌŸ1ÆAÉî~ƒŠ ×¸¸Ó-!‚kŸßÃëº“Ä
+$©2ò9=Ee¤0Msâ[øbwBòx‚áDƒƒ•&^G#§¨®WÃ>Ö<5w¦]Ï`×At·µ’;icÝ™Ì£;ÙAlpO öÁ:ºn¡§øŠÓXAX m,Úµ•Œ±~áüÝÿ ÄQH ÿ yÏ± Šöqºø‹Ri®#Ã×®KH„¹G›’0#Ò¢ûn‘åy¿ð”Þù~_›»þŒlÝ³v|Þ›¾\úñÖ¼î k‡HŽ§Å4ÑéB$"Tù&7~aPI"6 ‘ÇP	Ï7môÛ¿øËJMm²jš”ÖÖöí-DJå‚Ð‘À ó}‡ýZ—ú´ÿ ÈzçýOüôÿ [÷?ÚéYšÎ¹¦hËc¿\Õ$kÉbT¯Ü #sþ´þ÷î 	ÏBp8ê9Í7ÁúÞŸg/j²5Æ‰>œæ9WI$¬à¾HÊ€ü•Ürã;WZ6§?„ü3Ù°ºÒîmfžØÈ›ØD6¶Ó»i=ÆXqèx «‹2Ò&¹ñ-ü1N»¡y<Ap¢AÁÊ“/#‘ÓÔQ%Æ™
+†—Ä·è¦!8-â€<²@þ·î’@¦MaÝéz×‰mu»Í.ëcé¿g’ßO¿Ù$2y›€gÝáƒØ‘‘ì	…t˜õ?	¼?äÙiþt“B·)2ÀÒ}Þ\†b¬7ÂN(¬ŠÑ'…&‡WÖd‰Ô2:kWD0<‚“‘X÷·w1ø‰4KõiîM¡»vŸÄq Mû 3sžÃêksMÓm4>+|«h³±7ÆI'’IêMbÞÙ_Úøá5¸le¼¶m4ÚãæoÉÊ0G¡=:PZF¹¦jz-¾£6¹ªY"ó^)õû€P1“Ì¿wxÀ<gŽ‡ŠÑ¸¸Ó-!‚kŸßÃëº“Ä
+$©2ò9=Eqv–¾ºð%¥Å«Ow
+ß‚RrË»b 7<ãƒŒñ—h¾Ôô‰t¹¯,®®=5íäO¼ò¤ŽC;Hé‘‡ÇŒ¡ ÊK2/‰oÑLBp[Ä yd€ýoÝ$€Lš..4ËH`šçÄ·ðÅ:î…äñÂ‰*L¼ŽGOQ\êè1ê~1xÉ²Óüé&…nRe¤û¼¹ÅXn$?„œSõoÞFWKÒáœh‡Oša†ì †áß>d¹`]0z|ýËÏ :ö¯a =¤W:Î¬f¹ž8¼³¯\©DfÁ‘³.B >£uk7qéš'öŒ¦¥q¿o²xŽxRmÞ’4»~î[ß›u£jsøOÃ1-›­.æÖiíŒ‰½„Ckm;¶“Üe‡‡Š±âËM_\ð$¶‰¦cQºò÷[Ç:0‹—m ð¸ã<ž29 K—°²vK¯jP:F%e—^¹R¨[hc™zdŸ^(w°ì»üE©/Úñö}ÚõÈó³ŒlýïÍÔtõOR°½¾ñW†u(íY`µ[ƒq½×1ŒrsÇË‘\$>¡ é’-Ýº´ãÃ·vòÛÇq’fw2–L7UÉÈ#é¶ÐA{n·ºÖ­</²E­Ý2¶—A¬FîæÛ^¶Ò-gÕ¤šxe’çÄpÆÛH†bÎI5¥áù´oúñƒÿ E­T×­îo.ÖÖëD‹TÑ¤€åSgÙÆrî ¤à¯ÌzPé	©ÚÛ™¯µë+é"ó^Æ}jèL€1Rv™3·#ƒž:t§É{¤EoÄž)½HfÝåHÞ!¸&ÓæààõÅsÚe†½¢ßØëZÄMzÑémrñÏhˆ—x.]” °'•9õ9þÓ5á]æÓO¼†í-§ÞÚ<BE#I"—j¼d0qÎr8Ær@:=g\Ó4e±ß®j’5ä±*×î ¹ÿ Z{÷ ç¡8u7e¤0Msâ[øbwBòx‚áDƒƒ•&^G#§¨¬CGÔn|9 yze­½Íô“ØÚ2ª€¤î	œ.~làœuäõ1]éz×‰mu»Í.ëcé¿g’ßO¿Ù$2y›€gÝáƒØ‘‘ì	 ÞW°{ˆ-×ÄZ“Mq–Æ½rZD Ê<Ü‘€y•5´^Û­Å®µ«Oçl‘kwL­ƒƒ‚%ÇPkÎµŸj7PbËBŠ])b†t²ù3Ÿ1”;s°¶ONH÷ìü!¤O£C¬C5²ÛÅ6©4Öè…qå¡HÐqÓŒPšåÂh¶I1¾×§žyVÞÚÖ®–Vû«¸É…rO@;ô8ú·Šm4zÛLÕïu¸kA;\G­ÞH¨ä°Û€À‘òŸ›Ç¨ÚñV•u©ÙYËdî,/"½HY¶‰ŠgäÝü$ç‚xÏæ*I£K¨øØjºr¾. t¸ØàKçØË“’:äddu =Æ2ø›Q–ËKMdK¼¹ºñÜ`Æ
+…?)o˜îätêsV´ÿ K«-,²²ß[I8û_ˆnâL£ídFÛØ`œ`|¸=ð*hZµ¡øãWÖåÓ%¸¶»’á#X%‹~EubÔ`Œ÷ÏÅXÒ´-NÇÃºv‹«hpjzx¶‘¤ŽC,S´ŒG.ê ØäerA$Mïî“Âñëf?FQ|Ë«Iµ»¨å‰äÿ 1ÈnG¡â¶m`ŠöÒ«}[[xfd¿¶.Æå# àÉž†±Ež¾~&™wÛ5k˜ÚWi”ƒänvïµHÎG|æº.Ëû7I²±ó<Ï³@ïÛÛTã·J ÀÕï/týwLÒí¤Õ'mAdòä“ÄW‘…1Ì¸Æ0}{´iæ™©è¶úŒÚæ©dd‹Íx§×î@ÆO2ýÝã ñž:)<G¤Oªx¯@•ô¯¶iÖ¾wÚKùe?x¡WåfÉÁ<zc'Š5"y¼Wá©mô¯7NÓ¼Íå|°‘îP©…,ÊTc'Š Ò¸¸Ó-!‚kŸßÃëº“Ä
+$©2ò9=E\i¨i|K~Šb‚Þ ¸Ë$ ÿ ë~é$ zdÖþ]/ÄV·uäš\z{[,V7¦)üÓ&K4ˆJÇø#§J©=»hú×‚b‡HhZ5½"Â)BÈ	Ü¨'’O8êxÈUqq¦ZC×>%¿†)×t/'ˆ.H89Reär:zŠuËØY;%×ˆµ(#²Ë¯\©T-´1Ì½2@Ï¯ÅÚøSÄ0hvZTâW¶m6x|«{¯-a¹’BÁ¥Ã.ô
+À7Ž çô}JKß™ôiZ-.K­ï	å¿œ‘Ûç€µ¬ÝÇ¦hŸÚ0jš•Æý¾BÉâ9áI·zHÒíû¹o|U«—°²vK¯jP:F%e—^¹R¨[hc™zdŸ^+'ÄþeðÚƒ`Î”EÊ0ƒÌ1,íÓƒÜœ‘Û¥­JÂöûÅ^Ô£µe‚ÕnÆ÷\Ä^0	ÉÏ.E \w°ì»üE©/Úñö}ÚõÈó³ŒlýïÍÔtõ5´^Û­Å®µ«Oçl‘kwL­ƒƒ‚%ÇPkÌ ÑõL‘níÕ§»·–Þ;ˆŒƒ3¸‘”°Êaº®NA¯Ið¿üŠZ7ýxÁÿ ¢Ö€3uí^Ã@{H®uXÍs<qyg^¹RˆÍƒ#f\„ }F8ê/\\i–Á5Ï‰oáŠuÝÉâ…T™yŽž¢ ñf›w¨[érYÃç=–¥ÛÄ+:)9¸žsÉ:Õ!o¬Gâ«m~}!œK¥›Y-­®#v…üÝã%Ê1éžAí‚@7¢´IáI¡Õõ™"uŽšÕÑ ‚$äVW‰î¥ðî…6¨—:ÍÊÂË¾6×®ã8b ï99#Ž8Ï=ŒþÒ®´O	Xi÷¡Vâ5bê­¥›õÁÇõ¨|ua{ªøJïOÓíZââvŒ*«ª…ÃKÇËŽ2rE \½{7gÛ¼E©Zù™Ùçë×)»q™yê?:mÅÆ™i\ø–þ§]Ð¼ž ¸Q àåI—‘Èéê*…Å®¡Œ ×£Ógž	4¿²´1É’'óüÛœ.0qò“È>Äó–¾ñ–•8•í›Mž*ÞëËXnd°ipË½°ã†À9ä¬×çMFžýõMP´jJG6¿u” ï?1 àc’?±¥Æu-&ÊûíúÜi&ÙýµvvîPqŸ3žµÉ¿‡u‰¡°Yl”h-¦*<±Ÿ²ÜÊ~l+Ý2Ø#µtÚyÔôÏÙ$Z[M¨[[E	³iÑÂŸŸ%q€X{z ÑþÏ?ôÖÿ ðswÿ Ç(þÏ?ôÖÿ ðswÿ Ç)u+‹»]>Y¬l¾Ûr¸Ùoæˆ÷òù'ð£R¸»µÓåšÆËí·+–þh ˜ð02
+ Oìóÿ A=oÿ 7ürìóÿ A=oÿ 7ür®Q@ÿ ³Ïýõ¿üÝÿ ñÊ?³Ïýõ¿üÝÿ ñÊ¹E SþÏ?ôÖÿ ðswÿ Ç(þÏ?ôÖÿ ðswÿ Ç*åOû<ÿ ÐO[ÿ ÁÍßÿ £û<ÿ ÐO[ÿ ÁÍßÿ «”P?ìóÿ A=oÿ 7ürìóÿ A=oÿ 7ür®Q@ÿ ³Ïýõ¿üÝÿ ñÊ?³Ïýõ¿üÝÿ ñÊ¹E SþÏ?ôÖÿ ðswÿ Ç(þÏ?ôÖÿ ðswÿ Ç*åOû<ÿ ÐO[ÿ ÁÍßÿ £û<ÿ ÐO[ÿ ÁÍßÿ «”P?ìóÿ A=oÿ 7ürìóÿ A=oÿ 7ür®Q@ÿ ³Ïýõ¿üÝÿ ñÊ?³Ïýõ¿üÝÿ ñÊ¹E SþÏ?ôÖÿ ðswÿ Ç(þÏ?ôÖÿ ðswÿ Ç*åçž(‡Èñ_>êlÚDw\ÜÉ;žN;¶q×ÖŠ“Åÿ ò3Ûœ_ú”UKsˆ‡ÅÎˆ>Í§^y0²¤…|¤l±EËØ
+Ø²ñ/‹õ9î­µPÒ,›<£oÈÀ9¯¿Jä/ÿ ãáë”ú «ß,:†)™.E×˜6ä»1œ×Úà0˜yá¡)A7nÈÊRwÜëïüCâm2Ýfº×ŽÖ*¸ŠÎ&;ˆ$õŽ:þ‚¢¸ñ?‰­>ÔÓë„¬*&Î&lÄ0:­bß_Ù_h––Kr±ÉÆXº62‚8‘ùTwWÖÓê¶—Ïmqæ(VpB: õÅuýKÿ >ã÷"y¥Ü½wãŸ[]I
+kI2©âHàˆ†÷ÍOoã?Ia%ÜºÓ*#„+¤NÃ#©³ë\¶¤öÒj3½ší·-òŒcëØg55Œ‘Ã–+Öµ¼W-ŒžŸ(99ƒÅRÃÏ¸ýÈ9¥ÜêSÄÞ.šæå ÕÄÑBŒÂhí£erBŒ/Þ9}zÕ(ükã)]Ò;¹£8p¶‘’§ßäã¥f¥å‚jº‡÷V×<Q§ 9ÀäƒÛ¸â‹+>ÉNÉU¤Žå_Í’dŒŠ9ÚsôíÏ¡õ,7üûÜƒš]Íüoã	”4W’¸-´µŒäã8û½qÍ6-_ÄZµã]Ìa{‹D%f—O‰Y9¤¦CdôíÉªmyl°ë!/5Ó†‹
+ãpÉ$tã ãóíÍW²Ô·Þ^K{/Ïslñy…xŒ€:qØQõ,7üûÜƒš]Í»?øªæ÷ìï©Ë3¼­’9Lz¨\õÀüj(üoã	”4W’¸-´µŒäã8û½qÍdéRÚYk‰+\æÞ-Ø‘£ ·p}{öüª;kˆ`Òõ+f”%1ˆðkON8õÅRÃÏ¸ýÈ9¥ÜÚ7ñƒy»o%>WúÌZÇò}~^:Ê™'<Y†9uGU­£~jY/-ï®TÅ!ÿ hE"HÑ°WÂ´}ìŽø®sSÿ µçýwýÑõ,7üûÜƒš]Î›þOdý»û_þ[ù;>Í÷sœí©o|Uã[é-âÔ%œ+¶qüÇhl}ÓÎ+œ†h%ÑÉçXd>h.¬Aqü óZ’ÜC¨E®Í¡"s  8àã8 žqéGÔ°ßóî?riw*Üø«Zšù..ÞÞK¸	,¶0™#*r0Jd`äýj×ü,ÐOÿ %âÿ âk3Pž×R×¥”Îa·ršPœaqœuäÖ¨ÛG·
+“ÍäÆs™6Ç‚©a¿çÜ~äÒît?ð°|Qÿ A?ü—‹ÿ ‰£þŠ?è'ÿ ’ññ5Ï[G·
+“ÍäÆs™6Ç‚¢£êXoù÷¹4»7ü,ÐOÿ %âÿ âhÿ …ƒâú	ÿ ä¼_üMs4Qõ,7üûÜƒš]Î›þŠ?è'ÿ ’ññ5R÷ÅºÆ¥³íÒÚÝyyÙçÙBûs×N:Ê±(£êXoù÷¹4»7ü,ÐOÿ %âÿ âhÿ …ƒâú	ÿ ä¼_üMs4Qõ,7üûÜƒš]Í‹ÏjšŒÂkÓgs(]¡ç°Èq’9?^ÿ …ƒâú	ÿ ä¼_üMs4Qõ,7üûÜƒš]Î›þŠ?è'ÿ ’ññ4ÂÁñGýÿ ò^/þ&¹š(ú–þ}ÇîAÍ.çMÿ Åôÿ Éx¿øš?á`ø£þ‚ù/ÿ \Í}Kÿ >ã÷ æ—s¦ÿ …ƒâú	ÿ ä¼_üMð°|Qÿ A?ü—‹ÿ ‰®fŠ>¥†ÿ ŸqûsK¹ÓÂÁñGýÿ ò^/þ&øX>(ÿ  ŸþKÅÿ Ä×3ERÃÏ¸ýÈ9¥Üé¿á`ø£þ‚ù/ÿ Gü,ÐOÿ %âÿ âk™¢©a¿çÜ~äÒîtßð°|Qÿ A?ü—‹ÿ ‰£þŠ?è'ÿ ’ññ5ÌÑGÔ°ßóî?riw:oøX>(ÿ  ŸþKÅÿ ÄÕIü[¬]]Çwq-¬·1cËšK(YÓ#S#šÄ¢©a¿çÜ~äÒîtßð°|Qÿ A?ü—‹ÿ ‰£þŠ?è'ÿ ’ññ5ÌÑGÔ°ßóî?riw:oøX>(ÿ  ŸþKÅÿ ÄÑÿ Åôÿ Éx¿øšæh£êXoù÷¹4»›w¾-Ö5-Ÿn–ÖëËÎÏ>ÊÛž¸ÊqÐ~UoþŠ?è'ÿ ’ññ5ÌÑGÔ°ßóî?riw:oøX>(ÿ  ŸþKÅÿ ÄÑÿ Åôÿ Éx¿øšæh£êXoù÷¹4»7ü,ÐOÿ %âÿ âhÿ …ƒâú	ÿ ä¼_üMs4Qõ,7üûÜƒš]Î›þŠ?è'ÿ ’ññ4ÂÁñGýÿ ò^/þ&¹š(ú–þ}ÇîAÍ.çMÿ Åôÿ Éx¿øš?á`ø£þ‚ù/ÿ \Í}Kÿ >ã÷ æ—s¦ÿ …ƒâú	ÿ ä¼_üMð°|Qÿ A?ü—‹ÿ ‰®fŠ>¥†ÿ ŸqûsK¹ÓÂÁñGýÿ ò^/þ&øX>(ÿ  ŸþKÅÿ Ä×3ERÃÏ¸ýÈ9¥Üé¿á`ø£þ‚ù/ÿ Gü,ÐOÿ %âÿ âk™¢©a¿çÜ~äÒîtßð°|Qÿ A?ü—‹ÿ ‰£þŠ?è'ÿ ’ññ5ÌÑGÔ°ßóî?riw:oøX>(ÿ  ŸþKÅÿ ÄÑÿ Åôÿ Éx¿øšæh£êXoù÷¹4»7ü,ÐOÿ %âÿ âhÿ …ƒâú	ÿ ä¼_üMs4Qõ,7üûÜƒš]Î›þŠ?è'ÿ ’ññ4ÂÁñGýÿ ò^/þ&¹š(ú–þ}ÇîAÍ.çMÿ Åôÿ Éx¿øš?á`ø£þ‚ù/ÿ \Í}Kÿ >ã÷ æ—s¦ÿ …ƒâú	ÿ ä¼_üMð°|Qÿ A?ü—‹ÿ ‰®fŠ>¥†ÿ ŸqûsK¹ÓÂÁñGýÿ ò^/þ&øX>(ÿ  ŸþKÅÿ Ä×3ERÃÏ¸ýÈ9¥Üé¿á`ø£þ‚ù/ÿ Gü,ÐOÿ %âÿ âk™¢©a¿çÜ~äÒîtßð°|Qÿ A?ü—‹ÿ ‰£þŠ?è'ÿ ’ññ5ÌÑGÔ°ßóî?riw:í?X¿Öî'¹Ôgó¦THÃlUÂ‚ÇP;“EQð×Ý¹ú¯õ¢¾30Œa‰œb¬®j¶2oÿ ãáë”ú ªµjÿ þ>þ¹Gÿ  
+«__—ºÃÐÊ[…Q]¢
+(¢€
+(¢€
+(¢€
+(¢€%†êâÛw‘<±në±Êçò¨¨¢€
+•.®"‰¢ŽyR6ÎäW ðr**( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ð×Ý¹ú¯õ¢}ÛŸªÿ Z+á3/÷ºž¦Ëc&ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõÙwû¬=¥¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢­[i×wq™ ‹zƒ´ÀsøšŽæÖkIs¦Æ#pÂ³Ué9û5%ÍÚúýÁg¹QZ QE QE QE QE QE QE QE QE QE QE QE QE QE QE QEÐxkîÜýWúÑG†¾íÏÕ­ð™—ûÝOSe±“ÿ ÿ \£ÿ ÐU«Wÿ ñð¿õÊ?ý UZúì»ýÖ†RÜ(¢ŠíQE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QEÐxkîÜýWúÑG†¾íÏÕ­ð™—ûÝOSe±“ÿ ÿ \£ÿ ÐU«Wÿ ñð¿õÊ?ý UZúì»ýÖ†RÜ(¢ŠíQE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QEÐxkîÜýWúÑG†¾íÏÕ­ð™—ûÝOSe±“ÿ ÿ \£ÿ ÐU«Wÿ ñð¿õÊ?ý UZúì»ýÖ†RÜ(¢ŠíQE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QEÐxkîÜýWúÑG†¾íÏÕ­ð™—ûÝOSe±“ÿ ÿ \£ÿ ÐU«Wÿ ñð¿õÊ?ý UZúì»ýÖ†RÜ(¢ŠíQE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QEÐxkîÜýWúÑG†¾íÏÕ­ð™—ûÝOSe±Øx?Âú6·¥Ks¨ÙùÓ,«o5×
+"Œã
+GrjÏ‰ü3á¿èSj‰ ­ÊÂË¾6½–3†!r99#Ž8Ï=ÿ ‡_ò Ÿþ¾þ‰Š®xêÂ÷Uð•ÞŸ§ÚµÅÄíUWU
+†$–#—däŠÁbñ\±›KÕš¨«lgÉá?Ú(]B;YÖ!,±µûá!s’ÀíÜp	'òªúÏ†¼%¦hŸÚ0i¶·öù&¤aI·zHÏ·îå½ñ[•…í÷Š¼3©GjËªÜî¹ˆ¼`( “ž>\ŠçßÃºÂü#Aú‹6K,xAç2X¶1Ø“’=ð}wÿ ?%÷°åaúöà}í"¹±ˆÍs<qyfõÔ¢3`ÈÙ|„ }F8ê%Ö|5á-3DþÑƒMµ¸ß·ÈY5#
+M»ÒF}¿w-ïŠØñ=…î©e¤\ZÚ³Ki¨Ay%³:‰
+®w(9Û¸gûØàóÓ5üYi«ëž–Ñ4Ìj7^^ëxçFaÃrí´g“ÆG4}wÿ ?%÷°åb+ß	xMÙöè­m|Ììóï]7c®2üõQñ?†|7áÝ
+mQ4¹XYwÆ×²ÆpÄ.Aç'$qÇç±½âM3YÖ.Â¤w_Ù÷kÂ°%È‹È¹b>i‚°Þ€ŽÏ1kN©yðº:S¨y@Ð™#erÄîÆÎ0Iäp9ÁõÜOüü—ÞÃ–=†kÞð¶‹¥Ix4˜$”2¬qO¨µ¸“ÈÞí€q“øT·žð0†ôYÛJWpIïÙ	3‚ý8?•^ñ­•þ³àË‹++dº¹òÿ t^51áƒÄ¶8ÛŽ	äúsUüAg}©ê6Ê4YþÃ%°’Û¼"æ@N~ÌX¸ÚØ©9è1É£ë¸Ÿùù/½‡,{Ú¯‡üc¡NÒÂÎíY‚ÂT1G)Î3íÈüÕëŸ	xÉÙ.¢µÒ1+,·®¥P¶ÐÇ/Ó$úñGˆ¬µMcáëØA¢}šöm‘‹(æŒ¬*’>l…ÆÕP1Ö®êV·Þ*ðÎ¥«,«pn7ºæ"ñ€ €NNxùr(úî'þ~KïaËÅ'ð—ãû.ø­Wíxû>ë×vqŸ?ÍÔtõ-·‚<{n·¶qOçl‘]HÊØ88!±Ôã ÑõL‘níÕ§»·–Þ;ˆŒƒ3¸‘”°Êaº®NA¯Ið¿üŠZ7ýxÁÿ ¢Ö®âçä¾ö±ìs?ðŒx_þßì/ìOùqûgö¹ç¦Í»søç?…TÑôÏßø~ËT¾²µÓ~×¿dSê3µÊœÃ=éÞ·¯<<5‹ûÝ>8i~HiÕ	|Üãiç;Içëš±ð¿ˆãÐ,ô»˜gçO¸ƒÉ†ì †áåb²Kµ†ôØGCòóÉõÜOüü—ÞÃ–=ÛŸ	xÉÙ.¢µÒ1+,·®¥P¶ÐÇ/Ó$úñU5¯ø?IÐdÕÂÖTï„=ü‘¬ünÂ¶NI  9ýhGÔ¤½ðYŸF•¢ÒàdºÞðŽQQHùÁ@ù±Žx¥á­ï„eŽý4éSÙ[§šZÍ+d;Û Ä»› Œt£ë¸Ÿùù/½‡,{é~ð~¥idÿ ÙñGssh—fûd…Õq»$dã8¢o|?·ÏžÖ1bFˆïÔpëËËõ²*‡öŠ¡ŸK¸ÒáŠÖähÑéÒK<¨~Ìñ¸bÄ ÁƒŒýìœbª[øcÄò¾§öËycµÕ>Õ"ZÛÞ€-§•”˜©]éÐoã?.N(úî'þ~KïaËÇAsá/Ù;%ÔV°:F%e–õÔªÚåúdŸ^)—ð¤0Mr,áŠuÝÉ~Ê$©/Èätõ^=R’÷Áf}V‹K’ë{ÂB9EE oçävÆ9à>	®—â+[‹:òM.==­–+Óˆþi“%šD%NãüG‘Ó¥]Äÿ ÏÉ}ì9cØÐ‹À~žš=d‰Ô2:\ÈCÈ †äVN³áï	éSEmƒ=ýó©—ì¶ÓÈ]byÏÍÀê þ&ÂŽøêü?bºv…kj¶`Iû*Îf’K¼õ<óÛ=29¬«ÍkïBdl—äù°]4'Íówmù60séøÑõÜOüü—ÞÃ–=ŽræÇÁVú†ŽŸjÚf§Œ—Í¨H‚2ƒ$'HrH c»ß	xMÙöè­m|Ììóï]7c®2üõcé¾Õ¬l¼&.´†¹[½[Ëu’&8—!GÌÁXyç¥X²Ð5­?GÒ­n†§mi$búÊâ'’<±+‰)
+ñ€W£ãIõÜOüü—ÞÃ–=†k:_€ôe±ßky,Jo˜Ÿõ§çû€sÐœ:	</à8T4¢ÍÄ'¯Ø,ýÿ ºI ™4ýCGÔn|9 yze­½Íô“ØÚ2ª€¤î	œ.~làœuäõ&¡eªj~#ð½ýÖ‰ˆí<Ù.UfŽE…œ œ’*8þÄQõÜOüü—ÞÃ–=†\x_ÀvÁ5È³†)×t/%û(pr¤¿#‘ÓÔSï|%à}7gÛ¢µµó3³Ï½tÝŽ¸ËóÔ~u_Vð½äet½.Æˆtù †nÊnóæK–Ó§ÏÐü¼òiZf­¥êšN¥&•<«ˆšt°Å,^bHŽN\)R}@£ë¸Ÿùù/½‡,{5/Àz2Øïµ‚F¼–%@·Ì ÏúÓóýÀ9èNEgÃ^Ó4Oí4Û[û|…“R0¤Û½$gÛ÷rÞø«Ú®‘{u¡hf×I‚Ö[BÉ4ûy
+ ¶åS…Rß6OAœòxË¼Yi«ëž–Ñ4Ìj7^^ëxçFaÃrí´g“ÆG4}wÿ ?%÷°åb+ß	xMÙöè­m|Ììóï]7c®2üõ2Oø(³E1	ÁköË$ ÿ î’@¦M[¸µÔ!ñ”ôzlóÁ&—öV†9"Dþ`›s…Æ>RyØœ­Ã®œÞÀ¤iëxnŠÈ¤Fe¨ëÉçœÑõÜOüü—ÞÃ–=X¼á9áI¡ÓÖHC#¥Ì„0<‚nEcê^ðý‡ˆô*?Å*j;ñ3_Ì¥6Íòóž1Žy<qÖºi·zG„,lo¡ò®bó7¦àØÌŒG ‘ÐŠ¯¯ÚêâÝPµÓgº·°YÌÍ‘)&DÚ ë’1“Û½]Äÿ ÏÉ}ì9cØ¯{á/é»>Ý­¯™ž}ë¦ìuÆ_ž£ó©áðÚþÉö8¾Óåù¾OÚ¤ß³8Ý·vqž3Yú•‡‰õÀ>Ýi,ÜØÏÙmï­¼í!òÃÌO/nq»£|£8£O±Ô´[í7W¹Ó¥0ÛèKcp‹4!¢xØÌYÂì cî]Äÿ ÏÉ}ì9cØ–O|?ŠÞ‰Å!›w•#jL§~\Säð¿€áPÒ‹4Sœ¿`<²@÷þé$ zd×9á=ùm4mRKé­›M’–—?g•XÜ3«ºe
+¶F	Ï\t5¶ºÌzŸ„Œ^òl´ÿ :I¡[”™`i>ï.C1V‰á'}wÿ ?%÷°åcN/øNxRhtõ’'PÈés! ‚‘Yúç…ü'¢Ù$ÇFiçžU·¶ndY[î®âØQÇ$ô¿CÖéºm¦‘§Åcc•mv&âØÉ$òI=I¬ßiWZ•œ¶A^âÂò+Ô…›h˜¦~MßÂNx'Œþ`úî'þ~KïaËÇ=†|6|NšÚ
+¤§O"^ÊÀû
+ q‘ßwJÊ³ƒÂwš-Ü>ž{ë¥y~Ámu$Ž‘#•g'#”àq¹ˆQÜŽ¢}êž8RÔ4¨¥ÓÎ”"Ûr±É²o3vÒ¹<€O##¯5…áOjV×ÚyÕ-ç·†.HY ¼1‘)¹w˜Ü6¶}?G×q?óò_{Xö	4
+Éªè–Ú~‹Ý¦¬®ÑÜ‹ù—hA—ÊàòlƒœƒŒfº/øWÞÿ  gþLKÿ ÅW;£èzæ–¾2èóÈtµ»79¡È2–
+\dô'¶®@ì#¾ÖÇ‡Mäº:¶©¸âÁnF<Â ó9	‚OsØt£ë¸Ÿùù/½‡,{Ï‰ü3á¿èSj‰ ­ÊÂË¾6½–3†!r99#Ž8Ï=ŒÚ÷…|-¢éR^&	%«Sê-n$$ò7»`dþ«ã«ÝWÂWz~Ÿj×´aU]T(’XŽ>\q“’)¾5²¿Ö|qeec,—W>_î‹Æ¦<0c¸–ÇqÁ<ŸNhúî'þ~KïaËÆ¯¡øOE×tË½&í/–Oô¹/äAA’'9Pî§§­ÝkÁþÒtÉ/ãÐ~Ó<è/$FX‡,Ë–Ã9ÚHÏ®zÛñ…åî¹áýEt™n­­ã¹Vû¢Ü‘…
+C8Vî	ŠÓJÖm>E¢ÉÚu kVÌãl
+û€,Ç¨E aAéÇ4}wÿ ?%÷°åb[_xFöÒ«};|3F²FÞt£r‘p[=Kÿ 
+ûÂÿ ôÿ É‰øªÑX®ô?ÛÛØÛhÜÚA)˜!óv€¤ää/?†*Ö¥qwk§Ë5—ÛnW-üÑþ@?1à`dþ}wÿ ?%÷°åcþ÷…ÿ èÿ “ÿ ñTÂ¾ð¿ý?òb_þ*¶õ+‹»]>Y¬l¾Ûr¸Ùoæˆ÷òù'ð«t}wÿ ?%÷°åc™ÿ …}áúäÄ¿üUð¯¼/ÿ @Ïü˜—ÿ Š®šŠ>»‰ÿ Ÿ’ûØrÇ±Ìÿ Â¾ð¿ý?òb_þ*øWÞÿ  gþLKÿ ÅWME]Äÿ ÏÉ}ì9cØæá_x_þŸù1/ÿ Gü+ïÿ Ð3ÿ &%ÿ â«¦¢®âçä¾ö±ìs?ð¯¼/ÿ @Ïü˜—ÿ Š£þ÷…ÿ èÿ “ÿ ñUÓQG×q?óò_{Xö9ŸøWÞÿ  gþLKÿ ÅQÿ 
+ûÂÿ ôÿ É‰øªé¨£ë¸Ÿùù/½‡,{Ïü+ïÿ Ð3ÿ &%ÿ â¨ÿ …}áúäÄ¿üUtÔQõÜOüü—ÞÃ–=Žgþ÷…ÿ èÿ “ÿ ñTÂ¾ð¿ý?òb_þ*ºj(úî'þ~KïaËÇ3ÿ 
+ûÂÿ ôÿ É‰øª?á_x_þŸù1/ÿ ]5}wÿ ?%÷°åc™ÿ …}áúäÄ¿üUð¯¼/ÿ @Ïü˜—ÿ Š®šŠ>»‰ÿ Ÿ’ûØrÇ±Ìÿ Â¾ð¿ý?òb_þ*øWÞÿ  gþLKÿ ÅWME]Äÿ ÏÉ}ì9cØæá_x_þŸù1/ÿ Gü+ïÿ Ð3ÿ &%ÿ â«¦¢®âçä¾ö±ìs?ð¯¼/ÿ @Ïü˜—ÿ Š£þ÷…ÿ èÿ “ÿ ñUÓQG×q?óò_{Xö9ŸøWÞÿ  gþLKÿ ÅQÿ 
+ûÂÿ ôÿ É‰øªé¨£ë¸Ÿùù/½‡,{e­hö&¸ÖÚtL-m…w³e‹H3–'°Uïÿ ÈÍÿ nqèrQYJR›æ“»!îqV*Ö4«s…È‚2C2ˆÕ²@Ÿ˜Ê?*µÿ 	ï‰è%ÿ #ÿ âh¢¯•áÿ 	ï‰è%ÿ #ÿ âhÿ „÷Ä¿ôÿ Èÿ ñ4QG"°ÿ „÷Ä¿ôÿ Èÿ ñ4Â{â_ú	äÿ øš(£‘ØÂ{â_ú	äÿ øš?á=ñ/ý¿òüMQÈ‚ì?á=ñ/ý¿òüMðžø—þ‚_ù?þ&Š(äAvðžø—þ‚_ù?þ&øO|Kÿ A/üÿ Er »*^ø§UÔ¶}ºK[¯/;<û(_nzã)ÇAùU¿øO|Kÿ A/üÿ ErD.Ãþßÿ ÐKÿ  Gÿ ÄÑÿ 	ï‰è%ÿ #ÿ âh¢ŽDaÿ 	ï‰è%ÿ #ÿ âhÿ „÷Ä¿ôÿ Èÿ ñ4QG"°ÿ „÷Ä¿ôÿ Èÿ ñ4Â{â_ú	äÿ øš(£‘ØÂ{â_ú	äÿ øš?á=ñ/ý¿òüMQÈ‚ì?á=ñ/ý¿òüMðžø—þ‚_ù?þ&Š(äAvðžø—þ‚_ù?þ&øO|Kÿ A/üÿ Er »øO|Kÿ A/üÿ Gü'¾%ÿ  —þ@ÿ ‰¢Š9]‡ü'¾%ÿ  —þ@ÿ ‰£þßÿ ÐKÿ  Gÿ ÄÑEˆ.Ãþßÿ ÐKÿ  Gÿ ÄÑÿ 	ï‰è%ÿ #ÿ âh¢ŽDaÿ 	ï‰è%ÿ #ÿ âhÿ „÷Ä¿ôÿ Èÿ ñ4QG"°ÿ „÷Ä¿ôÿ Èÿ ñ4Â{â_ú	äÿ øš(£‘ØÂ{â_ú	äÿ øš£yâMGQ˜M{ö;™Bí=Œ@ëŒ”éÉüè¢ŽH…Ù{þßÿ ÐKÿ  Gÿ ÄÑÿ 	ï‰è%ÿ #ÿ âh¢ŽDaÿ 	ï‰è%ÿ #ÿ âhÿ „÷Ä¿ôÿ Èÿ ñ4QG"°ÿ „÷Ä¿ôÿ Èÿ ñ4Â{â_ú	äÿ øš(£‘ØÂ{â_ú	äÿ øš?á=ñ/ý¿òüMQÈ‚ì?á=ñ/ý¿òüMðžø—þ‚_ù?þ&Š(äAvðžø—þ‚_ù?þ&øO|Kÿ A/üÿ Er »øO|Kÿ A/üÿ Gü'¾%ÿ  —þ@ÿ ‰¢Š9]‡ü'¾%ÿ  —þ@ÿ ‰£þßÿ ÐKÿ  Gÿ ÄÑEˆ.Ãþßÿ ÐKÿ  Gÿ ÄÑÿ 	ï‰è%ÿ #ÿ âh¢ŽDaÿ 	ï‰è%ÿ #ÿ âhÿ „÷Ä¿ôÿ Èÿ ñ4QG"°ÿ „÷Ä¿ôÿ Èÿ ñ4Â{â_ú	äÿ øš(£‘ØÂ{â_ú	äÿ øš?á=ñ/ý¿òüMQÈ‚ì?á=ñ/ý¿òüMðžø—þ‚_ù?þ&Š(äAvðžø—þ‚_ù?þ&øO|Kÿ A/üÿ Er »øO|Kÿ A/üÿ Gü'¾%ÿ  —þ@ÿ ‰¢Š9]‡ü'¾%ÿ  —þ@ÿ ‰£þßÿ ÐKÿ  Gÿ ÄÑEˆ.Ãþßÿ ÐKÿ  Gÿ ÄÑÿ 	ï‰è%ÿ #ÿ âh¢ŽDaÿ 	ï‰è%ÿ #ÿ âhÿ „÷Ä¿ôÿ Èÿ ñ4QG"°ÿ „÷Ä¿ôÿ Èÿ ñ4Â{â_ú	äÿ øš(£‘ØÂ{â_ú	äÿ øš?á=ñ/ý¿òüMQÈ‚ì?á=ñ/ý¿òüMðžø—þ‚_ù?þ&Š(äAvS¸ñ6¥yqö‹¹#žm7²ùA$.R:(¢ŽT#ÿÙZimage/jpeg_;http://www.brokenthorn.com/Resources/images/intStarting.jpgObplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_;http://www.brokenthorn.com/Resources/images/intStarting.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl¼gA ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Sat, 22 Mar 2008 16:48:02 GMTVApache_Mon, 12 Apr 2021 11:22:42 GMT_max-age=2592000_Sat, 13 Mar 2021 11:22:42 GMTU30690_Upgrade, Keep-Alive_Ä
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDExOjIyOjQyIEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDExOjIyOjQyIEdNVKEfVTMwNjkwoSFfEBNVcGdyYWRlLCBLZWVwLUFsaXZloSNfEBQiNzdlMi00NDkwOTVkYWQxNDgwIqElVWJ5dGVzoSdfEB1TYXQsIDIyIE1hciAyMDA4IDE2OjQ4OjAyIEdNVAAIACMAMAA4AEMASABPAFcAZQBqAHkAhACJAJcApQCnALIAtAC3ALkAzgDQANsA3QDkAOYBBgEIARoBHAE8AT4BRAFGAVwBXgF1AXcBfQF/AAAAAAAAAgEAAAAAAAAAKAAAAAAAAAAAAAAAAAAAAZ8=_"77e2-449095dad1480"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí+0;DJMV_acjr}ŒŽ’”–˜šœž ¢¤¦¨·¹»½¿ÁÃÅÇÉËÍÏÑÓÕâêõ
+ %4?HMR`knƒ£ªÊÜüà÷#'49MQe             ~              sÔ !"Ob‡ÿØÿà JFIF  ` `  ÿá Exif  II*          ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ ×†" ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? §£øÓÄ×Úlz®¶ö~xßVÿ #ìY¤,@$ ¼‚§w8«ßð•Þÿ ÐÑ¨à\üEVø]tâ“ È	d£¸·ô5u^”RM¿[~ŒÁª’o•¥òÿ ‚(ÔX¾#ÕXd¬ð3î#£þ@œjÙÿ ®ÑñºÖøÝqö{‹&Éæ5}^«ÜÚéÏ¡-¼vvÍp<!¥åý’8þqŒÍç¯ïð~Lmnç“S'û«B£ÍoyêRÿ „ŸRÿ ¡‡Wÿ ¿±ñºCâDuñ¯ÿ ¢ÿ ãt·^³û~©¥Û_^Gw¦\éðKq!WI¾ÒUIXÀ6–Î6@Ç|ÔžÒ4–øƒme†§-½¾¥wc3_"Om6Èœ¯Î@|®vxÁÏÍ×bˆÿ á'Ô¿èaÕÿ ïì_ünø£Q|C«ûmÿ ªÚg‡4}LxzçûBæÊb‘µÄêY§‰ö*yÁ0¡²(~îK
+«áHm—Ä~#MFÁœé:mÜëm3¤†9#`¸'iF 2T®yÇJ.ƒSSþ}Hÿ ÌÃ«ÿ ßè¿øÝð“êCþf_þÿ Eÿ Æê¤¾µ–ÉË\]Eü<uó2lXF[>Pˆ(Çd6?ÙÇ“ã«]/Ãzôú=ƒê5»+ÜHŽ¬Ô®p~fô<S ÿ „£Qÿ ¡‹Wÿ ¿ÑñºŠup<E«ûmÿ «ÖÚv‡«èš}éµ°†ïÄ6kcleAåÝÆ³o”"ü¡ZHàQ´O˜†¶|=£øƒQ6vë-•ŒZäšZÇ0££1o3av&D<³ƒÈÏBë°jcÿ ÂO©ÐÃ«ÿ ßØ¿øÝ ñF¢zx‡Wÿ ¿Ññº­gá;PÑí5¸ç¿ŠÊM.úúKF™BmÜ&Ñ.À mÀýÃŒ¹âî»£é¢&¶-ç†ÒÏBÓçû-´‰“<ò:îy6H“³æö¢ë°ÿ „ŸRÿ ¡‡Wÿ ¿±ñº?á'Ô¿èaÕÿ ïì_ün‹Ø[ê:å·Úõ)D¸Y®äAüyµ»J‚FdÜ»3Óæ@cø;N±ñ6ŸáíKR¹‚þxg“.è‘Ü7šÉn¨À7–\)cÝ”rqEÐj?þ}Kþ†_þþÅÿ Æèÿ „ŸRÿ ¡‡Wÿ ¿±ñºàµ§±Ô®í$ŠX^	ž&‰äY
+±K#È5[ûSÝ¿JvA©è§Å:ˆëâ-XÛh¿øÝð”ê§ˆµoûýÿ ¬h¤ðŒoŒÉqn–k’Â®Ñ‡‘•¶’	Ç=P+Gâ>¡§i^/¸Ó`´„Û[²»ZEeº«”¨óSçu%‰aòúÑ‚Ó°j]ÿ „§Qÿ ¡‹Vÿ ¿Ññº_øIõ/úuûûÿ ©u?²ißµ{TÓôˆ´»e·žêK¨T¥½º¬FO-:nrÁF±-Æ2Ms~´Ó|Iâ`¤ÓÙi6v·È„á„J~U-‡#†Nðx$ÑuØ57ÿ á'Ô¿èaÕÿ ïì_ünøIõ/úuûûÿ ª·:‰k¤êúºÏªÜÚÚZY\E&Ægd`HFõÊ‚ u­>£øŸRÒæ½™,ÖäZYÝ™ c)·3í1„;ö®Ü’Ñƒƒƒ“€]¥øJ5úuûýÿ ¥(ÔOêÿ ÷ú/þ7Iªhºmþ›k1Ii{„£ÕL°”ÊË÷ƒ¦Ü–n~}Þœs«âèk¯jW—sIgjuK}>k5(ktrUR)1-ÂáFAù¹]vL¿øIõ/úuûûÿ £þ}Kþ†_þþÅÿ ÆëóC´¶ð•þ©iy=õÍëÛÝ©o³›Uó6FÍ©fÝƒüC€ÁÚØ·¥xbÎóÂkÝ^o“N»¿1Æê }š`¬œ©ûêÀü$† ºK¿ð“ê_ô0êÿ ÷ö/þ7Gü$ú—ý:¿ýý‹ÿ Óï<§iZ”Ý]ßÜÅ&¹• ŠD‰£Ä²obU· ¹Á=ðoà›?í¿é³ß^9Ô.u.$Œªÿ Ç³2©@AÛ¼ƒš.€?á'Ô¿èaÕÿ ïì_ünø£Q|C«ûmÿ ¨´_YëVþ–Öþi Ôd1ÞÝG*³Ê±¼”W ápq·sgÃ:vÿ 	†Å£5ýŽ§ÊMÝ³KcV Ç$‘F¹Ú¹R'‹ Ôgü$ú—ý:¿ýý‹ÿ Ñÿ 	>¥ÿ C¯ÿ bÿ ãuç#TÀ-Gö§»~”ìƒSÑ¿á'Ô¿èaÕÿ ïì_ünøIõ/úuûûÿ ¯9þÔ÷oÒíOvý(²OFÿ „ŸRÿ ¡‡Wÿ ¿±ñº?á'Ô¿èaÕÿ ïì_ün¼çûSÝ¿J?µ=Ûô¢È5=þ}Kþ†_þþÅÿ Æèÿ „ŸRÿ ¡‡Wÿ ¿±ñºóŸíOvý(þÔ÷oÒ‹ ÔôoøIõ/úuûûÿ £þ}Kþ†_þþÅÿ ÆëÎµ=Ûô£ûSÝ¿J,ƒSÑ¿á'Ô¿èaÕÿ ïì_ünøIõ/úuûûÿ ¯9þÔ÷oÒíOvý(²OFÿ „ŸRÿ ¡‡Wÿ ¿±ñº?á'Ô¿èaÕÿ ïì_ün¼çûSÝ¿J?µ=Ûô¢È5=þ}Kþ†_þþÅÿ Æèÿ „ŸRÿ ¡‡Wÿ ¿±ñºóŸíOvý(þÔ÷oÒ‹ ÔôoøIõ/úuûûÿ £þ}Kþ†_þþÅÿ ÆëÎµ=Ûô£ûSÝ¿J,ƒSÑ¿á'Ô¿èaÕÿ ïì_ünøIõ/úuûûÿ ¯9þÔ÷oÒíOvý(²OFÿ „ŸRÿ ¡‡Wÿ ¿±ñº?á'Ô¿èaÕÿ ïì_ün¼çûSÝ¿J?µ=Ûô¢È5=þ}Kþ†_þþÅÿ Æèÿ „ŸRÿ ¡‡Wÿ ¿±ñºóŸíOvý(þÔ÷oÒ‹ ÔôoøIõ/úuûûÿ £þ}Kþ†_þþÅÿ ÆëÎµ=Ûô£ûSÝ¿J,ƒSÑ¿á'Ô¿èaÕÿ ïì_ünøIõ/úuûûÿ ¯9þÔ÷oÒíOvý(²OFÿ „ŸRÿ ¡‡Wÿ ¿±ñº?á'Ô¿èaÕÿ ïì_ün¼çûSÝ¿J?µ=Ûô¢È5=þ}Kþ†_þþÅÿ Æèÿ „ŸRÿ ¡‡Wÿ ¿±ñºóŸíOvý(þÔ÷oÒ‹ ÔôoøIõ/úuûûÿ £þ}Kþ†_þþÅÿ ÆëÎµ=Ûô£ûSÝ¿J,ƒSÑ¿á'Ô¿èaÕÿ ïì_ünøIõ/úuûûÿ ¯9þÔ÷oÒíOvý(²OFÿ „ŸRÿ ¡‡Wÿ ¿±ñº?á'Ô¿èaÕÿ ïì_ün¼çûSÝ¿J?µ=Ûô¢È5=þ}Kþ†_þþÅÿ Æé­âLc ÕÉ=?}ÿ ¯;þÔ÷oÒíNxÜx=~†SÐ¿á+Õ?èaÔÿ ïüüf•|U©’3âWã+4GŸÆ!éY^Õïì-ï#¼ÓÖ9âYU^Y2 @8N¼×?«,ú&§>pñ¼°²hX•9LññzRÐ5;†ñF¦1jäžŸ¾‹ÿ Óá+Õ?èaÔÿ ïüüf¼÷ûSž7_¡­3â+kTŠÓ!‘„HK’2IP»ïO@;ñV¦HÏˆ5\Œ¬Ñ‡¥+x£SÇˆ5rOOßEÿ Æëƒ¾Õ®™’!0Â)àe3íëUÿ µ9ãqàõú4OBÿ „¯Tÿ ¡‡Sÿ ¿ñÿ ñšUñV¦HÏˆ5\Œ¬Ñ‡¡¦øOìú¾ƒÎ¡¢[´ÖŽE‹X~ÞÁXùmÆGÌzàç£g…¾ÖfžúâIí’ÚC/ÍQˆÖ2BñŒtõõæ’° ¾6éðÙëp„‰ŠúVçù$,ØÞsFaðª’¼“Qº[½da»10ÿ fJ(äì;’Úÿ mÃuþŠ—âT…Ï³WÊ€•éÆ8÷­?íßˆŸóùâOÎjõ‚.WÁ·AA$ßâÇH ö÷¯Kó$þïþDÿ ëT¹;Dù;QêèR‡X¼
+Ax¤r1ž„ŒŽ¦‰_ÆSéÃO›ûzKª‚ÙüãUÆÑ´ñÛ¾¥»Ö-l.- ºž8¥º}‘+H~c=8e\ž7:/VPny’wÿ "õ©s6§Éw)âÛË¬n¢Öç´‡T¬­``mSÀÀ8íSKuãy® º–OÉqo»É•ÌÅãÜ0ÛOQ‘ÁÇZú»Ì“û¿ùÿ ­YVšúI§ÚÜÝb´ÌaC“´1vTRp@ÎÐ8ˆ– «…˜í_ÆV)
+Zo[¬*ÉÅç Eb‚ã $@ê@ª¶Ö#³ó~ËcªÁçFa—Ê†EÞ‡ª¶*qÈ<W×~dŸÝÿ ÈŸýjÌÄ–ëRé+‹ÈŸË`É"¡}‚M‹!MŒû6ÐIÆN0ŽÇËÛ<[ý—ý™åkÙÿ óë¶_+ïnû>÷=:óP]ØxPº{«ÛVæáñ¾Y¡‘Ý°02HÉàøW×~dŸÝÿ ÈŸýj§s«Åo4¶ùßs¹¹h•ÉÚ€à;p¹ ž»[ÚØ.>PŠÃÄpy>UŽ«‘!šÈ<·ãæ^8o•yü£Ò§´Oéñ¤vQkvÈ’‘aYP+•ÚXÑ¶’3×õ]…ä·z}´ì£|£¶–PN8<sV|É?»ÿ ‘?úÔ\,|—x¶Ûì¾DZÜ_dßöo-e_'ÞÙ»žøëS}«Æÿ nûw™âµù~OŸ™¼Í™ÎÝÝvçœtÍ}7?‰ôk[yn.5:"¸6²I%ò*¤ÀdÆIà8ÃÖ´üÉ?»ÿ ‘?úÔ\,|ˆö#’K‰ÇUg¹ÏžÆ	—,î8ù¾`=À5=ªx¶ÊèÝZE­Ápc™bYQö  \Žv€ª éÀô¯©õ}Fm;I¹»HÃ4i•Î3Ðgz—ûF/ía»Y•Q˜èi*qƒƒŒ€NÝËœn\—‘±5Ÿú_ÿ à3ÿ …ØšÏý/ÿ ðÿ Â¾Âó$þïþDÿ ëVE—‹´Jí-,5Ý*êæLì†B7vÀ$áG'€OáEÇcæÍ2oéz.¯¤§‡æšÛTXÖo6ÖmÈP’¥J‘‚	Ï91s®ì<G¨]=ÕíŽ«spøß,ÐÈîØ$dð ü+ë¿2Oîÿ äOþµe\kÉ±¡·%›¾[hmÀ> lr§•"‹…™¢ºñ¼7SÝE'ˆc¸¸ÛçJ†`òm]Ç©Ààg¥UŠÛÅj'P†ÛXŽø³9¹Hålî;€ÎNNO|šúè3qëëP}±|èá.‚iÈ‘™¾fQ€Äd€YA=·Z.>P<[sö¯>-n_µìûO˜²·³îïÏÞÇlô©¢ºñ¼7SÝE'ˆc¸¸ÛçJ†`òm]Ç©Ààg¥}?wâ2ÂÐ]Þjv6ÖÆV€M5â¢Sqãp*ÀŽ¿)ô¨ßÄú4w–ï¬iË=â#ÛF×Èus„(:°cÐŽ½¨¸Xù†Wñ”úpÓæþÞ’Ä* ¶8Æq´m<```vÀ§Áuã{\}žOÃˆÒå™—¹Ú¼ÉÀè2}kéû_i—Ú„Ú}¦§cq{ï:Ú+Åy#Úv¶åŒÏCN»Ô¥¶Ô,m¶\7äà*ã\~´\V>T{oK§E§Ém¬=ŒM¾;fŽS7<…Æù>çÖ¤<[ªÚÇ¶–ëÂ"U” G ºã¦Ö :s_Zy’wÿ "õª…¯ˆ4ËíBm>ÓS±¸½ƒwmâ¼‘í;[rŽF	 ç¡¢ã±óW^7†ê{¨¤ñw|éPÌM£¸õ8ô¦X?Œ´¸?ûzÎmæ;:5-€3Žp>Õõ™'÷ò'ÿ Z2Oîÿ äOþµ%Èž-—ì~dZÛý‹eÜ²Ÿ#ÆÏîãjôÇAéZšF±ã/Ä0ë³i·úü´p¾¡òù`äq‚Fa‚qó3Í}&Ú”«­-ŽÁ·ìÆbwœ“½Tœu?¥.£¬Ùhöëq©ßZÙ@Îd¹ºXÔ¶	À-œÇ±¢â±òOö&³ÿ @‹ÿ üð£ûYÿ  Eÿ þ?øW×Ð]­Õ¼WïÐJã’9·+©0Aè7j·	nÏÑ#3|Ìª@b2@,¹=·Z.; ÿ bk?ô¿ÿ Àgÿ 
+?±5Ÿú_ÿ à3ÿ …}…æIýßü‰ÿ Ö¬ïí‘î¢—-öQÆï+ËµTvff< ×š.+'bk?ô¿ÿ Àgÿ 
+?±5Ÿú_ÿ à3ÿ …}_mâ}öâÚÞ×XÓ§žéÛÇò3J °% å€(ÜîŸCBøŸFd²uÖ4â—ÎRÑ…òbáƒm"?ïHäâ‹…”?±5Ÿú_ÿ à3ÿ …ØšÏý/ÿ ðÿ Â¾§ÆžšâÒuÍ:W»vŽÜÇx¬²:”7þñ>\äîàjI|[¢Awohú½Ú..šÊ(ÅÐ$Î£-Àá†@ ã–QÕ€%ÂÇÊŸØšÏý/ÿ ðÿ ÂìMgþÿ øÿ á_ZØjRÞ=à(É¹xT=W’qêÆ¬Áv·Vñ\[¼sA*ŽHæÜ®¤d@Áw¢ácäìMgþÿ øÿ áGö&³ÿ @‹ÿ üð¯°¼É?»ÿ ‘?úÕ^ëR·±ò~×q¿Ÿ*Á›pÌ‘¾ê.G,pp&‹ŽÇÈ¿ØšÏý/ÿ ðÿ ÂìMgþÿ øÿ á_ay’wÿ "õª–•©K¨éñÜ²._€ç€”vôZ.+%bk?ô¿ÿ Àgÿ 
+?±5Ÿú_ÿ à3ÿ …}…æIýßü‰ÿ Ö£Ì“û¿ùÿ ­EÇcãßìMgþÿ øÿ áGö&³ÿ @‹ÿ üð¯°¼É?»ÿ ‘?úÕZ]ER·’VµJ‰6J0PÛO¥O=ˆ=è¸XùûYÿ  Eÿ þ?øQý‰¬ÿ Ð"ÿ ÿ Ÿü+ë›ÉnôûiÙFù!Gl9, œpxæ¬ù’wÿ "õ¨¸¬|{ý‰¬ÿ Ð"ÿ ÿ Ÿü(þÄÖèÿ €Ïþö™'÷ò'ÿ Z2Oîÿ äOþµ±5Ÿú_ÿ à3ÿ …ØšÏý/ÿ ðÿ Â¾µÕõ´í&æí#Ñ¦T8ÏAž=êöæþñüè¸rŸbk?ô¿ÿ Àgÿ 
+?±5Ÿú_ÿ à3ÿ …}‡¹¿¼:77÷çEÃ”øóûYÿ  Eÿ þ?øQý‰¬ÿ Ð"ÿ ÿ Ÿü+ì=ÍýãùÑ¹¿¼:.§ÇŸØšÏý/ÿ ðÿ ÂìMgþÿ øÿ á_aîoïÎÍýãùÑpå><þÄÖèÿ €Ïþbk?ô¿ÿ Àgÿ 
+ûsxþtnoïÎ‹‡)ñçö&³ÿ @‹ÿ üð£ûYÿ  Eÿ þ?øWØ{›ûÇó£sxþt\9O?±5Ÿú_ÿ à3ÿ …ØšÏý/ÿ ðÿ Â¾ÃÜßÞ?›ûÇó¢áÊ|yý‰¬ÿ Ð"ÿ ÿ Ÿü(þÄÖèÿ €ÏþöæþñüèÜßÞ?SãÏìMgþÿ øÿ áKý‰­Ð"ÿ ÿ Ÿü+ì-ÍýãùÑ¹¿¼:.§ÇŸØšÏý/ÿ ðÿ Â—ûZÇü‚/ÿ ðÿ Â¾ÂÜßÞ?›ûÇó¢áÊ|{ý‰­Ð"ÿ ÿ Ÿü*e°ñ"¨U±ÕB€R`Ê¾¼ÜßÞ?›ûÇó¢áÊ|~úF¹#“KÔ]RÖîIý)¿Øš×ý/ÿ ðÿ Â¾ÂÜßÞ?›ûÇó¢áÊ|Šöž'“ìûí5vû6<ŒÇ!ò±Œmãåè:z
+ŽãMñÔÍ5Æ©Í+csÉŒÇ$JúûsxþtnoïÎ‹‡)ñÕÕµÍžšñ]A,´ÈÛ%B­Œ>n¿‘¢½ã¹'Å–ù9ÿ Aƒÿ CžŠÚ;÷;O‚_ò'Üÿ ×ëèˆ+¢ñŽ­¼?®Ã¤6¬_O*BÞmœÑFe‘£]ÙÔ)fRp=ëø%ÿ "}Ïý~·þˆ‚¹‰w×vÿ |)iÔñÛ\ÿ gùð¤„$»nÜ®å6#=+nZØ“Å¾#²ñ6­üÃØ[u[D[Ý5ÄS	ã”Êßé€H‰c €ÝEuQ|JÒíšâæÓEÕ/ÚîéC&œÖ7N$1p6Á31ù c–ÉùHÎ ‰þÝÿ ¨÷þV¿ûóY>2×nâðQ»°ÖgûL¥¾É ÔLènAÃÛ‚¹ÁŸö¿†F}¥j0ë=Ž§n®°^[ÇqÈ `®¡€8$gÖ³|=7^K{ˆ’h%YRHäPÊêdAà‚;S|ÿ $ÿ Ãöµÿ ÑKSx_þ@pÛOýôÀäî>!Aá]vóA¾²Õ.­-¥H`Ôd1$aš/7Éyå‘T²©f`Ì$o|èxÒïÄ |¢]±Þi©9ýÂÃå¼¿l;âùwìÚ>}§?/<ïˆîæ—ãî¯¥Ü\»imo4²ZÉ)–:aRÅK¢ƒ·Û—â^¢¼ž(¹³½ŠÏûmîMÃîŠWÖ o&EvMSbB6n9r6“X ;©þ+éÚF‰–“¤ß^Kmkòµ¹´¹H"j´²%´Ä"¨9ÆN0
+ŽG~tètÝ
+ö8Ùå’Hä’yå É<…p]È g    *€ ógŽï®,¼5£½ž­<²ÜËyåÔwaÞèyVªÂVK‰ÈUÊîò‚~žÔ¿äyÿ \ÿ A4Ðh¿ò²ÿ ¯x¿ôZÔšŽ§k¥[¬×nà;„DŠ'–Iáf8à€¤ôÔz/ül¿ëÞ/ýµåWúÇü$Z…½Ôï;ÇwUŽ#ÊE1£ˆ!!Km–Ñ]\´o%à/¹-Â¨‹â·‡FÐ­$DÔ4kÑœSI`îUa{u†HÅò–—ç9#nHû‚½'Ã-§§‡ìì´Ùg{{’Ð˜Ú9“b ˆÊ¬¬Wkr£!W™dê_Ùþg?ö7•µy“}‹f1Óí;<¬ñ¿ìžNßŸËò¸¢ÃXÿ „wP¸ºçHí"*ÑÊyx¡24‘¨m±]ª*$³%6¥ÁV ôÏÿ È³}þàÿ Ð…gøÖù,´»l[ù—rÞ•µ˜Ü­¸µp²;LÒ°!cI	ù[pÊ•`ÄV‡ŠäY¾ÿ pèB°>$Z>£§éš|GÞÞÜÚFJ3 òÙ]¢–Ú	
+œp2O ÐN>ûÄ·ž0¿Ðì¯î<4lb·mJâÑõ9c·ÕcUÈ“&±#‘d&'$æ6Ü¸PÕ½á;Áþ/·½·—ÁÚIöxåŽ{ŽHæ†Pê$’#†ŽE ª²•ü¸«_ƒ^%•4¸kXE¾‡wm6.™LsHÓ²)(2Fn8ÊŽAµþé÷Ö·sxZ{„´–×Mo¿{(NÉ/e3yrHQ‘•y!Ô¦ðv¡«köŽ‡,÷B×HÔ®4éõ9'âê8ÛäU*WÚ@y:àeNç-K¬Á­¦“ooCW¶éq¨UE  8 Õ‹s§?ƒ|O&¹¥i>~“¨Åok¨[ÙDÍ5±ˆŠXã\îŒ+dP
+ó
+ÚÖf[‹M&tKÛwQ$lŒ9åX§Ø€Gz Ý_¾>µÎêq^Ûkz^±k§Ïw¯³Æ²#BÁ¿xÈ»G’ÀüÙË.#¢_¾>µ‰wâ]7M»[	…ô—+LÉk§Ïqµ°RLhÀd£uô4€tFÏN³ž;auq}0“L’Ð¼\\ŒR	Ûa'÷y*3†ÁùŸö/Gã[ûˆï‚ÍaeÛémmös*I18Ÿ÷¾Xó6|Ø'¸¯ÿ 	†™ÿ >ºßþïøÕð˜iŸóë­ÿ àŽ÷ÿ P/‡ü=­Ùk¦mP½Æž5+Û«8VXÔY´’MµÙBîpÈíÏ˜pf Æ6ï«ÿ !ÍþÞ?ôQ®^ã^Òµ$º¾ñ$:üp<¡-?³o£·Xˆ/6Ô(uˆ|ª©·!Ëõ¯ü‡4ûxÿ ÑF„›T×ì4{‹{{¯µ4÷ïvÖs\1T*‘± ^O¨¯>‹V¿ƒDÒ¼?äÏ¥§‘f“´z™½Æ!^Al>Ï¹Š>UÛ•IV,5þ Eú¬w2ØÅÒî÷=ô±Gÿ I²ûÍ,r ç¦PóŒ`àŽVÎ}2X4³¢Ühò£\iò\Aiqj;¯-tHíã”»yq™ùj¥” Û@P‰t=Þ¼×ÚôöVñDa}ZK‰]~ÃgK~"D¥¥óƒFN&·ü¨ÝêÉ¬ÞÜ¼·ãìÍktnmÌbAò¤*»—x|à xê	©ÿ á9ðý:'þ"ÿ â«SNÕtíbÝ®4Ëû[ØÊ4–Ó,Š à•$gqî(FOù—þ¼?ö²Ó|C£]kéi|öFÎôÜ<Ñ2ò%IÌƒ¨éžø§Iÿ #rÿ ×‡þÖZ¥ã~×&…dÖÐ]Ås~é%¥ÉýÌûm.VNåÞˆßtà¨8$
+p>(±Òô	õ£Ôìo/¦cmöÜj7-*m6žRÆÙåsq·iŒ»m1%„V›aâ{-2év÷ñÚÜÀšuµüa¹š9Mh!‘XG8v”*ÈvÌ3tV×ÓxC@¶ðÞ«ƒ g>l7:ágÞXÈÂ&·ÀFbÿ (ùFJŽ*;ÝWþü1§ÈÒÄÖÞ{Î´xd"o†T(gÝ!pxÍ uÞÐ¥ðö‰öI›<­)‰(s¶=‘D¡N7|ÌÇ’rZmþÙªëö»`o:(cÅÄ^lg1È>tÈÜ¼ò228È¨¼Ù$×l–ÚH­¯Ñ#´¶?¹ƒu¥»²ÇÂü»ÝÛîŒ–' “UuÛÛ6ÓÆ7ö’yw6Öh_h;]`”©ÁàòZ˜V–]½ä¶—~=ÒînbòÌrËºe6—’]c/;0UFt!·1<qm4«ûÍb+½.ýüOW¦}CP±Ž¯(kDIæ\œZ©,¤¢ïÚª1„åu¯jzU­Œ>!Òõ»kUµ‚+OÍÝë*,hžsÄ…Wb’¥T¾í»•
+íi.Öü-a†47Ð­“”·¸¸†æi.Ñ™@“É·iZ0ò>U˜ –=€(§Ò¼>ÒÍ+jÚƒé²iŽ—kq
+¤VÖÆkiT&.%XâÍŒ£nü.âvª…Ãúwu§Üh¾)ÓµÑÞÚ%áeÖ(§Ž4}²­"y?yÂ’£0Aâo<]ªë³Z_j¯§@šrCp·Z|2H³©š9‰hÝ„±¢¬qM°ÇºD¶”£ªj;x}|a ¦‡âÚK¤ˆÁ£è’YÆûäE*âF`wƒ·g
+³4Q! ö-ýv§ÿ _ó(ëæÏü$›À~³Õ®5„»žk„·’íÊª1FbC–Ë Stg9ã¥}'¡®Ôÿ ëþoåyçíÿ $þÃþÂ‘ÿ è©h`Pøeð‡û;û#Å?ð’ß'Ú-a¹û5¢yÝ²O.FÜwÇÆ
+àgŽ˜¬ÿ ÚSþeûzÿ Ú5ëžÿ ’á¿ûÚÿ è¥¯#ý¥?æXÿ ·¯ý£@÷\œFëþýÒØéÉ©]=¼É¤
+JÍ$€Ê
+sóôÎ2x®²±¼/ÿ  8?í§þz â,¼9â=B¾°Ñ,^Æ=ö± "5°Œ–;Ruj,Þ\²ï@ÊîZriž'¸ƒEÒæût‘G²[›ÏµuÚÎÛ¢.8IaUX<ªìÄ¾N{Úò¿ünÒü7ã{ëN¾kKHŠÍ*C‰rT¨Uv_Ý…Ýó#/,½m¥øžïÆW’jwsÅ¦5[‚‘<HÕ–ãrÉÈs'”¬YCìÚ¼3¢ÜèžÔàºµº†VŽF•çÔáe™‹¼³6È²ÿ )$HßÆ276ï†¼K¥ø·D‡VÒgó-äá•¸xœuG˜gõdMÝKþAWŸõÁÿ ô@†»¥O®xwÃúbi	}nò[Ë<ÒÇ‰l UŠ;©`_h`¹&?4pH¨ï´-SL Kéã´‚×t±Ý}šßN“|,’E¼o‰TÆ#‰¼Å-ŒUIs×h¿ò²ÿ ¯x¿ôZ×iÚ|_.îµmlN|-gtÐé6QÈñ%ÞÐÊ×|¡›9pFÜ2‘÷· ^¥w¬jØÙx“K{…¿º¿²A­šé³?“,rn1;FÐ±¼dqû;?Úxví¦¥ååÅÕ¸X†b
+á¦Iº‘>eàFŒ2ålfÎF“¤x7â¡âËàû3ûëìëwe¶9³*Qq™ÚÛ—$dWGàÍsQ¶ñ«à­nGžëNA=…ä›‹ÝÙ“…gm 3¦UY‡Þ9êU‰ ÖÖ4õÓ<#oÅÔÑpÈ.fi™+•ÙfÉù‰#$€ èëÅ?ò,ß¸?ô![ QE(¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š ùûã·üvÿ õãþ‡=|vÿ ‘®ßþ¼`ÿ Ðç¢·†ÆrÜí~	ÈŸsÿ _­ÿ ¢ ¯=øé¨Í£üXÐõ;uFžÎÊÞâ5¥’y‚2=k½ø1s¿ƒç3Í@Þ¶7°\þâßÖ²¾2xø¾[moD¿¶›Q·‰mžÍî#A${‰¬HcNé‚0ØËr–Çœ§Ä?Kn.#Ò.ž…Ä‹¨j…J€äœý§ÄRóÿ Lßû§,ñ~¿ªi‹£êú{Ú'ÚÀÍw#îÌŒçÊø — r¸?wÝÙ|<Õÿ GÕ¦x£¸²²Hž´@Ì]U‚þnr0pwä~ëcÂú5?xÄZ¯Ø#Óím¥X<ÍÁo UuF2ê: Æ|¡>âí‚	Ý|ÿ $ÿ Ãöµÿ ÑKSx_þ@pÛOýõ_Â²Á¦ø?D°»¹¶ŽæÚÂfO=×XÔ0È8<ƒÒ«i×òÚxvÖ+V¶S3ª½Ä€$#Ì“20È,>êòI*	ec<âN¹sá¿Žº¶©hˆóÄˆ]FÑPòŒ¬à‚85BßÅ^)’É­ŸÃ÷W‚ñgy.u"o$HÂÎ‹,Ž˜"D `¨®ÃâÂ»­GW]kÃÚšê“Üí[È®¯"o03]§tciÆÑ·…žßáýòxžïZi-™®âb’k”°På˜³“yÎò}¼Î.€<§ÄÞ'Ö5Û{+=Z7Slò\Df–y$+8F2»U6ãrrI'ìKþAWŸõÁÿ ô_5xÏáÿ ‰õb‹;8¦mÂ–}Bóg?zbs–çý¢Ùi[3Iï"èÙÚÞiÍ{Ý§ÙÜÛ\5Â´«Æ<©2w9çå~I ‡ù†é¾‹ÿ  [/ú÷‹ÿ E­xý®6™qeo#"Éd‘ùí)*‘µ±³YàX·YZåGîïD›vÄÙõ&öÒ&Í%º†7ÐåZ@úµ¬ßi:F»åÜ%îŸüXÙ4¸‘xÎ2Õƒ.æ(êÊèÄ•`Ã rÛmÿ ü#ßcŸûìeûwÙî<Ï³yxÆï+ìÛ¶|¾wŸåg÷Ÿwå¬K­:mNâöÞ6F’õ$ò"Y$k“x±”ÈÑn½º;ÂŸÝÙ6í•q£ÿ tßÚkòt-Þo›ÿ !H<Ìç?ëþÁçnÿ ¦žg™žwnæ»oé:F…æ\=îŸ-ü¹ß4XyÆpÙ‹6Õ.ìÌîÀb€hx§þE›ï÷þ„+Ç¯3x^k‚‹:úË#ÈTU†v,rŽ  gv1Éë©â[ëI¼;yWP;”Uy«+Æ:iñ$öv1j–awöÓu1Y7H<ÄªVS†,\2•;
+Ù(Sfyæ×.%±±•á°‰Ìww‘1VvL9‡}ÞU~}Æ.gHÒ´ëïx¢EKx ·ÓÅ¬Öj¨mäŒOPˆÀÊíd#2F8ÌkVë6öñ[ÅñÍ ,qÚ¼j`¸Fœ.6ùŸ.ß./_ÁºŸ…žúâã]³¼º»HcfŠ$·EH”…Cœ³wÀUUU@C§j3=ÃiÚŠ¤ZŒh_äGs y±ä“ŒI%	 ’
+;Åâ¹¦ÿ ØBý
+Ÿ¨/R·Xä¿Š)#q$Å2‰ ¡9Á#A*À© åÜßËwmaÓ[¨µ(UšÞ@R`ÄŠ¹, ç•nT‚2À`©~øú×›x¢õ,|C¨Jö¶7!´ë$ÙyÈ 0¿pÎ½vyÆÝÁŒhZDô•ûãë\Fµ¢®«©½í¾»¦C¶ÐBðÜG#Ñ4¬®9ã ƒ1#9ÚÈ¬e s3ø£ŸæèZ Ýæoó-3Œùû·o+Ÿõ“gvÌí›w—ºãìšvW—Zå½ñ¶ðî-Ê9	´C•qs¸¶÷F'sºà¨ÜÍ"±žU·ªþ ·{ƒ8×tXÜ¸p![ÈÕ(FÕ[à*,  ZcF4†dKw·^ðôP;«˜â´¸E „ ÀPFÒ>ï—ÜyQí Êñf¼×ÐøŽÒk=9ŠY^Æ—>Jù¸Ž  6ò3ƒ"ðIùeÂäÌ¶Ýþ«ÿ !ÍþÞ?ôQ®Fÿ Â³ê_‡ñ&…·±M³¥¤Ûñ*²¿[²GîâÄh¨Ôní¦Ö´¦Šâ'TŠ¸!tzúPÍS@°Ö.-î.¾Ô³Û£¤r[^MnÁ\©`Ll¤‚Qx>‚¸Xìçƒ[Ð,5[žg”5ÃfY`ó"Úÿ hDk¦&%uH€üéÈl#úö•‡üþÛßÕÿ ?´¬?çöÛþþ¯øÐ–øzßR:$ˆ÷ÐÇý‹kqm ’i"T–cwªÒ¯ðXFY×;‡Þë¼n1¯-Ý¼ð\%üI"NÁŸ+el2H’N¸Ï.ÇžI9¬aðëÃ>T(úÚÍåD£Ïi¦ÊûB(,ÖåŽ@äž•Óx~ÇJðíµÄ0êËqçÊ²³Jð¦Ý±¤Jª±ª*¨XÔ  X“þFåÿ ¯ý¬µˆ?ä7á_û
+?þ‘ÜÐ×vÏâ9n"1-ŽÃ£÷©ÔÓu×K¶Ónì/4÷¹ÓîÊC=Ï–’æ)"*\+)lí9ÛŽ3Íø½.ÛÄ¼–†uòl,%™â˜Å²0÷»™˜\ÛáGË‘þÉê£¿µñ_‡­î"¾6Âü˜žãÌ>Oú%ÛùNò\He	dE	òíÜv…Zºþ©x‹Pk»”Ð“|QDðÿ jÅ4må™
+6Ù¬_<×àÔ?†ï´]JÚòÝt/ôy|á
+jVð#¿—$`·“`ŒØY_÷ ßÃÿ òñWý…ÿ Hí«+ÄMu¦xÖÞÞ'šytÒ‘Ç–gc  $“Ú´ô'KFÔ®ïï4ô¹Ô.…ËÃÏ˜‘b(â
+…-‘líÝŽq’ë;»a¯ê³ˆ„DÛ€åÆÓò?zŸ xVÊßRñ†‰aw™ms3&â7#H¡†G#‚zW±èº­¦¡á(ÛouÏ{$Ê$ÄæBÌÑ¹\›‰#hLl¿¼ádóUný¦ú]#RÓîl.îm¤¶¹‰¡™<ð7#dŽ	é^A¯øQXžëNÖî&K‡fvŠKk•“,Xî†y"X‰2K»au6Q¶4s ÂÖ’›I£”$‚æÊñ]‰RÞK¥Ão$68d8/œ†,Džuçx	®>!øq ‰åq©[¹TRÄ*È€“ØkÞ|à˜íµÕuíPÍ:¢/úMÔ~l›%óWrFJF<ÅYHÒ6™s"?¨iXÏí·ýý_ñ 
+úíOþ¿æþQ×ñãJÔuÙ[é–W³®¤ŽÑÛBÒ0_.Q’Œ‘Ï¸®ÇF»¶‰õ’â$G¾˜«3€å§­rðøy"Ò£µ{Ï$2Æ÷,÷\k[RD-uû£†Üâ^|ßœuÏÍ@gƒ`š×Àþ·¸‰áž-6Ý$ŽE*ÈÂ5yÕçÞ(øq¨|@ñîµý·}k¥YZÂ4-ÆZEùÛß‡rðÄù€›·¸“MÕ£·×´ûyï4³eBà´­%ËJñû´YãDp/—÷B“Iÿ lh.e¶×¬ío.õ+Ë¹."1«B²Gv‘22ª»ºý¡Î6¤ /ÃßíÏø@´øHüÿ í_(ù¿hÇ™·qÙ¿ý­›sŸ›=yÍ]ð¿ü€àÿ ¶Ÿú5ë3ÂÖñèï~Ò>‹§ZÜ:4:vŸ$f(˜.÷ˆã$·ËÀãgƒµnøvîÚßE·Y®"ˆr¸þöOZ à¿hŸù'ööÿ EK]‘ñ'€ÛXM\øƒ@þÐKv¶Pˆ7”X1Sór2 ŒôçÉÎ®¨ºµ¦\iº”–w6w	²XžQ†žAÈ È®7þOÃúÛàÆoþ9@_³·ü“ûÿ û
+Iÿ ¢¢¯RÔ¿äyÿ \ÿ A5SK]EÓ-ôÝ6K;k;tÙI(ÂÏ$“’Iä’IäÓµBÉôÛ¤KËvf…ÀPI8>ô&‹ÿ  [/ú÷‹ÿ E­q?ç{ÞxFò/+RðýÔN lHŽìé*îQò¶[¡Aãp®¿I½´‡I³In¡Å´9Vþ­kÅþÐ¼Vö÷©¬/Y´F[]JÊà$¨
+‘µˆ9dËg¨n9 Ãø_¥j:Ž>!\^Ø][Au©·’hYeó'9BFa‡#ÔzÕ½wñÆ}wYµ‹v“`4S3tþo˜ûr |¤2‘“ü$d7nü!­kQ=âŒ·:knAek£Ê
+•Ú]IÊóÊAôèGu¥®…¢é–ún›%µºlŠ$”aGç’IÉ$òI$òhž)ÿ ‘fûýÁÿ ¡
+Ø¬ßZMáÛÈâºÜ Â¬€“Èí[ô QE(¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š ùûã·üvÿ õãþ‡=|vÿ ‘®ßþ¼`ÿ Ðç¢·†ÆrÜäôj¶k]/FºŽB“¾µiqòŽ1ÜÖ‡ü.=gþ…ÿ ÿ àÿ ñÊ¯á}GÂ61êKâ›'ºW‚‘§.çäÇ—…ù‹5A­ÛV=káÒëž –ûOûNŸ6Ï"83æ|•ÄaÚ¹Ý™é§Zôi{.O{	9Y'u³ÛmVº¿»×–uþb—ü.=gþ…ÿ ÿ àÿ ñÊ?áqë?ô/ø_ÿ  ÿ ŽUØõ¯‡K®x‚[í?í:|Û<ˆàP<Ï˜mòTC‡jçvdÿ ¦kŒñ•Î“yâ›ÉôDE±fùjíµqì ``‚r	ÜÙÍvá0øzõ}œð²†—»nÛ-7ß_ÃÕ)”šWæ;}â?Šuéç‡NðÏ…$kxâRö¾R¤j@f,ò€ ÈïFñÅ:¶¶º=‡†|)q|Ìê¨–¹V*	87iRrjÃøe·3ø¦"yf“Ã·h‘¢–fbP  êIíGÂí-®>#Ûé÷Úb\B«2ÞAuj$…S÷ƒ°‡
+3ÁÉÇ|1TpÔ~´ùî£u¬¯³zûÊþš_kŽ.O—ÌßÓþ!x¯S±’úßÃ^KHäµÅÌ+o‚v†’e°3’Ö§_øÔßjoáÁ.µµÅ¯“9 .]æódmçæŒŠÇÑlîÏÃ+Û(ôwÕï!×G¥¼r–·Ä$y…b+ $‚¿1ÛòðÍuþ2&ûMñµ…‚x’â?#ÉlÈÑ)´UÉ2•£ÿ tƒ–×z´iâ]ÓV»W»ÒÎ¿}oÌ÷å[Y½KI¸Þçÿ Yÿ ¡Âÿ ø ÿ ür®ÿ ÂÌñ?öö×ü#þÏûOÙ<ï±õ»wmÛæçîóœb¹izv‹ãmSNÒ_u” ƒÌß°•“?ì±+Ï#99­ë¸lþ4“éö×Ê|E´GpÒìãŸÝºœñŽ¸ç¥zÕ°ø?aF½WUtmÞÒWþe¯ÌÍJWi½_âg‰ô-Rm7RðÇ…à»‡o™Ø‹c*r²‘ÐŽõ&‹ñÅ>"ÔFŸ¥øgÂ“]2–XÚ×Ë,\o”dãœp	ètúÎ™b<u¬ê×0%úÿ jY[][˜ uµ·û:³O)’7+PHÙ÷OÍÀÇ)à­ôßOeog4Vöw7{P«.Ž‰<í!“õÜ9æ¼šX¬%\êªIN4¹÷•›åM«s'»K}SÜÑ©)%}/`Ò¾&ø“Z¾[+xE®[qòHT¼À$ŒÉô¨o>,xƒO¾¸²ºðß…ã¸·‘¢•>ÂÇk)Á`ò;W3à½2þOé0%ËMi¨B÷ˆ˜´*²¨bã(©=*¯Œ¿äxñý„®?ôcW·X×AE8òóo+ïoæÛäeÏ.[¶‘ñ3Äúî©›¦øcÂóÝÍ»ËìEs…,yi@èzŸOø…â½NÆKëxE-#B×0­¼fB	ÚI”ÀÎHZç~Y&£ñÎÚ{o-9~Ð“[¬ÈªÇp;~}ƒ<uÆyÁÑÑlîÏÃ+Û(ôwÕï!×G¥¼r–·Ä$y…b+ $‚¿1ÛòðÍpã©áhW•(ÁiÉ»iÉ?´—Ù[ÚÝÝìª.M^ýÍ…ñ¯Mö¡fþð¼éØû[\Zù1Ã’åÞ`¿6FÞ~aÈÈ¬Oø\zÏýþÿ Àÿ ã•ÙxÈ›í7ÄÖ	âKˆüD%°#D¦ÑW$@Ê@VVŒýÒX^Wã­/NÑ|mªiÚKî²‚@y›ö ²gý–%yäc'57ÕqÍB­+I«èßEÞò¾®Z]-;Øu9£³:Í7â—ˆµmF?øQîgm‘#ÚÃ7a–”ž€g“€94ÛŸ‹~#Òõ)­¦ð÷†a»µ™£p¶M”u88"^Äuß‡–v¶Ú<ä6ÐÜßÇ­ÛÁtòÆ%6c4Ø<G’¤ šÛ¸Ó¡·Å7IáÙµ=`ø’Txb‚9fKvVxßl‘J’C¸ù°1Q^®–*t•+¥eñ4ït›m»(êºoäÐ.gÜM#â¿Ä™àÓô]
+á*Êd‰Ò1½‚*–y‚å‰À\äó€k
+o‹ºõ´òA?†¼5Ñ±GôçVVdàƒÚµÌÿ ŸÄ'ÂðØ¯™m›xfiÒ6S™:¿»æL 6îÃ —à++k‹uÝAµ]Z/b–(eò! »ÜÌÒFìüÀSîœ·¡á9*Ö•%Ë—3½Üc-d¤ãöší¦îúõÒ¹ü.=gþ…ÿ ÿ àÿ ñÊÑÑ~#ø§ÄZˆÓô¿øRk¦RËZùe€ëòŒœsÎ=«1xoN¶Ž{a¤Ãÿ ÿ ¯Úîxtí¹!l‘	Qœ·Êy9ª¾Ó%´ý g‚+†k»ÇòÖ"«Edq•HdÁéó.:Š*WÀJ…iÑ§iB’»vvWZ)uºëÔÕÙÅêO:Ùø_ÃS {‰véï„Y‰ó8 ~d€9 U_ø\zÏýþÿ Àÿ ã”Ÿ®®ìî¼I¤xVìé7b+ym#i¤œýÖK7Ý9‘ÁÊõ®'X´»°Ö.í¯ÒîãùÉ	Œ¢1ä¨òþQŒã§Lb½*<%L]J‚J)5ïJí>¶¾Þ„9IE;ž‘oñÅ7z%æ±†|(ö6l«pâ×æŒ±ržnìp1×Ðã;þ³ÿ Bÿ …ÿ ðÿ øåGà÷–Ëá—oÍ¢Kë%ŒÏhÙÄ§·F+¹[iÈänÊãÃZ.‘âí^êg´]ZÖ‹%‚ŽÎ„Hó¹’7)Y‡Ëå€üÜ¾mjØ,=j´§Jü­òÙµ{*m§«Öõ<––ß{JM&Ÿõ¯ùü.=gþ…ÿ ÿ àÿ ñÊµ¦üRñ­¨Áagáß
+=Ìí²${Cfì2Ò“Ðòp&‘ô»}Lø€L¶I4mBÓþÓj’4i$¬œù€—SÒdtaÏ5ÔÜh:Nâ½CPÒ´ëc4:íœW
+Ñ‰O´h’i&
+xˆÜ7žn*kâ²ø©Fmî»»^Ðjúíj‘ëÝv»J}_õ¯ù¶>;ñ†¥¯Ï¡Zø[Â©ÂÎ[„;á€-0F ž=cÿ ÂãÖè_ð¿þ ?ÿ ­?ÙÝ/íwºÚaåÞÞÌùŒü±²Éµ¢ëƒÐî¢©x[N†ÛÀ÷Ó/‡fÔõÈµao=¼PG$ðÄ#$nI"—bï	Ú	#ùqZ9a!/zš~í6­&µ›’wnV²²·¯˜½ç×¿àCÿ Yÿ ¡Âÿ ø ÿ ürø\zÏýþÿ Àÿ ã•®¶At¯êiáy´ùá{[s]¥´¬¥gÔaÂ©ÞPåPãå®CNÕ÷âê^k4¬í	¹˜-ÉŒ†Ë2àù°6à cºhC]Tp£¤üú_–2³åo¤·JKG¾—MÉ[Scþ³ÿ Bÿ …ÿ ðÿ øå]ÿ …™âì?í¯øF</ýŸöŸ²yßb?ëvîÛ·ÍÏÝç8Åyuwš}Ö¯ðvK6ÚkÛ¸µñ4–öÑ™$HÍ¹Š®HRAé‘]XìK‘YÉ'vôOæLg'ÔÕÕþ&xŸBÕ&Óu/x^¸vù‘ýˆ¶2¡‡+)ïR[üGñMÞ‰y¬AáŸ
+=›*Ü8µù£,@\§›»œŒuô8Óñ|–“^üBÔ£‚ÂæãLŸOkižÞ)¼·eH§p;†[ 0È†iúÝ„µø–Ö:d)d’iÞLrDL>a*íÐíilåy ‚§Á§‰ÃN•5ìR©.Kë+{ÞË™-n´ª­{êö×V¥w®šþ¿äsð¸õŸúü/ÿ €ÿ Ç(ÿ …Ç¬ÿ Ð¿áü þ9]uÇ†´]#ÅÚ½Ô6Ïhºµ¬K/œ‘çs$nR,³—Ë )ù¸y§Òíôm3â ]2Ù$Ñµ[OûMªHÑ¤’²sæ]L{H‘Ñ‡<×MV[Y'
+/U{Ïí¸­uÒÎJûéª¾‰ËS[±tßŠ^"Õµ,,ü;áG¹¶DhcÝ†ZP2zžN äÕëøÃR×çÐ­|-áGÔágG­ÂÈpÀ˜#€O ž‚¶®4'@ñ^¡¨iZu±švÎ+…hÄ‰§Ú4I4“<DnÏ
+·á{;¥ý¢.÷[L<»ÛÙŸ1Ÿ–6Y6±ôS½pzÃÔW?Ö°•iU­F’J4Ü×3•ïdìí-µK¿ÊÅZI¤ßS3þ³ÿ Bÿ …ÿ ðÿ øåZÓ~)x‹VÔ`°³ðï…ævÙ=¡Œ3vi@Éèy8“Qø[N†ÛÀ÷Ó/‡fÔõÈµao=¼PG$ðÄ#$nI"—bï	Ú	#ùq[z]•¦©u­[hVvwñköö÷–¢D»Kµ
+²I(#å,¬ž£iº±5p4ÝHÂŽ±Ñ>mÞ›®kÛ]úù6“˜©;jbÞ|XñŸ}qeuá¿Çqo#E*}…ŽÖS‚2$Áäv­/Çž-Ö4ëBÏÃ~6¶¬«<“"B#-÷woœ`À=	Èƒ\á–ëé4OBw
+êA*ÎYO=ˆ ƒÜ]Ãx®#ðWŠ®—C}^?>Ãm¡‰Ùn
+JY”mê@ ‘ÈŒnG/†*\Ï“víï8§oywº»·qFRsåo¹&¯ñ3Äú©6›©xcÂð]Ã·ÌìE±•9YHèGz¥ÿ Yÿ ¡Âÿ ø ÿ ür¦Ó|9öÔôïG:]·ÙÄš˜lÜ[ÌbBÄáXËò<P»µ5]&îÝÍ¤øgM:¢êQEVV1ß/ö’Æ)²6õfÉ2‘– ‚FÝ«Ïírø¸ÓtÔ›·¼¤ÔÒÕ;·×U«Z_tÛ´÷¹‹ÿ Yÿ ¡Âÿ ø ÿ ürø\zÏýþÿ Àÿ ã•¯ga±r|)ms¯.²!¹±Ò’+³Gääa]'T]ûó€>o—#nÑZy¼µñ»Øø^ÎJÂæÖK[bŠøÁ#’“(!HuÀc°‚¨z W!ûl¾ï÷:&•ùû¸®»^Iój­¯dËO¿àV±ø£â]Iç[?øjcq.Ý=ð‘ Ë1>g Ì$
+~‘ñ3Äúî©›¦øcÂóÝÍ»ËìEs…,yi@èz×¶’ÓMø‡ã}D‚ÀBÚ]Áµ·ŽÞ)î<¸ËD¹°Ü÷\¨Áùx®kÀ5Ã|Xf­¦ÙÜãÎûtD3EÈOE°|¸ÁùxäTsá%BµeIG–šœS”¯gê®¶Ñh÷ÒúÜ=ë¥~¶þ³ÿ Bÿ …ÿ ðÿ øåð¸õŸúü/ÿ €ÿ Ç*=J¹‹À²éš2]ø†-d[ÜÂöu40ŽÕ¶á†p	#ã½¯Yiü,	tË4*æÊK3öxåXd—ä™~`A\–UHà8Ú¤òøÖt£FúÛâÍëÙ74Ö÷I¿&—=¯ëúF/ü.=gþ…ÿ ÿ àÿ ñÊ½ÿ ÷Åßóå¢à<¿üv¹Ÿ‰zmž“ñV³°·K{ehÙbNKF¬p;±àp:+“¯W	—à18xW;)¤Ö¯ª¿r%9ÅµsÔ¿á~ø»þ|´Oü—ÿ ŽÑÿ ÷Åßóå¢à<¿üv¼¶ŠèþÇÁ'âÿ Ì^Ò]ÏRÿ …ûâïùòÑ?ð_þ;Gü/ßÏ–‰ÿ €òÿ ñÚòÚ(þÇÁ'âÿ Ì=¤»ž¥ÿ ÷Åßóå¢à<¿üvø_¾.ÿ Ÿ-ÿ åÿ ãµå´Qý‚þOÅÿ ˜{Iw=Kþï‹¿çËDÿ Àyøíð¿|]ÿ >Z'þËÿ ÇkËh£ûüŸ‹ÿ 0ö’îz—ü/ßÏ–‰ÿ €òÿ ñÚ?á~ø»þ|´Oü—ÿ Ž×–ÑGö>ù?þaí%Üõ/ø_¾.ÿ Ÿ-ÿ åÿ ã´ÂýñwüùhŸø/ÿ ¯-¢ì|ò~/üÃÚK¹ê_ð¿|]ÿ >Z'þËÿ Çhÿ …ûâïùòÑ?ð_þ;^[EØø/äü_ù‡´—sÔ¿á~ø»þ|´Oü—ÿ ŽÑÿ ÷Åßóå¢à<¿üv¼¶Š?±ð_Éø¿ói.ç©ÂýñwüùhŸø/ÿ £þï‹¿çËDÿ Àyøíymcà¿“ñæÒ]ÏRÿ …ûâïùòÑ?ð_þ;Gü/ßÏ–‰ÿ €òÿ ñÚòÚ(þÇÁ'âÿ Ì=¤»ž¥ÿ ÷Åßóå¢à<¿üvø_¾.ÿ Ÿ-ÿ åÿ ãµå´Qý‚þOÅÿ ˜{Iw=Kþï‹¿çËDÿ Àyøíð¿|]ÿ >Z'þËÿ ÇkËh£ûüŸ‹ÿ 0ö’îu~&ñ~£ãIŽ£©Åkñ,p(¶FUÚ<Æä31ÎX÷ô¢°-ÿ ãÂoúêŸÉ¨¯—ÅÒ*ó„’f©Ý]¿ÿ …ÿ ®Qÿ èªÕ«ÿ øø_úåþ€*­}n]þëC	nQEvˆ(¢Š (¢Š (¢Š (¢Š (¢Š (¢Š +FÃZºÓ`h`ŠÁÕ›q7|¶pÞ‘ÇLãó¬ê**S…EË4šóÔ¶Å«ýBmJušt¶FUÚ½´p.2OÝTÏ\gòª´QUF–*ÈŠ(¦EPZ6ÕÖ›CV¬Û‰¸Óà³€>ôˆÄ:ggQQRœ*.Y¤×ž ¶-_êjS¬Ó¥²2®Ð-í£q’~ìj žzã?•U¢Š¨Â0\±V@QE0
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+ÛÓ|K6™áÝSEK9`Ô¶ùòËæyƒg)· ÚÙ#ŽIç#ŠÄ¢³­F£ËQ]]?šw_sÔk`¢Š+@
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€.[ÿ Ç„ßõÕ?“QE¿üxMÿ ]Sù5ñ9‡ûÔýMã°Ûÿ øø_úåþ€*­Z¿ÿ …ÿ ®Qÿ èª×Ôåßî°ô1–áEWh‚Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( –ÿ ñá7ýuOäÔQoÿ ×TþME|Naþõ?Sxì6ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõ9wû¬=e¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š(å¿üxMÿ ]Sù5[ÿ Ç„ßõÕ?“Q_˜½OÔÞ;¿ÿ …ÿ ®Qÿ èªÕ«ÿ øø_úåþ€*­}N]þëCnQEvˆ(¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š ¹oÿ ×TþMEÿ ñá7ýuOäÔWÄæïSõ7ŽÃoÿ ãáë”ú ªµjÿ þ>þ¹Gÿ  
+«_S—ºÃÐÆ[…Q]¢
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€.[ÿ Ç„ßõÕ?“QE¿üxMÿ ]Sù5ñ9‡ûÔýMã°Ûÿ øø_úåþ€*­Z¿ÿ …ÿ ®Qÿ èª×Ôåßî°ô1–áEWh‚Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( –ÿ ñá7ýuOäÔQoÿ ×TþME|Naþõ?Sxì6ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõ9wû¬=e¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š(å¿üxMÿ ]Sù5[ÿ Ç„ßõÕ?“Q_˜½OÔÞ;¿ÿ …ÿ ®Qÿ èªÕ«ÿ øø_úåþ€*­}N]þëCnQEvˆ(¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š ¹oÿ ×TþMEÿ ñá7ýuOäÔWÄæïSõ7ŽÃoÿ ãáë”ú ªµjÿ þ>þ¹Gÿ  
+«_S—ºÃÐÆ[…Q]¢
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€.[ÿ Ç„ßõÕ?“QE¿üxMÿ ]Sù5ñ9‡ûÔýMã°Ûÿ øø_úåþ€*­Z¿ÿ …ÿ ®Qÿ èª×Ôåßî°ô1–áEWh‚Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( –ÿ ñá7ýuOäÔQoÿ ×TþME|Naþõ?Sxì6ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõ9wû¬=e¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š(å¿üxMÿ ]Sù5[ÿ Ç„ßõÕ?“Q_˜½OÔÞ;¿ÿ …ÿ ®Qÿ èªÕ«ÿ øø_úåþ€*­}N]þëCnQEvˆ(¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š ¹oÿ ×TþMEÿ ñá7ýuOäÔWÄæïSõ7ŽÃoÿ ãáë”ú ªµjÿ þ>þ¹Gÿ  
+«_S—ºÃÐÆ[…Q]¢
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€.[ÿ Ç„ßõÕ?“QE¿üxMÿ ]Sù5ñ9‡ûÔýMã°Ûÿ øø_úåþ€*­Z¿ÿ …ÿ ®Qÿ èª×Ôåßî°ô1–áEWh‚Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( –ÿ ñá7ýuOäÔQoÿ ×TþME|Naþõ?Sxì6ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõ9wû¬=e¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š(å¿üxMÿ ]Sù5[ÿ Ç„ßõÕ?“Q_˜½OÔÞ;¿ÿ …ÿ ®Qÿ èªÕ«ÿ øø_úåþ€*­}N]þëCnQEvˆ(¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š ¹oÿ ×TþMEÿ ñá7ýuOäÔWÄæïSõ7ŽÃoÿ ãáë”ú ªµjÿ þ>þ¹Gÿ  
+«_S—ºÃÐÆ[…Q]¢
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€.[ÿ Ç„ßõÕ?“QE¿üxMÿ ]Sù5ñ9‡ûÔýMã°Ûÿ øø_úåþ€*­Z¿ÿ …ÿ ®Qÿ èª×Ôåßî°ô1–áEWh‚Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( –ÿ ñá7ýuOäÔQoÿ ×TþME|Naþõ?Sxì6ÿ þ>þ¹Gÿ  
+«V¯ÿ ãáë”ú ªµõ9wû¬=e¸QEÚ ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š(å¿üxMÿ ]Sù5[ÿ Ç„ßõÕ?“Q_˜½OÔÞ;¿ÿ …ÿ ®Qÿ èªÕ«ÿ øø_úåþ€*­}N]þëCnQEvˆ(¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š µm¨ÝÚFc‚]ŠNâ6ƒÏâ*;›©®äNûØ à?
+†ŠÍP¤§íW7{k÷…ÞÁEV€QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE \·ÿ 	¿ëª&¢‹øð›þº§òj+âs÷©ú›Ça·ÿ ñð¿õÊ?ý UZµÿ ÿ \£ÿ ÐU¯©Ë¿Ýaèc-ÂŠ(®ÑQ@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@Q@-ÿ ãÂoúêŸÉ¨¢ßþ<&ÿ ®©üšŠøœÃýê~¦ñØmÿ ü|/ýrÿ @V­_ÿ ÇÂÿ ×(ÿ ôUkêrï÷XzËp¢Š+´AEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPËøð›þº§òj(·ÿ 	¿ëª&¢¾'0ÿ zŸ©¼vÿ ÿ \£ÿ ÐU«Wÿ ñð¿õÊ?ý UZúœ»ýÖ†2Ü(¢ŠíQE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QErßþ<&ÿ ®©üšŠ-ÿ ãÂoúêŸÉ¨¯‰Ì?Þ§êo†ßÿ ÇÂÿ ×(ÿ ôUjÕÿ ü|/ýrÿ @V¾§.ÿ u‡¡Œ·
+(¢»DQE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE \·ÿ 	¿ëª&¢‹øð›þº§òj+âs÷©ú›Ça.¶M"º±»U Žàý*'ý¯ÒŠ(§˜b©ÁB²^KüÅ0òÚý(òÚý(¢¯ûWüÿ ‚ÿ !rD<Ÿö¿J<Ÿö¿J(£ûWüÿ ‚ÿ  äˆy?í~”y?í~”QGö®3ùÿ þAÉòÚý(òÚý(¢í\góþüƒ’!äÿ µúQäÿ µúQEÚ¸Ïçüù$CÉÿ kô£Éÿ kô¢Š?µqŸÏø/òH‡“þ×éG“þ×éEjã?Ÿð_ä‘'ý¯Ò'ý¯ÒŠ(þÕÆ?à¿È9"Oû_¥Oû_¥Qý«ŒþÁrD<Ÿö¿J<Ÿö¿J(£ûWüÿ ‚ÿ  äˆy?í~”y?í~”QGö®3ùÿ þAÉòÚý(òÚý(¢í\góþüƒ’!äÿ µúQäÿ µúQEÚ¸Ïçüù$CÉÿ kô£Éÿ kô¢Š?µqŸÏø/òH‡“þ×éG“þ×éEjã?Ÿð_ä‘'ý¯Ò'ý¯ÒŠ(þÕÆ?à¿È9"Oû_¥Oû_¥Qý«ŒþÁrD<Ÿö¿J<Ÿö¿J(£ûWüÿ ‚ÿ  äˆy?í~”y?í~”QGö®3ùÿ þAÉòÚý(òÚý(¢í\góþüƒ’!äÿ µúQäÿ µúQEÚ¸Ïçüù$CÉÿ kô£Éÿ kô¢Š?µqŸÏø/òH‡“þ×éG“þ×éEjã?Ÿð_ä‘'ý¯Ò'ý¯ÒŠ(þÕÆ?à¿È9"Oû_¥Oû_¥Qý«ŒþÁrD<Ÿö¿J<Ÿö¿J(£ûWüÿ ‚ÿ  äˆy?í~”y?í~”QGö®3ùÿ þAÉòÚý(òÚý(¢í\góþüƒ’!äÿ µúQäÿ µúQEÚ¸Ïçüù$CÉÿ kô£Éÿ kô¢Š?µqŸÏø/òH‡“þ×éG“þ×éEjã?Ÿð_ä‘'ý¯Ò'ý¯ÒŠ(þÕÆ?à¿È9"Oû_¥Oû_¥Qý«ŒþÁrD<Ÿö¿J<Ÿö¿J(£ûWüÿ ‚ÿ  äˆy?í~”y?í~”QGö®3ùÿ þAÉòÚý(òÚý(¢í\góþüƒ’!äÿ µúQäÿ µúQEÚ¸Ïçüù$CÉÿ kô£Éÿ kô¢Š?µqŸÏø/òH‡“þ×éG“þ×éEjã?Ÿð_ä‘'Œ¤vIv‘[§  ÆŠ(®*•%RNswl¤¬ÿÙ_6http://www.brokenthorn.com/Resources/images/intGen.jpgOŠbplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_6http://www.brokenthorn.com/Resources/images/intGen.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl¼pm ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Sat, 22 Mar 2008 16:48:02 GMTVApache_Mon, 12 Apr 2021 11:22:42 GMT_max-age=2592000_Sat, 13 Mar 2021 11:22:42 GMTU25223_Upgrade, Keep-Alive_Ä
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDExOjIyOjQyIEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDExOjIyOjQyIEdNVKEfVTI1MjIzoSFfEBNVcGdyYWRlLCBLZWVwLUFsaXZloSNfEBQiNjI4Ny00NDkwOTVkYWQxNDgwIqElVWJ5dGVzoSdfEB1TYXQsIDIyIE1hciAyMDA4IDE2OjQ4OjAyIEdNVAAIACMAMAA4AEMASABPAFcAZQBqAHkAhACJAJcApQCnALIAtAC3ALkAzgDQANsA3QDkAOYBBgEIARoBHAE8AT4BRAFGAVwBXgF1AXcBfQF/AAAAAAAAAgEAAAAAAAAAKAAAAAAAAAAAAAAAAAAAAZ8=_"6287-449095dad1480"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí&+6?EHQZ\^emx‡‰‹‘“•—™›Ÿ¡£²´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÝåðþ /:CHM[fi~ž¥Å×÷ýÛòý"/4HL`             ~              nÔ$%&OÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      ) 1;    Â        ‚     €{    È        €€           Ø       è       ð        „‚(     }=     Ui          õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  ) " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ÷Òq\ï‹|[eáM4\N¾uÔ¹[[Ul4Ì=û(ÈËvÈêHñw‹¬|%¦‹€eº—+mj­†™‡òQ‘–í‘Ô”Ú%Ö¡©KâzQ%üƒ…Æ…Q’œ¼’I$šãÆc#‡™ÍˆÄÆ’Óq.ü?¨ø†9õÝgPhu–Ä°:‹læUSœ¦:Œƒó’r–ÿ /tûxí5Þúî!¶K•Ô<7Ð”Bœc88ÎH p-XY_üBÕÂÊWµÐíŸwŠ9r9Ø™±È=Â‚	çjŸbÓtÛ=NƒO°·ö°.Ô9¹$žI$’I$’I$šÃ.Ž!§R³ßdc„]e'¹óùºÔ5^\x:ëhÛX ä"‘´g#wI&Ÿ¬Kæ\ÙÁ{<öúD’(ºžÝ’(Ï?/_NÇœ66ŸYñÏàñU¢ÝZ²ÛkË‹{œ|®:ˆäÇUÉ8=T’Gp|žÚâC5Æ“ªÛ47Ð.h$$ŒvÎä‚ ò+—Ft«,GÄŽ|E)S©í¨÷ÏM°Ñ¬íô……tõŒ<–Ü¬§Á¿‹9Îã’IÉ$œÖxg†|Qsàk¿²]4—óò‚ÍjÇ’Ê:‘œîQÉå†C{\)soöÒC4¨xåI2®§AAë^½
+Ð­h•±©Äœô®3Ç>‡ÅV«wlËm¬Û/ú=ÆßË“”É8=T’GRgÚŠÑÅIY—(©+3æéµQcowe­Û47–ÙŽh%É uÇ±#‚ ž	ÑÓ>üGŸN†m?Z“H´ŠÉõàhÁ$ó)
+OÞ#¨Ï89{âOü–ÿ Ü?ÿ JÞ½ÄtË†ÂBŒ¥ËÔä£‡Œ±ÿÙ_4http://www.brokenthorn.com/Resources/images/left.jpgO‚bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_4http://www.brokenthorn.com/Resources/images/left.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl¼wî ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Fri, 24 Jul 2009 23:29:22 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1540_Upgrade, Keep-Alive_À
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDEwOjEzOjE0IEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDEwOjEzOjE0IEdNVKEfVDE1NDChIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QEyI2MDQtNDZmN2JmOTViMTg4MCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyMiBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCyALQAtwC5AM4A0ADbAN0A5ADmAQYBCAEaARwBPAE+AUMBRQFbAV0BcwF1AXsBfQAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGd_"604-46f7bf95b1880"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$)4=CFOXZ\ckv…‡‰‹‘“•—™›Ÿ¡°²´¶¸º¼¾ÀÂÄÆÈÊÌÎÛãîü-8AFKYdg|œ£ÃÕõúÔêõû ',@DX             ~              fÔ()*OdÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      )       Â                     È                     Ø       è       ð          (       =                 õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  % " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? eÕíçuKCR¸’ÖêÙÊZÚFJ›&S‘Ø6íÀdðI¦ à¯>¥/ö&¶-b1”|anÔÿ µÆHöÈèÁ[ã>©'öÞˆ«µÓ -Úáoö°8cØ {à#0x‚×ky–º…«äVX$RGÔ`ŽG\Ž ŠñëU«…­Ï-`ÿ Ëœêaê^Z¦{ÖáŒçŠ+„ðWŒßPŸû\Û±ù¢Ý¨þ!þß#ñ^
+W«
+‘œy¢zPœf®ŽÞkˆm­äžâdŠÔ¼’Hvª($“ÐÞ¼7VÕm¼Mã6Ö4ËakeˆÚà‚­wâuÎ FìNpªž/ñœž1»û£<:NS”k¶‡aÙsÈSþñç2mÍþ©¨C¡hP—¼¶HXTpYˆûª23ß$–â¼Ü]gWýž’½÷<üMgUû:h»©üC«Ùèº,mQ[Í[…b¿fÚFX¸åœsë€l
++×¼!àë/éf¶ýõÔ¸k«¶Pf8þ;Tp9êI$®¼.4)(^çM?³®yÅ=×Áwö÷:Qhíµ¥²ŽM¹Ùè§xã.ë¾ð…‡„´Ãkl|Û™6µÍÓ(3ÇÂ£«Ðdõ$’Q[Ó„T¤Ò*Š›i=QVnÿÙ_5http://www.brokenthorn.com/Resources/images/right.jpgO0bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_5http://www.brokenthorn.com/Resources/images/right.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl¼V ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpeg_timeout=2, max=98_Fri, 24 Jul 2009 23:29:24 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1380ZKeep-Alive_”
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDlppbWFnZS9qcGVnoRBfEBF0aW1lb3V0PTIsIG1heD05OKESWlVzZXItQWdlbnShFFZBcGFjaGWhFl8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRhfEA9tYXgtYWdlPTI1OTIwMDChGl8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoRxUMTM4MKEeWktlZXAtQWxpdmWhIF8QEyI1NjQtNDZmN2JmOTc5OWQwMCKhIlVieXRlc6EkXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyNCBHTVQACAAhAC4AOQA+AEUATQBbAGAAbwB6AH8AjQCbAJ0AqACqAL4AwADLAM0A1ADWAPYA+AEKAQwBLAEuATMBNQFAAUIBWAFaAWABYgAAAAAAAAIBAAAAAAAAACUAAAAAAAAAAAAAAAAAAAGC_"564-46f7bf9799d00"ZUser-AgentUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë#(3<BENWY[bjuƒ…‡‰‹‘“•—™›«­¯±³µ·¹»½¿ÁÃÅÇÔßíôü
+)27<JUi‰°ÂâçòŠ «±¶ÌÐÝâöú             z                          1   <   N   d   ‚   ‘   ¨  ïr  ï|  ï‚  ï¶  ï·  ï¾  ïÇ  ïÝ  ú  ú™  úÔ  ˜ @ @ @C Hó Hü Àâ Àí Á+ É¾ ÉÇ ,R ,‹ 5 5" ;* ;a Cç Cð IX I             +             QÄ

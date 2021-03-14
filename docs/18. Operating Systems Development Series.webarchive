@@ -1,0 +1,1700 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameOö<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"><!-- saved from url=(0056)http://www.gamedev.net/reference/articles/article290.asp --><html><head><title>Operating Systems Development Series</title> 
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><link href="Files/reference.css" type="text/css" rel="stylesheet"> 
+<meta content="MSHTML 6.00.6000.16441" name="GENERATOR"></head> 
+<body text="#000000" vlink="#666699" alink="#000000" link="#666699" bgcolor="#ffffff" leftmargin="0" background="Files/watermark.gif" topmargin="0" marginheight="0" marginwidth="0"> 
+
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+ 
+        <div id="ad_main"> 
+ 
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+//-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+ 
+     </td> 
+  </tr> 
+</tbody></table> 
+
+
+<table cellspacing="0" cellpadding="3" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td class="tblhdr">Operating Systems Development Series</td> 
+</tr> 
+  <tr> 
+ 
+    <td align="middle" colspan="2"></td></tr></tbody></table> 
+<table cellspacing="0" cellpadding="5" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td> 
+ 
+<!-- Title --> 
+ 
+      <center><span class="title">Operating Systems Development - Virtual Memory</span> 
+ 
+<br><span class="author">by Mike, 2008</span></center> 
+ 
+ 
+      <p>This series is intended to demonstrate and teach operating system development from
+	the ground up.</p> 
+ 
+	<h1>Introduction</h1> 
+ 
+	Welcome back! Jeeze, I cant believe we are already going on tutorial eighteen. See? OS development
+	isn't too bad ;)
+	<p> 
+	In the last tutorial we have looked at physical memory management and even developed a full
+	working physical memory manager. In this tutorial, we will take it to a new level by introducing
+	paging and virtual memory. We will learn how we can mimic a full virtual address space for
+	our programs and learn how we can manage virtual memory.
+	</p><p> 
+	Heres the list for this chapter:
+ 
+	</p><ul> 
+ 
+ 	<li>Virtual Memory</li> 
+	<li>Memory Management Unit (MMU)</li> 
+	<li>Translation Lookaside Buffer (TLB)</li> 
+	<li>PAE and PSE</li> 
+	<li>Paging Methods</li> 
+	<li>Pages and Page Faults</li> 
+ 
+	<li>The Page Table</li> 
+	<li>The Page Directory Table</li> 
+	<li>Implimenting Paging</li> 
+	</ul> 
+	...And a whole lot more!<p> 
+ 
+	This tutorial will build off of the physical memory manager we developed in the last chapter.
+	This may also be the last chapter on memory management!
+	</p><p> 
+ 
+	<i>With that in mind, lets get started!</i> 
+ 
+	</p><h1>Virtual Memory Concepts</h1> 
+ 
+	<h2>The need for Virtualization</h2> 
+ 
+	You might be curious as to why we should worry about this "virtual memory" thing. After all,
+	we already have a nice and effective way of managing memory, right? Well, sort of. While
+	it manages blocks of memory well, thats all our physical memory manager does. This alone
+	is pretty useless, don't you think?
+	<p> 
+	There are alot of very important concepts that we should look at to better understand virtual
+	memory and the need for it.
+	</p><p> 
+ 
+	Right now all we have is a way to directly and indirectly work with physical memory.
+	There are alot of big problems with this that you may
+	already know (or even have experience with yourself ;) ) One that we have just seen was when
+	we would access to a block of memory that does not exist. Knowing that both programs and data
+	are in memory, it is also possible for programs to access each others memory spaces, or even
+	corrupt and overwrite themselves or other programs without knowing it. After all, there is no
+	memory protection.
+	</p><p> 
+	Also, it is not always possible to load a file or program into a sequencial area of memory.
+	This is when fragmentation happens. For an example, lets say we have 2 programs loaded. One at
+	0x0, the other at 0x900. Both of these programs requested to load files, so we load the data files:
+	</p><p> 
+	</p><p></p><center><img src="http://www.brokenthorn.com/Resources/images/MemFrag.gif"></center><p> 
+	</p><p> 
+	Notice what is happening here. There is alot of unused memory between all of these
+	programs and files. Okay...What happens if we add a bigger file that is unable to fit
+	in the above? This is when big problems arise with the current scheme. We cannot
+	directly manipulate memory in any specific way, as it will currupt the currently
+	executing programs and loaded files.
+	</p><p> 
+	As you can see, there are alot of problems that will arise when working with physical memory.
+	If your operating system is single-tasking (Where only one ring 0 program runs at a time),
+	then this might be fine. For anything more complex, we will be needing more control over how
+	memory works within the system. What we need is a way to abstract physical memory in such a
+	way that we do not need to worry about these details anymore. I think you know where I am
+	getting at here -- this is where virtualization comes in. Lets take a look!
+ 
+	</p><h2>Virtual Memory</h2> 
+ 
+	<h3>Concepts</h3> 
+ 
+	Understanding what virtual memory is can be a little tricky. Virtual Memory is a special
+	Memory Addressing Scheme implimented by both the hardware and software. It allows non
+	contigous physical memory to act as if it was contigius memory.
+	<p> 
+	Notice that I said <i>"Memory Addressing Scheme"</i>. What this means is that virtual memory
+	allows us to control what a <b>Memory Address</b> refers to.
+ 
+	</p><h3>Virtual Address Space (VAS)</h3> 
+ 
+<b>A Virtual Address Space is a Program's Address Space.</b> One needs to take note that this does not have to do
+with <b>Physical Memory</b>. The idea is <b>so that each program has their own independent address space.
+This insures one program cannot access another program, because they are using a different address space.</b> 
+<p> 
+Because <b>VAS</b> is <b>Virtual</b> and not directly used with the physical memory,
+it allows the use of other sources, such as disk drives, as if it was memory.
+That is, <b>It allows us to use more "memory" then what is physically installed in the system.</b> 
+ 
+</p><p> 
+This fixes the "Not enough memory" problem.
+</p><p> 
+Also, as each program uses its own VAS, we can have each program always begin at base 0x0000:0000. This solves the relocation problems discussed ealier, as well as memory fragmentation--as we no longer need to worry about allocating continous physical blocks of memory for each program.
+</p><p><b> 
+Virtual Addresses are mapped by the Kernel trough the MMU. More on this a little later.</b> 
+ 
+	</p><h3>Memory Management Unit (MMU)</h3> 
+ 
+The <b>Memory Management Unit (MMU)</b> (Also known as <b>Paged Memory Management Unit (PMMU)</b>) sets between
+(Or as part of) the <b>microprocessor</b> and the <b>memory controller</b>. While the <b>memory controller's</b> 
+ 
+primary function is the translation of memory addresses into a physical memory location, the <b>MMU</b>'s
+purpose is the translation of virtual memory addresses into a memory address for use by the
+<b>memory controller</b>.
+<p> 
+This means--<b>when paging is enabled, all of our memory refrences go through the MMU first!</b> 
+ 
+	</p><h3>Translation Lookaside Buffer (TLB)</h3> 
+ 
+This is a cache stored within the processor used to improve the speed of virtual address translation. It is useually
+a type of <b>Content-addressable memory (CAM)</b> where the search key is the virtual address to translate, and
+the result is the physical frame address. If the address is not in the TLB (A <b>TLB miss</b>), the MMU searches through the page table to
+find it. If it is found in the TLB, it is a <b>TLB Hit</b>. If the page is not found or invalid inside of the page table during a TLB miss,
+the processor will raise a <b>Page Fault</b> exception for us.
+ 
+ 
+<p> 
+Think of a TLB as a table of pages stored in a cache instead of in RAM--as that is basically what it is.
+</p><p> 
+<b>This is important!</b> The pages are stored in <b>page tables</b>. We set up these page tables to describe how physical
+addresses translate to virtual addresses. In other words: <b>The TLB translates virtual addresses into physical addresses
+using the page tables *we* set up for it to use!</b> Yes, thats right--we set up what virtual addresses map to what. We will
+look at how to do this a little later, cool? Dont worry--its not that bad ;)
+ 
+</p><h3>Paged Virtual Memory</h3> 
+ 
+Virtual Memory also provides a way to indirectly use more memory then we actually have within the
+system. One common way of approching this is by using <b>Page files</b>, stored on a hard drive or
+a <b>swap partition</b>.
+ 
+<p> 
+Virtual Memory needs to be mapped through a hardware device controller in order to work, as it is
+handled at the hardware level. This is normally done through the <b>MMU</b>, which we will look at later.
+</p><p> 
+For an example of seeing virtual memory in use, lets look at it in action: 
+</p><p> 
+</p><center><img src="http://www.brokenthorn.com/Resources/images/virtual-memory%5B1%5D.png"></center><p> 
+</p><p> 
+Notice what is going on here. Each memory block within the Virtual Addresses are linear. Each Memory Block is mapped to either it's location within the real physical RAM, or another device, such as a hard disk. The blocks are swapped between these devices as an as needed bases. This might seem slow, but it is very fast thanks to the MMU.
+</p><p> 
+ 
+<b>Remember: Each program will have its own Virtual Address Space--shown above.</b> Because each address space is linear, and begins from 0x0000:00000, this immiedately fixes alot of the problems relating to memory fragmentation and program relocation issues.
+</p><p> 
+Also, because Virtual Memory uses different devices in using memory blocks, it can easily manage more then the amount of memory within the system. i.e., If there is no more system memory, we can allocate blocks on the hard drive instead. If we run out of memory, we can either increase this page file on an as needed bases, or display a warning/error message,
+ 
+</p><p> 
+Each memory "Block" is known as a <b>Page</b>, which is useually 4096 bytes in size. We will cover <b>Pages</b> a little
+later.
+</p><p> 
+Okay, so a <b>Page</b> is a memory block. <b>This memory block can either be mapped to a location in memory, or
+to another device location, such as a hard disk.</b> This is an <b>unmapped</b> page. If software accessed an
+unmapped page (The page is not currently in memory), it needs to be loaded somehow. This is done by our <b>Page
+fault handler</b>.
+ 
+ 
+</p><p> 
+We will cover everything later, so do not worry if this sounds hard :)
+</p><p> 
+Because we are talking about paging in general, I think now would be a good idea to look at some extensions
+that may be used with paging. Lets have a look!
+ 
+</p><h2>PAE and PSE</h2> 
+ 
+<h3>Physical Address Extension (PAE)</h3> 
+ 
+PAE is a feature in x86 microprocessors that allows 32 bit systems to access up to 64 GB of physical memory.
+PAE supported motherboards use a 36 line address bus to achieve this. Paging support with PAE enabled (Bit 5
+in the cr4 register) is a little different then what we looked at so far. I might decide to cover this a little
+later, however to keep this tutorial from getting even more complex, we will not look at it now. However, I
+do encourage readers to look into it if you are interested. ;)
+ 
+<h3>Page Size Extension (PSE)</h3> 
+ 
+PSE is a feature in x86 microprocessors that allows pages more then 4KB in size. This allows the x86 architecture
+to support 4MB page sizes (Also called "huge pages" or "large pages") along side 4KB pages.
+ 
+ 
+	<h1>The World of Paging</h1> 
+ 
+	<i>Let the madness begin :)</i> 
+ 
+	<h2>Introduction</h2> 
+ 
+Woo-hoo! Welcome to the wonderful and twisted-minded world of paging! With all of the fundemental concepts that we have went over already, you should have a nice and good grasp at what paging and virtual memory is all about. This is a great start, don't you think?
+<p> 
+Okay, cool...but, how do we actually impliment it? How does paging work on the x86 architecture? Lets take a look!
+ 
+</p><h2>Pages</h2> 
+ 
+A <b>Page</b> (Also known as a <b>memory page</b> or <b>virtual page</b>) is a fixed-length block of memory.
+This block of memory can reside in physical memory. Think of it like this: A page describes a memory block,
+and where it is located at. This allows us to "map" or "find" the location of where that memory block is at.
+We will look at mapping pages and how to impliment paging a little later :)
+ 
+ 
+<p> 
+The i86 architecture uses a specific format for just this. It allows us to keep track of a single page,
+and where it is currently located at. Lets take a look..
+ 
+	</p><h3>Page Table Entries (PTE)</h3> 
+ 
+	A page table entry is what represents a page. We will not cover the page table until a little
+	later so dont worry too much about it. However we will need to look at what an entry in the
+	table looks like now. The x86 architecture defines a specific bit format
+	for working with pages, so lets take a look at it.
+ 
+<ul> 
+<li><b>Bit 0 (P):</b> Present flag</li> 
+<ul> 
+<li>0: Page is not in memory</li> 
+<li>1: Page is present (in memory)</li> 
+ 
+</ul> 
+ 
+<li><b>Bit 1 (R/W):</b> Read/Write flag</li> 
+<ul> 
+<li>0: Page is read only</li> 
+<li>1: Page is writable</li> 
+</ul> 
+<li><b>Bit 2 (U/S):</b>User mode/Supervisor mode flag</li> 
+<ul> 
+<li>0: Page is kernel (supervisor) mode</li> 
+ 
+<li>1: Page is user mode. Cannot read or write supervisor pages</li> 
+ 
+</ul> 
+<li><b>Bits 3-4 (RSVD):</b> Reserved by Intel</li> 
+<li><b>Bit 5 (A):</b> Access flag. Set by processor</li> 
+<ul> 
+<li>0: Page has not been accessed</li> 
+<li>1: Page has been accessed</li> 
+ 
+</ul> 
+<li><b>Bit 6 (D):</b> Dirty flag. Set by processor</li> 
+ 
+<ul> 
+<li>0: Page has not been written to</li> 
+<li>1: Page has been written to</li> 
+</ul> 
+<li><b>Bits 7-8 (RSVD):</b> Reserved</li> 
+<li><b>Bits 9-11 (AVAIL):</b> Available for use</li> 
+ 
+<li><b>Bits 12-31 (FRAME):</b> Frame address</li> 
+ 
+</ul> 
+ 
+Cooldos! Thats all? Well.. I never said it was hard ;)
+<p> 
+Quite possibly the most important thing here is the <b>frame address</b>. <b>The frame address represents the 4KB physical
+memory location that the page manages.</b> This is <i>vital</i> to know when understanding paging, however it is hard to
+describe why it is so right now. For now, just remember that <b>each and every page manages a block of memory. If the
+page is present, it manages a 4KB physical address space in physical memory.</b> 
+ 
+</p><p> 
+The <b>Dirty Flag and Access Flag are set by the processor, not software.</b> You might wonder on how the processor knows what bits to set; ie, where they are located in memory. We will look at that a little later. Just rememeber that, this will allow the software or executive to test if a page has been accessed or not.
+</p><p> 
+The <b>present flag</b> is an important one. This one single bit is used to determin if a page is currently in physical memory or not. If it is currently in physical memory, the frame address is the 32 bit linear address for where it is located at. If it is not in physical memory, the page must reside on another location--such as a hard disk.
+</p><p> 
+If the present flag is not set, the processor will ignore the rest of the bits in the structure. This allows us to use the rest of the bits for whatever purpose...perhaps where the page is located at on disk? This will allow--when our page fault handler gets called--for us to locate the page on disk and swap the page into memory when needed.
+</p><p> 
+Lets give out a simple example. Lets say that we want this page to manage the 4KB address space beginning at physical location 1MB (0x100000). What this means--to put in other words--<b>is that this page is <i>"mapped"</i> to address 1MB</b>. 
+ 
+</p><p> 
+To create this page, simply set 0x100000 in bits 12-31 (the frame address) of the page, and set the present bit. Voila--the page is mapped to 1MB. :)
+For example:
+ 
+</p><blockquote><pre><div class="code">%define		PRIV		3
+ 
+mov		ebx, 0x100000 | PRIV	; this page is mapped to 1MB</div></pre></blockquote> 
+<b>Notice that 0x100000 is 4KB aligned?</b> It ORs it with 3 (11 binary which sets the first two bits. Looking at the above table, we can see that it sets the present and read/write flags, making this page present (Meaning its in physical memory. This is true as it is mapped from physical address 0x100000), and is writable.
+<p> 
+Thats it! You will see this example expand further in the next few sections so that you can start seeing how everything fits in, so don't worry to much if you still do not understand. 
+</p><p> 
+Also notice that there is nothing special about PTEs--they are simply 32 bit data. What is special about
+them is how they are <i>used</i>. We will look at that a little later...
+ 
+</p><h3>pte.h and pte.cpp - Abstracting page table entries and pages</h3> 
+ 
+The demo hides all of the code to set and get the individual properties of the page table entries inside of
+these two files. All these do is set and get the bits and frame address from the 32 bit pattern that we
+have looked at in the list above. This interface does have a little overhead but greatly improves readability
+and makes it easier to work with them.
+ 
+<p> 
+The first thing we do is to abstract the bit pattern used by page table entries. This is too easy:
+ 
+</p><blockquote><pre><div class="code">enum PAGE_PTE_FLAGS {
+ 
+	I86_PTE_PRESENT			=	1,		//0000000000000000000000000000001
+	I86_PTE_WRITABLE		=	2,		//0000000000000000000000000000010
+	I86_PTE_USER			=	4,		//0000000000000000000000000000100
+	I86_PTE_WRITETHOUGH		=	8,		//0000000000000000000000000001000
+	I86_PTE_NOT_CACHEABLE		=	0x10,		//0000000000000000000000000010000
+	I86_PTE_ACCESSED		=	0x20,		//0000000000000000000000000100000
+	I86_PTE_DIRTY			=	0x40,		//0000000000000000000000001000000
+	I86_PTE_PAT			=	0x80,		//0000000000000000000000010000000
+	I86_PTE_CPU_GLOBAL		=	0x100,		//0000000000000000000000100000000
+	I86_PTE_LV4_GLOBAL		=	0x200,		//0000000000000000000001000000000
+   	I86_PTE_FRAME			=	0x7FFFF000 	//1111111111111111111000000000000
+};</div></pre></blockquote> 
+	Notice how this matches up with the bit format that we looked at in the above list.
+	What we want is a way to abstract the setting and getting of these properties (ie, bits)
+	behind the interface.
+	<p> 
+	To do this, we first abstract the data type used to store a page table entry. In our case
+	its a simple uint32_t:
+ 
+</p><blockquote><pre><div class="code">//! page table entry
+typedef uint32_t pt_entry;</div></pre></blockquote> 
+ 
+	Simple enough. Next up is the interface routines that are used to set and get these bits.
+	I dont want to look at the implimentation of it as all it does is (litterally) set or get
+	individual bits within a pt_entry. So instead I want to focus on the interface:
+ 
+<blockquote><pre><div class="code">extern void 		pt_entry_add_attrib (pt_entry* e, uint32_t attrib);
+extern void 		pt_entry_del_attrib (pt_entry* e, uint32_t attrib);
+extern void 		pt_entry_set_frame (pt_entry*, physical_addr);
+extern bool 		pt_entry_is_present (pt_entry e);
+extern bool 		pt_entry_is_writable (pt_entry e);
+extern physical_addr	pt_entry_pfn (pt_entry e);</div></pre></blockquote> 
+ 
+	<b>pt_entry_add_attrib()</b> sets a single bit within the pt_entry. We pass it a mask (like our
+	I86_PTE_PRESENT bit mask) to set it. <b>pt_entry_del_attrib()</b> does the same but clears the bit.
+	<p> 
+	<b>pt_entry_set_frame()</b> masks out the frame address (I86_PTE_FRAME mask) to set our frame address
+	to it. <b>pt_entry_pfn()</b> returns this address.
+	</p><p> 
+	There is nothing special about these routines--we can easily set and get these attributes manually
+	if we wanted to via bit masks or (if you wanted) bit fields. I personally feel this setup makes it
+	much easier to work with though ;)
+ 
+</p><p> 
+	Okay, this is great as this setup allows us to keep track of a single page. However, it is useless by itself as a typical system will need to have alot of pages. This is where a page table comes in.
+ 
+	</p><h2>Page Tables</h2> 
+The page table...hm...where oh where did we hear that term before? *looks one line up*. Oh, right ;)
+<p> 
+ 
+A <b>Page Table</b> is..well..a table of pages. (Surprised?) A page table allows us to keep track of
+how the pages are mapped between physical and virtual addresses. <b>Each page entry in this table
+follows the format shown in the previous section.</b> In other words, <b>a page table is an array of page table entries (PTEs)</b>.
+ 
+</p><p> 
+ 
+While it is a very simple structure, it has a very important purpose. The page table containes a list of all
+the pages it containes, and how they are mapped. By "mapping", We refer to how the virtual address "maps" to
+the physical frame address. The page table also manages the pages, weather they are present, how they are stored,
+or even what process they belong to (This can be set by using the AVAIL bits of a page. This may not be needed,
+it depends on the implimentation of the system.)
+ 
+</p><p> 
+Lets stop for a moment. <b>Remember that a page manages 4KB of physical address space?</b> By itself, a page is
+nothing more then a 32 bit data structure that describes the properties of a specific 4KB region of physical memory (Remember this from before?)
+Because each page "manages" 4KB of physical memory, putting 1024 pages together we have 1024*4KB=4MB of managed
+virtual memory. Lets take a look at how its set up:
+ 
+</p><p> 
+ 
+</p><center><img src="images/paging.jpg"></center> 
+ 
+<p> 
+Thats an example of a page table. Notice how it is nothing more then an array 1024 page entries. Knowing that each page
+manages 4KB of physical memory, we can actually turn this little table into its own <b>virtual address space</b>. How
+can we do this? Simple: By deciding the format of a <b>virtual address</b>.
+ 
+</p><p> 
+ 
+Heres an example: Lets say we have designed a new virtual address format like this:
+ 
+</p><p> 
+      </p><blockquote><pre><div class="code">AAAAAAAAAA        BBBBBBBBBBBB
+page table index  offset into page</div></pre></blockquote> 
+ 
+This is our format for a virtual address. So, when paging is enabled, all memory addresses will now follow the above
+format. For example, lets say we have the following instruction:
+ 
+      <blockquote><pre><div class="code">mov	ecx, [0xc0000]</div></pre></blockquote> 
+<p> 
+Here, <b>0xc0000</b> will be treated like a <b>virtual address</b>. Lets break it apart:
+ 
+      </p><blockquote><pre><div class="code">  11000000        000000000000	; 0xc0000 in binary form
+AAAAAAAAAA        BBBBBBBBBBBB
+page table index  offset into page</div></pre></blockquote> 
+ 
+<p> 
+What we are now doing is an example of <b>address translating</b>. We are actually translating this virtual
+address to see what physical location it refers to. The page table index, 11000000b = 192. This is the page entry
+inside of our page table. We can now get the base physical address of the 4KB that this page manages. If this
+page is present (Pages <b>present</b> flag is set), all we need to do is access the pages <b>frame address</b> 
+to access the memory. If this page is NOT present, then generate a page fault--The page data might be somewhere
+on disk. The page fault handler will allow us to copy the 4KB data for the page into memory somewhere and set
+the page to <b>present</b> and update its <b>frame address</b> to point to this new 4KB block of physical memory.
+ 
+ 
+</p><p> 
+Okay okay, I know. This little example of creating a fake "virtual address" might seem silly, but guess what?
+<i><b>This is how its actually done!</b></i> The actual format of a virtual address is a <i>little</i> bit more complex
+in that there are <i>three</i> sections instead of 2. However, if we omit the first section of the real
+virtual address format then it would be <i>exactally</i> 
+the same as our above example.
+</p><p> 
+I hope by now you are starting to see how everything fits together, and the importance of page tables.
+ 
+ 
+</p><h3>Page Size</h3> 
+ 
+A system with smaller page sizes will require more pages then a system with larger page sizes. Because the table
+keeps track of all pages, a system with smaller page sizes will also require a larger page table because there
+are more pages to keep track of. Simple enough, huh?
+ 
+<p> 
+The i86 architecture supports 4MB (2MB pages if using <b>Page Address Extension (PAE)</b>) and 4KB sized pages.
+</p><p> 
+The important things to note are: Notice how page size may effect the size of page tables.
+ 
+	</p><h2>The Page Directory Table (PDT)</h2> 
+ 
+Okay... We are almost done! A page table is a very powerful structure as you have seen. Remember our previous virtual
+address example? I gave an example of a virtual addressing system where each virtual address was composed of two
+parts: A page table entry and a offset into that page.
+<p> 
+On the x86 architecture, the virtual address format actually uses three sections instead of two: The entry number
+in a <b>page directory table</b>, the page table index, and the offset into that page.
+</p><p> 
+ 
+A <b>Page Directory Table</b> is nothing more then an array of <b>Page Directory Entries</b>. I know I know... How
+useless and non-informative was that last sentence? ;)
+ 
+</p><p> 
+So, anyways, lets first look at a page directory entry. Then we will start looking at the directory table, and where
+it all fits in...
+ 
+	</p><h3>Page Directory Entries (PDEs)</h3> 
+ 
+	Page directory entries help provide a way to manage a single page table. Not only do they contain the address
+	of a page table, but they provide properties that we can use to manage them. You will see how all of this fits
+	in within the next section, so dont worry if you dont understand it yet.
+	<p> 
+	Page directory tables are very simularly structured in the way page tables are structured. They
+	are an array of 1024 entries, where the entries follow a specific bit format. The nice thing
+	about the format of page directory entries (PDEs) is that they follow almost the exact same
+	format that page table entries (PTEs) do (in fact they can be interchangeable). There is only a few little bit of details (pun intended ;) ).
+	</p><p> 
+ 
+	Here is the format of a page directory entry:
+</p><ul> 
+<li><b>Bit 0 (P):</b> Present flag</li> 
+<ul> 
+<li>0: Page is not in memory</li> 
+<li>1: Page is present (in memory)</li> 
+</ul> 
+ 
+<li><b>Bit 1 (R/W):</b> Read/Write flag</li> 
+ 
+<ul> 
+<li>0: Page is read only</li> 
+<li>1: Page is writable</li> 
+</ul> 
+<li><b>Bit 2 (U/S):</b>User mode/Supervisor mode flag</li> 
+<ul> 
+<li>0: Page is kernel (supervisor) mode</li> 
+<li>1: Page is user mode. Cannot read or write supervisor pages</li> 
+ 
+</ul> 
+<li><b>Bit 3 (PWT):</b>Write-through flag</li> 
+ 
+<ul> 
+<li>0: Write back caching is enabled</li> 
+<li>1: Write through caching is enabled</li> 
+</ul> 
+<li><b>Bit 4 (PCD):</b>Cache disabled</li> 
+<ul> 
+<li>0: Page table will not be cached</li> 
+<li>1: Page table will be cached</li> 
+ 
+</ul> 
+<li><b>Bit 5 (A):</b> Access flag. Set by processor</li> 
+ 
+<ul> 
+<li>0: Page has not been accessed</li> 
+<li>1: Page has been accessed</li> 
+</ul> 
+<li><b>Bit 6 (D):</b> Reserved by Intel</li> 
+<li><b>Bit 7 (PS):</b> Page Size</li> 
+ 
+<ul> 
+<li>0: 4 KB pages</li> 
+ 
+<li>1: 4 MB pages</li> 
+</ul> 
+<li><b>Bit 8 (G):</b> Global Page (Ignored)</li> 
+<li><b>Bits 9-11 (AVAIL):</b> Available for use</li> 
+<li><b>Bits 12-31 (FRAME):</b> Page Table Base address</li> 
+</ul> 
+<p> 
+ 
+	Alot of the members here should look familiar from the page table entry (PTE) list that we looked at ealier.
+	</p><p> 
+	The <b>Present</b>, <b>Read/Write</b>, and <b>access</b> flags are the same as it was with PTEs, however they apply to a <b>page table</b> 
+	rather then a <b>page</b>.
+	</p><p> 
+ 
+	<b>page size</b> determins if the pages inside of the page table are <b>4KB</b> or <b>4MB</b>.
+	</p><p> 
+	<b>Page Table Base address</b> bits contain the 4K aligned address of a <b>page table</b>.
+ 
+ 
+	</p><h3>pde.h and pde.cpp - Abstracting Page Directory Entries</h3> 
+ 
+	Simular to what we did with PTEs, we have created an interface to abstract PDEs in the same manner.
+ 
+      <blockquote><pre><div class="code">enum PAGE_PDE_FLAGS {
+ 
+	I86_PDE_PRESENT			=	1,		//0000000000000000000000000000001
+	I86_PDE_WRITABLE		=	2,		//0000000000000000000000000000010
+	I86_PDE_USER			=	4,		//0000000000000000000000000000100
+	I86_PDE_PWT			=	8,		//0000000000000000000000000001000
+	I86_PDE_PCD			=	0x10,		//0000000000000000000000000010000
+	I86_PDE_ACCESSED		=	0x20,		//0000000000000000000000000100000
+	I86_PDE_DIRTY			=	0x40,		//0000000000000000000000001000000
+	I86_PDE_4MB			=	0x80,		//0000000000000000000000010000000
+	I86_PDE_CPU_GLOBAL		=	0x100,		//0000000000000000000000100000000
+	I86_PDE_LV4_GLOBAL		=	0x200,		//0000000000000000000001000000000
+   	I86_PDE_FRAME			=	0x7FFFF000 	//1111111111111111111000000000000
+};
+ 
+//! a page directery entry
+typedef uint32_t pd_entry;
+</div></pre></blockquote> 
+Not to hard. We use the new type pd_entry to represent a page directory entry. Also, with the PTE interface,
+we provide a small set of routines used to provide a nice way of setting and getting the bits within
+the page directory entry:
+ 
+      <blockquote><pre><div class="code">extern void		pd_entry_add_attrib (pd_entry* e, uint32_t attrib);
+extern void		pd_entry_del_attrib (pd_entry* e, uint32_t attrib);
+extern void		pd_entry_set_frame (pd_entry*, physical_addr);
+extern bool		pd_entry_is_present (pd_entry e);
+extern bool		pd_entry_is_user (pd_entry);
+extern bool		pd_entry_is_4mb (pd_entry);
+extern bool		pd_entry_is_writable (pd_entry e);
+extern physical_addr	pd_entry_pfn (pd_entry e);
+extern void		pd_entry_enable_global (pd_entry e);</div></pre></blockquote> 
+ 
+	<h3>Understanding the Page Directory Table</h3> 
+ 
+The Page Directory Table is sort of like an array of 1024 page tables. Remember that each page table manages 4MB
+of a virtual address space? Well... Putting 1024 page tables together we can manage a full 4GB of virtual
+addresses. Sweet, huh?
+<p> 
+Okay, its a little more complex then that, but not that much. The <b>Page Directory Table</b> is actually an
+array of <b>1024 page directory entries</b> that follow the format above. Look back at the format of an entry
+and notice the <b>Page Table Base address</b> bits. This is the address of the page table this directory
+entry manages.
+ 
+ 
+</p><p> 
+It may be easier to see it visually, so here you go:
+</p><p> 
+</p><center><img src="images/paging2.jpg"></center><p> 
+Notice what is happening here. Each page directory entry points to a page table. Remember that each page manages
+4KB of physical (and hence virtual) memory? Also, remember that a page table is nothing more then an array of
+1024 pages? 1024*4KB = 4MB. This means that each page table manages its own 4MB of address space.
+</p><p> 
+Each page directory entry provides us a way to manage each page table much easier. Because the complete
+page directory table is an array of 1024 directory entries, and that each entry manages its own table,
+we effectivly have 1024 page tables. From our previous calculation we know each page table manages 4MB of
+address space. So 1024 page tables*4MB size= 4GB of virtual address space.
+</p><p> 
+I guess thats it for ... believe it or not... everything. See, its not that hard, is it? In the next section,
+we will be revisiting the <i>real</i> format of an x86 virtual address, and you will get to see how everything works
+together!
+ 
+	</p><h3>Use in Multitasking</h3> 
+ 
+	We run into a small problem here. Remember that a page directory table represents a 4GB address space? How
+	can we allow multiple programs a 4GB address space if we can only have one page directory at a time?
+	<p> 
+ 
+	We cant. Not nativly, anyways. Alot of mutitasking operating systems map the high 2 GB address space for its own use
+	as "kernel space" and the low 2 GB as "user space". The user space cannot touch kernel space. With the kernel address
+	space being mapped to every processes 4GB virtual address space, we can simply switch the current page directory
+	without error using the kernel no matter what process is currently running. This is possible do to the kernel always
+	being located at the same place in the processes address space. This also makes scheduling possible. More on that
+	later though...
+ 
+	</p><h1>Virtual Memory Management</h1> 
+ 
+	We have covered everything we need to develop a good virtual memory manager. A virtual
+	memory manager must provide methods to allocate and manage pages, page tables, and
+	page directory tables. We have looked at each of these in separate, but have not
+	looked at how they work together.
+
+	<h2>Higher Half Kernels</h2>
+
+	<h3>Abstract</h3>
+
+	<p>
+	A <b>Higher Half Kernel</b> is a kernel that has a virtual base address of 2GB or above. A lot
+	of operating systems have a higher half kernel. Some examples include the Windows and Linux Kernels.
+	The Windows Kernel gets mapped to either 2GB or 3GB virtual address (depending on if /3gb kernel switch
+	is used), the Linux Kernel gets mapped to 3GB
+	virtual address.
+	The series uses a higher half kernel mapped to 3GB.
+	Higher half kernels must be mapped properly into the virtual address space. There are several
+	methods to achieve this, some of which is listed here.
+	</p>
+	<p>
+	You might be interested on why we would want a higher half kernel. We can very well run our kernel
+	at some lower virtual address. One reason has to do with v86 tasks. If you want to support v86 tasks,
+	v86 tasks can only run in user mode and within the real mode address limits (0xffff:0xffff), or about
+	1MB+64k linear address. It is also typical to run user mode programs in the first 2GB (or 3GB on some OSs)
+	as software typically never has a need to access high memory locations.
+	</p>
+
+	<h3>Method 1</h3>
+
+	<p>
+		The first design is that we can have the boot loader set up a temporary page directory.
+		With this, the base address of the kernel can be 3GB. The boot loader maps a physical address
+		(typically 1MB) to this base address and calls the kernel's entry point.
+	</p>
+	<p>
+		This method works, but creates a problem of how the kernel is going to work with managing virtual
+		memory. The kernel can either try to work with the page directory and tables set up by the boot loader,
+		or create a new page directory to manage. If we create a new page directory, the kernel will need to remap
+		itself (1MB physical to the base virtual address of the kernel) or cloning the existing temporary page directory
+		to the new page directory.
+	</p>
+	<p>
+		At this time, this is the method the series uses. The series boot loader will set up a temporary page
+		directory and maps the kernel to 3GB virtual. The kernel then creates a new page directory during
+		VMM initialization and remaps itself. The kernel must remain position-independent during this set up phase.
+		This is the method we use in our in-house OS.
+	</p>
+
+	<h3>Method 2</h3>
+	<p>
+		Another possible design is that the boot loader loads the kernel into a physical memory location and keeps paging
+		disabled. The kernel virtual base address would be the virtual address it is supposed to execute at. For example,
+		the boot loader can load and execute the kernel at 1MB physical, although the kernels base address is 3GB.
+	</p>
+	<p>
+		This method is a little tricky. There has to be a way for the boot loader to know what physical address to load and
+		execute the kernel at, and the kernel has to map itself to its real base virtual address. This
+		is usually done during kernel startup in position-independent code. This can be used in position-dependent code, but
+		the kernel must be able to fix the addresses when accessing data or calling functions. This is the method used in our in-house OS.
+	</p>
+
+	<h3>Method 3</h3>
+	<p>
+		This method uses Tim Robinson's GDT trick. This can be found in his documentation located <a href="http://www.osdever.net/tutorials/pdf/memory1.pdf">here (*.pdf)</a>
+		This allows your kernel to run at a higher address (its base address) even though it is not loaded there. This trick
+		works do to address wrap around. For example, lets say our kernel is loaded at 1MB physical address, but we want it to appear
+		to be running at 3GB Virtual. The base that we want is X + 3GB = 1MB in this case. Lets look closer.
+	</p>
+	<p>
+		Remember that the GDT descriptor base address is a DWORD. If the value becomes greater then 0xffffffff, it will wrap
+		around back to 0. 3GB = 0xC0000000. 0xffffffff - 0xc0000000 = 0x3FFFFFFF bytes left until it wraps. We need to add an address
+		that will make this address to point to our physical location (1MB). Knowing we have 0x3FFFFFFF bytes left until our DWORD wraps
+		back to 0, we can add 0x100000 (1MB) + 0x3FFFFFFF = 0x400FFFFF + 1 = 0x40100000.
+	</p>
+	<p>
+		So, by using the above example, if our kernel is loaded at 1MB physical address but has a real base address of 3GB virtual,
+		we can create a temporary GDT with a base code and data selector of 0x40100000. The processor automatically adds the base
+		selector addresses to the addresses it is accessing. After using LGDT to install this new GDT. After this we are now running
+		at 3GB. This works because the processor will add the cs and ds selector base (40100000) to whatever address that is being referenced.
+		For example, 3GB would be translated by the processor to 1MB in our example as 3GB+base selector ((40100000) = 1MB physical.
+	</p>
+	<p>
+		This trick is fairly easy to impliment and works well but wont work for 64 bit (Long Mode). After the kernel performs this trick
+		it can set up its page directory and map itself with ease after which can enable paging.
+	</p>
+ 
+<h2>Virtual Addressing and Mapping Addresses</h2> 
+ 
+When we enable paging, <b>all memory refrences</b> will be treated as a <b>virtual address</b>. This is very
+important to know. This means we must set up the structures properly first before enabling paging. If we do
+not, we can run into an immiedate triple fault--with or without valid exception handlers.
+ 
+<p>Remember the format of a virtual
+address? <b>This is the format of a x86 virtual address</b>:
+ 
+      </p><blockquote><pre><div class="code">AAAAAAAAAA         BBBBBBBBBB        CCCCCCCCCCCC
+directory index    page table index  offset into page</div></pre></blockquote> 
+ 
+<b>This is very important!</b> This tells the processor (And *us*) alot of information.
+ 
+<p> 
+The <b>directory index</b> portion
+tells us what index into the current <b>page directory</b> to look in. Look back up to the Directory Entry Structure
+format in the previous section. <b>Notice that each directory table entry containes a pointer to a page table</b>. You
+can also see this within the image again in that section.
+</p><p> 
+Because each index within the directory table points to a page table, this tells us what page table we are accessing.
+</p><p> 
+ 
+The <b>page table index</b> portion tells us what <b>page entry</b> within this page table we are accessing.
+</p><p> 
+...And remember that each page entry manages a full 4KB of physical address space? The <b>offset into page</b> portion
+tells us what byte within this pages physical address space we are refrencing.
+ 
+</p><p> 
+<b>Notice what happened here.</b> We have just translated a virtual address into a physical address using our page tables.
+Yes, its that easy. No trickery involved.
+ 
+</p><p> 
+ 
+Lets look at another example. Lets assumed that virtual address 0xC0000000 was mapped to physical address 0x100000. How do we
+do this? We need to find the page in our structures that 0xC0000000 refer to -- just like we did above. In this case
+0xC0000000 is the virtual address, so lets look at its format:
+ 
+      </p><blockquote><pre><div class="code">1100000000         0000000000        000000000000		; 0xC0000000 in binary form
+ 
+AAAAAAAAAA         BBBBBBBBBB        CCCCCCCCCCCC
+directory index    page table index  offset into page</div></pre></blockquote> 
+<p> 
+Remember that the directory index tells us what page table we are accessing within the page directory table? So... 1100000000b
+(The directory index) = 768th page table.
+</p><p> 
+Remember that the page table index is the page we are accessing within this page table? That is 0, so its the first page. Also
+note the offset byte in this page is 0.
+</p><p> 
+Now, all we need to do is set the <b>frame address</b> of the first page in the 768th page table to 0x100000 and voila! You have
+just mapped 3GB virtual address to 1MB physical! Knowing that each page is 4KB aligned, we can keep doing this in increments
+of 4KB physical addresses.
+ 
+</p><h2>Identity Mapping</h2> 
+ 
+Identity Mapping is nothing more then mapping a virtual address to the same physical address. For example, virtual address 0x100000
+is mapped to physical address 0x100000. Yep--Thats all there is to it. The only real time this is required is when first setting
+up paging. It helps insure the memory addresses of your current running code of where they are at stays the same when paging is
+enabled. Not doing this will result in immediate triple fault. You will see an example of this in our Virtual Memory Manager
+initialization routine.
+ 
+	<h2>Memory Managment: Implimentation</h2>
+
+	<h3>Implimentation</h3>
+ 
+	I suppose that is everything. What we will look at next is the virtual memory manager (VMM) itself that has
+	been developed for this tutorial. This will bring everything that we have looked at together so that you
+	can see how everything works.
+	<p> 
+	I have tried to make the routines small so that we can focus on one topic at a time as there is a couple
+	of new things that we still need to look at.
+	</p><p> 
+	Alrighty...First lets take a look at the page table and directory table themselves:
+ 
+</p><blockquote><pre><div class="code">//! virtual address
+typedef uint32_t virtual_addr;
+ 
+//! i86 architecture defines 1024 entries per table--do not change
+#define PAGES_PER_TABLE 1024
+#define PAGES_PER_DIR	1024
+
+#define PAGE_DIRECTORY_INDEX(x) (((x) &gt;&gt; 22) &amp; 0x3ff)
+#define PAGE_TABLE_INDEX(x) (((x) &gt;&gt; 12) &amp; 0x3ff)
+#define PAGE_GET_PHYSICAL_ADDRESS(x) (*x &amp; ~0xfff)
+
+//! page table represents 4mb address space
+#define PTABLE_ADDR_SPACE_SIZE 0x400000
+
+//! directory table represents 4gb address space
+#define DTABLE_ADDR_SPACE_SIZE 0x100000000
+
+//! page sizes are 4k
+#define PAGE_SIZE 4096
+ 
+//! page table
+struct ptable {
+ 
+	pt_entry m_entries[PAGES_PER_TABLE];
+};
+ 
+//! page directory
+struct pdirectory {
+ 
+	pd_entry m_entries[PAGES_PER_DIR];
+};</div></pre></blockquote> 
+ 
+	Simular to our <b>physical_addr</b> type, I created a new address type for virtual memory--<b>virtual_addr</b>.
+	Notice that a page table is nothing more then an array of 1024 page table entries? Same thing with the page directory
+	table, but its an array of page directory entries instead. Nothing special yet ;)
+	<p> 
+	</p><p>
+	<b>PAGE_DIRECTORY_INDEX, PAGE_TABLE_INDEX, PAGE_GET_PHYSICAL_ADDRESS</b> are macros that just returns the respective
+	partion of a virtual address. Remember that a virtual address has a specific format, these macros allow us to
+	obtain the information from the virtual address.
+	</p>
+	<p>
+	<b>PTABLE_ADDR_SPACE_SIZE</b> represents the size (in bytes) that a page table represents. A page table is 1024 pages, where
+	a page is 4K in size, so it is 1024 * 4k = 4MB. <b>DTABLE_ADDR_SPACE_SIZE</b> represents the number of bytes a page directory
+	manages, which is the size of the virtual address space. Knowing a page table represents 4MB of the address space, and that
+	a page directory contains 1024 page tables, 4MB * 1024 = 4GB.
+	</p>
+ 	<p>
+	The virtual memory manager presented here does not handle <b>large pages</b>. Instead, it only manages 4K pages.
+	</p>
+
+	The Virtual Memory Manager (VMM) we use relies on these structures heavily. Lets take a look at some of the routines
+	in the VMM to learn how they work.
+ 
+	<h3>vmmngr_alloc_page () - allocates a page in physical memory</h3> 
+ 
+	To allocate a page, all we need to do is allocate a 4K block of physical memory for the page to refer to,
+	then simply create a page table entry from it:
+ 
+<blockquote><pre><div class="code">bool vmmngr_alloc_page (pt_entry* e) {
+ 
+	//! allocate a free physical frame
+	void* p = pmmngr_alloc_block ();
+	if (!p)
+		return false;
+ 
+	//! map it to the page
+	pt_entry_set_frame (e, (physical_addr)p);
+	pt_entry_add_attrib (e, I86_PTE_PRESENT);
+ 
+	return true;
+}</div></pre></blockquote> 
+ 
+	Notice how our PTE routines make this much easier to do? The above sets the PRESENT bit in the page table entry
+	and sets its FRAME address to point to our allocated block of memory. Thus the page is present and points to
+	a valid block of physical memory and is ready for use. Cool, huh?
+	<p> 
+	Also, notice how we "map" the physical address to the page. All this means is that we set the page to point
+	to a physical address. Thus the page is "mapped" to that address.
+ 
+	</p><h3>vmmngr_free_page () - frees a page in physical memory</h3> 
+ 
+	To free a page is even easier. Simply free the block of memory using our physical memory manager, and clear
+	the page table entries PRESENT bit (marking it NOT PRESENT) :
+ 
+<blockquote><pre><div class="code">void vmmngr_free_page (pt_entry* e) {
+ 
+	void* p = (void*)pt_entry_pfn (*e);
+	if (p)
+		pmmngr_free_block (p);
+ 
+	pt_entry_del_attrib (e, I86_PTE_PRESENT);
+}</div></pre></blockquote> 
+ 
+	Thats it! Now that we have a way to allocate and free a single page, lets see if we can put them together
+	in full page tables...
+ 
+	<h3>vmmngr_ptable_lookup_entry () - get page table entry from page table by address</h3> 
+ 
+	Now that we have a way of abtaining the page table entry number from a virtual address, we need
+	a way to get it from the page table. This routine does just that! It uses the above function
+	to convert the virtual address into an index into the page table array, and returns the page
+	table entry from it.
+ 
+<blockquote><pre><div class="code">inline pt_entry* vmmngr_ptable_lookup_entry (ptable* p,virtual_addr addr) {
+ 
+	if (p)
+		return &amp;p-&gt;m_entries[ PAGE_TABLE_INDEX (addr) ];
+	return 0;
+}</div></pre></blockquote> 
+ 
+	Because this routine returns a pointer, we can modify the entry as much as we need to as well. Cool?
+	<p> 
+	Thats it for the page table routines. See how easy paging is? ;)
+	</p><p> 
+	Next up...The page directory routines!
+ 
+	</p><h3>vmmngr_pdirectory_lookup_entry () - get directory entry from directory table by address</h3> 
+ 
+	Now that we have a way to covert a virtual address into a page directory table index, we need to provide
+	a way to get the page directory entry from it. This is exactally the same with the page table routine counterpart:
+ 
+<blockquote><pre><div class="code">inline pd_entry* vmmngr_pdirectory_lookup_entry (pdirectory* p, virtual_addr addr) {
+ 
+	if (p)
+		return &amp;p-&gt;m_entries[ PAGE_TABLE_INDEX (addr) ];
+	return 0;
+}</div></pre></blockquote> 
+ 
+	<h3>vmmngr_switch_pdirectory () - switch to a new page directory</h3> 
+ 
+	Notice how small all of these routines are. They provide a minimal but very effective interface
+	for easily working with page tables and directories. When we set up a page directory, we need
+	to provide a way to install it for our use.
+	<p> 
+	In the previous tutorial, we added two routines: <b>pmmngr_load_PDBR()</b> and <b>pmmngr_get_PDBR()</b> 
+	to set and get the <b>Page Directory Base Register (PDBR)</b>. This is the register that stores the current
+	page directory table. On the x86 architecture, the PDBR is the <b>cr3</b> processor register. Thus, these
+	routines simply set and gets the cr3 register.
+	</p><p> 
+ 
+	vmmngr_switch_pdirectory () uses these routines to load the PDBR and set the current directory:
+ 
+</p><blockquote><pre><div class="code">//! current directory table (global)
+pdirectory*		_cur_directory=0;
+ 
+inline bool vmmngr_switch_pdirectory (pdirectory* dir) {
+ 
+	if (!dir)
+		return false;
+ 
+	_cur_directory = dir;
+	pmmngr_load_PDBR (_cur_pdbr);
+	return true;
+}
+ 
+pdirectory* vmmngr_get_directory () {
+ 
+	return _cur_directory;
+}</div></pre></blockquote> 
+ 
+	<h3>vmmngr_flush_tlb_entry () - flushes a TLB entry</h3> 
+ 
+	Remember how the TLB caches the current page table? Sometimes it may be necessary to flush
+	(invalidate) the TLB or individual entries so that it can get updated to the current value.
+	This may be done automatically by the processor (Like during a mov instruction involving
+	a control register).
+	<p> 
+	The processor provides a method for us to manually flush individual TLB entries ourself.
+	This is done using the <b>INVLPG</b> instruction.
+	</p><p> 
+ 
+	We simply pass it the virtual address and the resulting page entry will be invalidated:
+ 
+</p><blockquote><pre><div class="code">void vmmngr_flush_tlb_entry (virtual_addr addr) {
+ 
+#ifdef _MSC_VER
+	_asm {
+		cli
+		invlpg	addr
+		sti
+	}
+#endif
+}</div></pre></blockquote> 
+ 
+	Keep in mind that <b>INVLPG</b> is a <b>privlidged instruction</b>. Thus you must be running in <b>supervisor mode</b> 
+	to use it.
+
+	<h3>vmmngr_map_page () - maps pages</h3>
+
+	This is one of the most important routines. This routine allows us to map any physical address to
+	a virtual address. Its a little complicated so lets break it down:
+
+<blockquote><pre><div class="code">void vmmngr_map_page (void* phys, void* virt) {
+
+   //! get page directory
+   pdirectory* pageDirectory = vmmngr_get_directory ();
+
+   //! get page table
+   pd_entry* e = &amp;pageDirectory-&gt;m_entries [PAGE_DIRECTORY_INDEX ((uint32_t) virt) ];
+   if ( (*e &amp; I86_PTE_PRESENT) != I86_PTE_PRESENT) {</div></pre></blockquote> 
+<p>
+	We are given a physical and virtual address as paramaters. The first thing that must be
+	done is to verify that the page directory entry that this virtual address is located in
+	is valid (That is, has been allocated before and its PRESENT bit is set.)
+</p>
+<p>
+	The page directory index is part of the virtual address itself, so we use PAGE_DIRECTORY_INDEX()
+	to obtain the page directory index. Then we just index into the page directory array to obtain
+	a pointer to the page directory entry. Then the test to see if I86_PTE_PRESENT bit is set or not.
+	If it is not set, then the page directory entry does not exist so we must create it...
+</p>
+
+
+<blockquote><pre><div class="code">      //! page table not present, allocate it
+      ptable* table = (ptable*) pmmngr_alloc_block ();
+      if (!table)
+         return;
+
+      //! clear page table
+      memset (table, 0, sizeof(ptable));
+
+      //! create a new entry
+      pd_entry* entry =
+         &amp;pageDirectory-&gt;m_entries [PAGE_DIRECTORY_INDEX ( (uint32_t) virt) ];
+
+      //! map in the table (Can also just do *entry |= 3) to enable these bits
+      pd_entry_add_attrib (entry, I86_PDE_PRESENT);
+      pd_entry_add_attrib (entry, I86_PDE_WRITABLE);
+      pd_entry_set_frame (entry, (physical_addr)table);
+   }
+</div></pre></blockquote> 
+<p>
+	The first thing the above does is to allocate a new page for the new page table and clears it.
+	After words, it uses PAGE_DIRECTORY_INDEX() again to get the directory index from the virtual
+	address, and indexes into the page directory to get a pointer to the page table entry. Then it
+	sets the page table entry to point to our new allocate page table, and sets its PRESENT and WRITABLE
+	bits so that it can be used.
+</p>
+<p>
+	At this point, the page table is guaranteed to be valid at that virtual address. So the routine
+	now just needs to map the address...
+</p>
+<blockquote><pre><div class="code">   //! get table
+   ptable* table = (ptable*) PAGE_GET_PHYSICAL_ADDRESS ( e );
+
+   //! get page
+   pt_entry* page = &amp;table-&gt;m_entries [ PAGE_TABLE_INDEX ( (uint32_t) virt) ];
+
+   //! map it in (Can also do (*page |= 3 to enable..)
+   pt_entry_set_frame ( page, (physical_addr) phys);
+   pt_entry_add_attrib ( page, I86_PTE_PRESENT);
+}</div></pre></blockquote> 
+<p>
+	The above calls PAGE_GET_PHYSICAL_ADDRESS() to get the physical frame that the page directory entry
+	points to in order to get the page table entry. Then, using <b>PAGE_TABLE_INDEX</b> to get the
+	page table index from the virtual address, indexing into the page table it obtains the page
+	table entry. Then it sets the page to point to the physical address and sets the pages PRESENT bit.
+</p>
+ 
+	<h3>vmmngr_initialize () - initialize the VMM</h3> 
+
+	This is an important routine. This uses all of the above routines (Well, most of them ;) ) to set up
+	the default page directory, install it, and enable paging. We can also use this an example of how
+	everything works and fits together. Because this routine creates a new page directory, we also need
+	to map 1MB physical to 3GB virtual in order for the kernel.
+	<p> 
+	This is a fairly big routine so lets break it down and see whats going on:
+ 
+</p><blockquote><pre><div class="code">void vmmngr_initialize () {
+ 
+	//! allocate default page table
+	ptable* table = (ptable*) pmmngr_alloc_block ();
+	if (!table)
+		return;
+ 
+	//! allocates 3gb page table
+	ptable* table2 = (ptable*) pmmngr_alloc_block ();
+	if (!table2)
+		return;
+
+	//! clear page table
+	vmmngr_ptable_clear (table);</div></pre></blockquote> 
+ 
+	Remember how page tables must be located at 4K aligned addresses? Thanks to out physical memory manager (PMM),
+	our <b>pmmngr_alloc_block()</b> already does just this so we do not need to worry about it. Because a single block
+	allocated is already 4K in size, the page table has enough storage space for its entries as well (1024 page table
+	entries * 4 bytes per entry (size of page table entry) = 4K) so all we need is a single block.
+	<p> 
+	Afterwords we clear out the page table to clean it up for our use.
+ 
+</p><blockquote><pre><div class="code">	//! 1st 4mb are idenitity mapped
+	for (int i=0, frame=0x0, virt=0x00000000; i&lt;1024; i++, frame+=4096, virt+=4096) {
+
+ 		//! create a new page
+		pt_entry page=0;
+		pt_entry_add_attrib (&amp;page, I86_PTE_PRESENT);
+ 		pt_entry_set_frame (&amp;page, frame);
+
+		//! ...and add it to the page table
+		table2-&gt;m_entries [PAGE_TABLE_INDEX (virt) ] = page;
+	}</div></pre></blockquote> 
+ 
+	This parts a little tricky. Remember that <b>as soon as paging is enabled, all address become virtual?</b> 
+	This poses a problem. To fix this, we must map the virtual addresses to the same physical addresses so they
+	refer to the same thing. <b>This is idenitity mapping</b>.
+	<p> 
+	The above code idenitity maps the page table to the first 4MB of physical memory (the entire page table). It creates
+	a new page and sets its PRESENT bit followed by the frame address we want the page to refer to. Afterwords it converts
+	the current virtual address we are mapping (stored in "frame") to a page table index to set that page table entry.
+	</p><p> 
+	</p><p> 
+	We increment "frame" for each page in the page table (stored in "i") by 4K (4096) as that is the block of memory
+	each page refrences. (Remember page table index 0 references address 0 - 4093, index 1 refrences address 4096--etc..?)
+ 	</p>
+	<p>
+	Here we run into a problem. Because the boot loader maps and loads the kernel directly to 3gb virtual,
+	we also need to remap the area where the kernel is at:
+	</p>
+<blockquote><pre><div class="code">	//! map 1mb to 3gb (where we are at)
+	for (int i=0, frame=0x100000, virt=0xc0000000; i&lt;1024; i++, frame+=4096, virt+=4096) {
+
+		//! create a new page
+		pt_entry page=0;
+		pt_entry_add_attrib (&amp;page, I86_PTE_PRESENT);
+		pt_entry_set_frame (&amp;page, frame);
+
+		//! ...and add it to the page table
+		table-&gt;m_entries [PAGE_TABLE_INDEX (virt) ] = page;
+	}
+</div></pre></blockquote>
+	<p>
+	This code is pretty much the same as the above loop and maps 1MB physical to 3GB virtual. This is what maps
+	the kernel into the address space and allows the kernel to continue running at 3GB virtual address.
+	</p>
+
+<blockquote><pre><div class="code">	//! create default directory table
+	pdirectory*	dir = (pdirectory*) pmmngr_alloc_blocks (3);
+	if (!dir)
+		return;
+ 
+	//! clear directory table and set it as current
+	memset (dir, 0, sizeof (pdirectory));</div></pre></blockquote>
+
+	The above creates a new page directory and clears it for our use.
+ 
+<blockquote><pre><div class="code">	pd_entry* entry = &amp;dir-&gt;m_entries [PAGE_DIRECTORY_INDEX (0xc0000000) ];
+	pd_entry_add_attrib (entry, I86_PDE_PRESENT);
+	pd_entry_add_attrib (entry, I86_PDE_WRITABLE);
+	pd_entry_set_frame (entry, (physical_addr)table);
+
+	pd_entry* entry2 = &amp;dir-&gt;m_entries [PAGE_DIRECTORY_INDEX (0x00000000) ];
+	pd_entry_add_attrib (entry2, I86_PDE_PRESENT);
+	pd_entry_add_attrib (entry2, I86_PDE_WRITABLE);
+	pd_entry_set_frame (entry2, (physical_addr)table2);</div></pre></blockquote> 
+ 
+	Remember that each page table represents a full 4MB virtual address space? Knowing that each page directory
+	entry points to a page table, we can saftley say that each page directory entry represents the same 4MB
+	address space inside of the 4GB virtual address space of the entire directory table. The first entry
+	in the page directory is for the first 4MB, the second is for the next 4MB and so on. Because we are only mapping
+	the first 4MB right now, all we need to do is set the first entry to point to our page table.
+	<p> 
+	</p><p>
+	In a simular way, we set up a page directory entry for 3GB. This is needed so we can map the kernel in.
+	</p>
+	<p>
+	Notice that we also set the page directory entries PAGE and PRESENT bit as well. This will tell the processor
+	that the page table is present and writable.
+	</p>
+
+<blockquote><pre><div class="code">	//! store current PDBR
+	_cur_pdbr = (physical_addr) &amp;dir-&gt;m_entries;
+ 
+	//! switch to our page directory
+	vmmngr_switch_pdirectory (dir);
+ 
+	//! enable paging
+	pmmngr_paging_enable (true);
+}</div></pre></blockquote> 
+ 
+	Now that the page directory is set up, we install the page directory and enable paging. If everything worked as expected,
+	your program should not crash. If it does not work, it will probably triple fault.
+ 
+	<h2>Page Faults</h2> 
+ 
+	As you know, as soon as we enable paging all addresses become virtual. All of these virtual
+	addresses rely heavily on the page tables and page directory data structures. This is fine,
+	but there will be alot of times when a virtual address requires the cpu to access a page
+	that is not yet valid. This is when a <b>page fault exception (#PF)</b> is raised by the processor.
+	A <b?page fault=""> will only occur when a page is marked <b>not present</b>. A <b>General Protecton Fault (#GPF)</b> will
+	occur if the page is not properly mapped but marked present and accessable. A <b>#GPF</b> will also
+	occur if the page is not accessable.
+	<p> 
+	A page fault is cpu interrupt 14 which also pushes an error code so that we can abtain information.
+	The error code pushed by the processor has the following format:
+ 
+	</p><p> 
+	</p><ul> 
+	<li><b>Bit 0:</b></li> 
+		<ul> 
+			<li>0: #PF occured because page was present</li> 
+			<li>1: #PF occured NOT because the page was present</li> 
+		</ul> 
+	<li><b>Bit 1:</b></li> 
+		<ul> 
+			<li>0: Operation that caused the #PF was a read</li> 
+			<li>1: Operation that caused the #PF was a write</li> 
+		</ul> 
+	<li><b>Bit 2:</b></li> 
+		<ul> 
+			<li>0: Processor was running in ring 0 (kernel mode)</li> 
+			<li>1: Processor was running in ring 3 (user mode)</li> 
+		</ul> 
+	<li><b>Bit 3:</b></li> 
+		<ul> 
+			<li>0: #PF did not occure because reserved bits were written over</li> 
+			<li>1: #PF occured becaused reserved bits were written over</li> 
+		</ul> 
+	<li><b>Bit 4:</b></li> 
+		<ul> 
+			<li>0: #PF did not occure during an instruction fetch</li> 
+			<li>1: #PF occured during an instruction fetch</li> 
+		</ul> 
+	</ul> 
+	<p> 
+	All other bits are 0.
+	</p><p> 
+	When a #PF occures, the processor also stores the address that caused the fault in the <b>CR2</b> register.
+	</p><p> 
+	Normally when a #PF occurs, an operating system will need to fetch the page from the faulting address
+	of the currently running program from disk. This requires several different components of an OS (disk driver,
+	file system driver, volume/mount points management) that we do not yet have. Because of this, we will return
+	back to page fault handling a little later when we have a more evolved OS.
+ 
+	</p><h1>Demo</h1> 
+ 
+	This demo includes all of the source code in this tutorial, and more. This demo includes paging code inside
+	of the bootloader and kernel to include the complete virtual memory manager (VMM) and to map the kernel
+	to the 3GB mark within its own virtual address space.
+	<p> 
+	There is nothing new visually with this demo. Because of this, there is no new pics. However it does demenstrate the concepts described in this
+	chapter in both assembly language source (The bootloaders Paging.asm file) and C source (The VMM that
+	we have developed in this chapter.)
+	</p><p> 
+	<a href="Demos/Demo12.zip">DEMO DOWNLOAD</a> 
+ 
+ 
+</p><h1>Conclusion</h1> 
+I am very glad to get this one done! We have covered alot of information and ground in this tutorial: Virtual Memory,
+Virtual addressing and translation, paging, methods, and more. With this tutorial, we are not out of the paging word yet! However, we can all saftely go to bed tonight knowing that we have a better understanding of it, how it works, and hot to work with it. See? Its not so bad :)
+<p> 
+Inside of the next tutorial I am thinking about going back to the fun stuff with developing a keyboard driver. Because we already
+have a form of output, and we will be able to retrieve input, we may even make a simple command line as well ;)
+	</p><p>
+	Until next time,
+	</p><p>
+	~Mike<br>
+	<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2/">Neptune Operating System</a></i>
+
+	<br><br>
+	<i>Questions or comments? Feel free to <a href="mailto:neon6000@aol.com">Contact me</a>.</i>
+
+	<br><br>
+	Would you like to contribute and help improve the articles? If so, please <a href="mailto:neon6000@aol.com">let me know!</a>
+
+<br><br> 
+<table width="100%" border="0"> 
+<tbody><tr> 
+<td><p align="left"> 
+<a class="anchor" href="OSDev17.html"> 
+<img src="images/left.jpg" border="0"></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev17.html"> 
+<font size="4">Chapter 17</font> 
+</a> 
+ 
+</p></td> 
+<td> 
+<p align="center"> 
+<font size="4"><a class="anchor" href="OSDevIndex.html">Home</a></font> 
+</p> 
+</td> 
+<td><p align="right"> 
+<a class="anchor" href="OSDev19.html"><font size="4">Chapter 19</font></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev19.html"><img src="images/right.jpg" border="0"></a> 
+</p></td> 
+</tr> 
+</tbody></table> 
+ 
+ 
+ </p></b?page></td></tr></tbody></table></body></html>Ytext/htmlUUTF-8_1http://www.brokenthorn.com/Resources/OSDev18.htmlP¨#(,0Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlr
+ò ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlrf ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔOfGIF89a¶ © ÷     €   € €€   €€ € €€€€€ÀÀÀÿ   ÿ ÿÿ   ÿÿ ÿ ÿÿÿÿÿ                                                                             3  f  ™  Ì  ÿ 3  33 3f 3™ 3Ì 3ÿ f  f3 ff f™ fÌ fÿ ™  ™3 ™f ™™ ™Ì ™ÿ Ì  Ì3 Ìf Ì™ ÌÌ Ìÿ ÿ  ÿ3 ÿf ÿ™ ÿÌ ÿÿ3  3 33 f3 ™3 Ì3 ÿ33 33333f33™33Ì33ÿ3f 3f33ff3f™3fÌ3fÿ3™ 3™33™f3™™3™Ì3™ÿ3Ì 3Ì33Ìf3Ì™3ÌÌ3Ìÿ3ÿ 3ÿ33ÿf3ÿ™3ÿÌ3ÿÿf  f 3f ff ™f Ìf ÿf3 f33f3ff3™f3Ìf3ÿff ff3fffff™ffÌffÿf™ f™3f™ff™™f™Ìf™ÿfÌ fÌ3fÌffÌ™fÌÌfÌÿfÿ fÿ3fÿffÿ™fÿÌfÿÿ™  ™ 3™ f™ ™™ Ì™ ÿ™3 ™33™3f™3™™3Ì™3ÿ™f ™f3™ff™f™™fÌ™fÿ™™ ™™3™™f™™™™™Ì™™ÿ™Ì ™Ì3™Ìf™Ì™™ÌÌ™Ìÿ™ÿ ™ÿ3™ÿf™ÿ™™ÿÌ™ÿÿÌ  Ì 3Ì fÌ ™Ì ÌÌ ÿÌ3 Ì33Ì3fÌ3™Ì3ÌÌ3ÿÌf Ìf3ÌffÌf™ÌfÌÌfÿÌ™ Ì™3Ì™fÌ™™Ì™ÌÌ™ÿÌÌ ÌÌ3ÌÌfÌÌ™ÌÌÌÌÌÿÌÿ Ìÿ3ÌÿfÌÿ™ÌÿÌÌÿÿÿ  ÿ 3ÿ fÿ ™ÿ Ìÿ ÿÿ3 ÿ33ÿ3fÿ3™ÿ3Ìÿ3ÿÿf ÿf3ÿffÿf™ÿfÌÿfÿÿ™ ÿ™3ÿ™fÿ™™ÿ™Ìÿ™ÿÿÌ ÿÌ3ÿÌfÿÌ™ÿÌÌÿÌÿÿÿ ÿÿ3ÿÿfÿÿ™ÿÿÌÿÿÿ!ù   ,    ¶ ©  ÿ ÿ	H° Áƒ*\È°¡Ã‡#JœH±¢Å‹3jÜÈ±£Ç CŠI²¤É“Q¨\É²¥Ë—0cÊœI³%Ê›Q¤¢¶³'ÏŸ>ƒ*´(Ñ£F“"E³©CÔü¤’JuªÕªX¯jÍÊu«×®`µR£ÆÔ©Ù„:¿ªËv­Û¶\y–=K— T¸oóâÝëvìÜºuÓò¬·ð^¹týB¡"ÖAÅŒCnüo²äÅ”-WÆìØnTÃ 	‹öê—.¼Û@ÝØfðtêÕËbü…Úµêm±g×F};7mÖ)S…>º8â³šý»—â1bî¡0¤éÐòÛª_¿•|»væÜ­3ÿÏ.¾¹çâÄÓó-}Ž˜ð(kRy#›{ø)^Ý¯ÿ=ÿý*ô‡Ÿ€ñu&`ê%ˆXÇ™Gy·,™?^gK…Ì]Xž†b˜‡à§àˆŠE] øGÙ2*5¢˜Š°hâ_
+°¤Ÿ
+1ÎX#Œ2âgà?–($‰:EÛ(#Û=p¨¤Â6G&)1«)ùO”VR)å•HfY¥l")f‚ì™E!
+)Ä¢Xš,Þpfš•5iÞ›’É!q¢¡]Âé'qEvÖ]$Zb™‚Ú§¡ŒŠh¢Múç¤…!
+i¤‹RªéZ^Š’¤_©Ü?Ì4š—!ËUz¢§NéÕÛ4ÿ“Šš¢˜–!ølsÏa©üÕ”?ÏQf°‘mV,±Âþct•{Y±a†ª«ŽQ³>ËuæO­´­*ÿäzª1#*¶ÿL\­RÁÚLºªúŠ3²ýfo«Ù¶½º±¶Œâ»¾£™é«±¦R?©„;ë¶‹²p3°Þ“
+ª£K­°ø3Êµ©€kî´W‰º«^¢ô]sÏE7ÝÊáyá¶°PòÌ0GË•¨™»\·Së3$Ój²TäVFô®jRœjU@ÇK€jÎ‡Bö©H`~TD¡ý ¸õ®få®U¨–JrÇËJ->©t[jÅ{œpÇµ’\•Þo¥ÿ|Ê…(]c–§‡n^e6~Ýáê¼ÕÑS½?ƒì˜(¢~»œ–=mÓÝN£UéR#§¢c,¢à¢ðÐ;Ž=èõƒ/â·ãdlvÂRBêTÕ4ÏþTcqÚSuFÝ¦«ò-ß SÏi¯tii%“NBùå•ßk&ãï‰þ–’Iù¦]YŠÓ›·ø£	›(¸)ghâ¿xœïá‰'Ÿ†—ñØw=y±Ê$ " w²ªÞ¤l¶Š`\°çÀ~ft_GAÚÊoüH%HÂªh0„ é`	%Â’hfXœ1Vfb¸¬€5šyaJ.¸Â6Ð)ôzMÁÿB0ß &ˆ·iÆåà€øð6õB =¨À’¤;ãi™t¨£8òx§‹^;Ò?°ˆœíŠ+<áßfä«ÕGlpd£@–uˆ°i­kÁé¡ý`Å‘x(BƒSâ9
+ÝÐqúcúöh*5šdv¬kQîâ“#ÝAR~(°Î$i'Ç<¢‘}}	––Ô$ÆxoKæå™%T~o‘Ÿ,”#]x¿5Å¢Mþ³SžÒ¶•î~»Ü“'	J
+¢$#Œå˜fyL¨P™
+
+e3-•±XóšØÌ¦6·ÉÍnzó›Ö4à49¢¤˜S)è<§:Ó™qŽÓ™àŒ§<çIÏlºó)';×ÉÿÏ}ús÷t¡³Ã2zÊa=SÏ†:ô¡Ì‰ÀÂ¯ß±^«ùGÃƒŠîFˆ|ê§HÿIÒ‘J$0[ŒË¨!œEn T²CK_z ˆÚô¦Ø¬I@=B5L^-k7Ú’Õ8ul!-©RMºÔ øj§ÜuXH
+)rã™PP©2«!Ú!NÇJVKA•#°ƒSë\T;Ínw±3b``A2©LÍkSõúÔ›˜{¦t%*_9Mø@°VbhYÑ¾¢~òk.u™K=å‰1ñ£,0ñº×Îê 9+>RMÆš¶žŽíEôùYÏºv)¡Um>OKÛyÿ¦V¶aíkwÛÚ@‰·I&1eVàVä™“UÐ†«LVÓX Œy ›èÐ[Í.´þÁ¢&*t»5åKÔP…9³Á+,3ïrGS\”¬5OÄMßôCRhâEû5ÅÂŒyIS¢@à–´RQEWV•ÚîÑÜ°Ë0¾½	-®Ì‹à™ð?”!1^ØŒá-êªç?lìa£xÚ‰ñf•ËQÅd¥»\*`á`Ð´w¼[eý€»£RÍ*Ð†&p`Çáñ@¾[åè–4Ñ¬ÉÍhp0ÝsMKÚˆ2„©¤›(²ª„ìPK}  òCŠ<£ˆŸæ˜ç¦
+ÿU3Ýx!&•ôVNWÝÊAœº”Üä®kÝd%c× •R%0à:‰dÐ\ùrycš“«·«…]ÁR^p,Næ(.ÿ6#ªì“T™Ê.XM$5aCŒ—n¤ÄÍ5ÜQ8¯ÆRqñ¯)?/76	l9Ùüs—r2²Ý_hú)ÂÆˆpM¦v9Ú9á­¶{ëilç¤¶àþæm½ÝÝrûÜ»7¹RÚp»;§±]÷S¶Mo¾Æ[ VË$Hõ£W´ ÿ^	™ž¬š¾ûàá¼7—FâÑ!r£ôbÃÇØDì½ÁA·ÆÓ­pe¤L(¡YcCfZÿ|ÙLe¶2våa58Â~[PT|9p&ò5jž;\!=µÖâhäÕùtèwd´Á6ÎôÎÞÖj¹êxŸ{4A@÷C¿âUó€ÙpƒTœ0ýru@š9Âo+Fãn«*Å¡Q°u…´5’®›¤ìc¯©&­…î]Ó¯Ô§ßäÊ¡Ò@¼7àŸ'ä¯¥ìù`'ŸØO±ã“¹ÚÃ]ó›3I9•Mè#ÙùÝ²~•…ü.ë]`þ/ãõŽ}?Õ-o„´{óµ¥}íbnÙûž(ºß½bqOV
+ŸÝ¿O>lír|…Üžø¦~ó{Oøê·Sá‡¾}ï³¯5äº¯Öîÿ·Û:5‰¿ßÏ‡þbok3eeÒqéGû‚ÄŒd¿¿©?kl—
+üKöÖ€×Ç|qˆWd5$E˜´bRË¢oAFPRa/ÓE8ÓE.‡oHSi§~´Å~ï± 8ÄpCcT%O‚-þ`3ÄVõ³Vû'nÄc†–t>B!~ ]¥ƒ¶€Ê7„·uhÍ6aÀ}ñU·cJ˜´ÂT€‘óubV…àÑ‚S¢’fš‚ë§pí×‚f]eÜµÚ0Œ3¬$(H€&IoU;{Ç;Ž³) h72hp"„ø‡=Q„ýãvDO"?õ¢{R8 Ð‡öÿ€v\²%¢vJ^‚J¦&^r•Xy]è…Å†'Ê¡*1>óÑ-(p'ÞRKxzöcl«÷?½ôK²¨Kœˆ€(}Ç—~žxS¼(|Ô7„ÖŒ»ç‹¿ØX
+×|¡EŒÎhŒµ‡ŒÉèPÐ(oÃ¨‹±WÁou, w,”°7 çZ<DmCl%1QÑpøg›ÑQó…q&^£‚èa ]êm'‘RÈR,—a4rIÛKÒ²+àBg%c=PƒiÉiÃ¡Ž$t¥ˆƒBud  µ@tqÕly¡`SAcQFc²6e 3Z&±€»F’8Ô’(Óm(ÑuTÿ5!]wv‰3U^C	cxU\˜vƒ±d©RQö’”ƒ”B“`	4&C+M³Ööi‘VxÇVvµ•>R.¨ØV'’mÁÕƒ(YmS’¯ö`‚
+0¶Ö"+¨‚
+[¦ ö=“ˆyçSy;Çz©;ó_¤Ò9B³4$&4ZF7í’.VFÙ9¥'Y¨Wrª‡‹ð ³¸YÃÔjÛP*ÂÃ0$©&q7	C+Vñ’/†g±²iVñk}c“ÌÈ{çø<c<Vq–˜#Í W‰ù”Ëñ–^ccU9›Á•dèØ²iœj–œéXœÌ™‹ÎXŒËÈœÒ8¨UÆyÓ©mv‰àçwÞÿ8ž”XýSŽÃ‡6õAá§B&Ë ˆð)ØHøb—rYF-%v†¥,Oòaxê)Oìi]sƒ5èc«r-Rd=vdK×¸ ñe:¹…º­s5g"h‡ 	
+NJq˜ws¨#³³5…Æ‡‚‡¡¾—¢j‘%—Xj[2 à¡jè#V'ª 5a]®H?±x™–…'ªo©…šŸÉg•Ç8¤ëÎG£Š¥ha¥ÊÈ¥Ç)¥»¦Áå¥E¥Ñ¨¥5š5,'Å=™ñ¦æh¦…¦1qqqñåQä¨}½qî‰\ÎY—tréR‰fâÿQ 0W¢µY¨ìem8‘?’\sG€š©AUƒ½3\Å„§Ñu€Ô¡vÛŒqvg…Óª#Q"qwÜ%‡.ÊwAÈ]ãxwÕ™°úl\†×=zi>?Y>á³jDù«D©FšP¦WlJ:­Ò:Ú·l¯WÌ
+¬¢Jn¯*©}F¦¾˜A—¤-°É ÁJ¦ß7©R<éÊBœ£ké¬`J¨©0:þ`-Ö2Ú"e¯V=qY`¢b-¤"°©˜±Ù­ÞÖ®¨Ã©05¶0¢p9NC`£1µBš•1cƒI=Žñ˜j!«ÌH¨·ùnÉš¦S˜E3=Oöj†I:Û°²wælÿqRž2ô,É²,çIž<‹~‘z:Os1{2Ž‘bA#cÌ3^ÿPš›#]ÅÃgõÊ°¡ð%DFä/ c±‘¨ü5®^¡7¢e–F7¨éb¢2¹&i1+šŸ™šÿà65iµAþI0ãÆP37 SbË#f´pS=•á0ÌC-²ö´©Bcóz2®Ö3yA² á©:öF@(,_#Ÿ;TŸ:)Ò…A8ËSShª‰ôR©8¢as…K"rKšû+ú:¸Ú‡…#?·º‡tXºÛj(©Û8J¬É¤©¸—S’¼œ8»à:©x[ÃöŠÒª?cäe™ØÛŒÃË­âCjŽÑ[mÓ\ø:¾êZ¾¸Õ®è;²öÊ¥çû½w¾éi§ñ¤¾²ÅbÊqô{ :õ¿ À¬ý[À|ÀœÀ
+\ ;Yimage/gif_7http://www.brokenthorn.com/Resources/images/MemFrag.gifO2bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_7http://www.brokenthorn.com/Resources/images/MemFrag.gifÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlr ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/gif_timeout=2, max=99_Sat, 27 Oct 2007 05:25:20 GMTVApache_Mon, 12 Apr 2021 11:21:32 GMT_max-age=2592000_Sat, 13 Mar 2021 11:21:32 GMTT4710ZKeep-Alive_”
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDllpbWFnZS9naWahEF8QEXRpbWVvdXQ9MiwgbWF4PTk5oRJaVXNlci1BZ2VudKEUVkFwYWNoZaEWXxAdTW9uLCAxMiBBcHIgMjAyMSAxMToyMTozMiBHTVShGF8QD21heC1hZ2U9MjU5MjAwMKEaXxAdU2F0LCAxMyBNYXIgMjAyMSAxMToyMTozMiBHTVShHFQ0NzEwoR5aS2VlcC1BbGl2ZaEgXxAUIjEyNjYtNDNkNzJiMTdhNzAwMCKhIlVieXRlc6EkXxAdU2F0LCAyNyBPY3QgMjAwNyAwNToyNToyMCBHTVQACAAhAC4AOQA+AEUATQBbAGAAbwB6AH8AjQCbAJ0ApwCpAL0AvwDKAMwA0wDVAPUA9wEJAQsBKwEtATIBNAE/AUEBWAFaAWABYgAAAAAAAAIBAAAAAAAAACUAAAAAAAAAAAAAAAAAAAGC_"1266-43d72b17a7000"ZUser-AgentUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë%*5>DGPY[]dlw…‡‰‹‘“•—™›Ÿ­¯±³µ·¹»½¿ÁÃÅÇÉÖáïöþ +49>LVjŠ‘±Ããèó‹¢­³¸ÎÒßäøü             z              Ô !"Oè‰PNG
+
+   IHDR  “  µ   7éx   PLTE     ?    À  ÿ *  *? * *À *ÿ U  U? U UÀ Uÿ   ?  À ÿ ª  ª? ª ªÀ ªÿ Õ  Õ? Õ ÕÀ Õÿ ÿ  ÿ? ÿ ÿÀ ÿÿ*  * ?* * À* ÿ** **?****À**ÿ*U *U?*U*UÀ*Uÿ* *?**À*ÿ*ª *ª?*ª*ªÀ*ªÿ*Õ *Õ?*Õ*ÕÀ*Õÿ*ÿ *ÿ?*ÿ*ÿÀ*ÿÿU  U ?U U ÀU ÿU* U*?U*U*ÀU*ÿUU UU?UUUUÀUUÿU U?UUÀUÿUª Uª?UªUªÀUªÿUÕ UÕ?UÕUÕÀUÕÿUÿ Uÿ?UÿUÿÀUÿÿ   ?  À ÿ* *?**À*ÿU U?UUÀUÿ ?Àÿª ª?ªªÀªÿÕ Õ?ÕÕÀÕÿÿ ÿ?ÿÿÀÿÿª  ª ?ª ª Àª ÿª* ª*?ª*ª*Àª*ÿªU ªU?ªUªUÀªUÿª ª?ªªÀªÿªª ªª?ªªªªÀªªÿªÕ ªÕ?ªÕªÕÀªÕÿªÿ ªÿ?ªÿªÿÀªÿÿÕ  Õ ?Õ Õ ÀÕ ÿÕ* Õ*?Õ*Õ*ÀÕ*ÿÕU ÕU?ÕUÕUÀÕUÿÕ Õ?ÕÕÀÕÿÕª Õª?ÕªÕªÀÕªÿÕÕ ÕÕ?ÕÕÕÕÀÕÕÿÕÿ Õÿ?ÕÿÕÿÀÕÿÿÿ  ÿ ?ÿ ÿ Àÿ ÿÿ* ÿ*?ÿ*ÿ*Àÿ*ÿÿU ÿU?ÿUÿUÀÿUÿÿ ÿ?ÿÿÀÿÿÿª ÿª?ÿªÿªÀÿªÿÿÕ ÿÕ?ÿÕÿÕÀÿÕÿÿÿ ÿÿ?ÿÿÿÿÀÿÿÿÿ  ÿ ?ÿ ÿ À   ***UUUªªªÕÕÕÿÿÿÛßÝó   	pHYs  M  MÒÎ­N   tEXtSoftware GNU Ghostscript 5.10—N  eIDATxœíY²äªEßîü§U³áË/ŽÓ¦GHB€lkGTL›Fh%½›ÿ&múßnL…Œ‰>}2&údLôÉ˜è“1Ñ'c¢OÆDŸŒ‰>}2&údLôÉ˜è“1Ñ'c¢OÆDŸŒ‰>}2&údLôÉ˜è“1Ñ'c¢OÆDŸŒ‰>}fâ&Ðh.P¾(†³C™‚‰ÊÄýéþ”Æ!ÛUK¦ž¦Pêµ/RÖOòí¢×Ÿ>K¯e‰¬¨'ÇËC“–BL²Š"šz#Ëûr&‘¥X#$¼–ûÅ˜¤yý:’ðå4Ú…æ×7Âø>§ŸkB!¤ì"Ÿuñ——gÌÄÅÄyUr+5gÜUaâŽ`èä÷uÈº(Ï#vQÜÊçø3ñ?f¦QY’ÿ²ôã²”šÇÄ…¾#*u•IwÔ‚Ì3$2‹>E§bc9çã®¨DqÚÞ¡R³æ'8&¿¿‚L’¢†F>X´žQþìL³>+gÀç}Ý&Î!˜¤?›!•S…:“$Bü—™kúÉÿïû.‰´Iüó[ÓvE¿z‘ªÒaUˆ,ä˜¤•2ü8óþã:Úû±ÜëL|¾G(^8´I4;,™8ÿŸX’ü.ëÿÅç§3ñFEm´¾ØÑŸDLœs¡{	““èƒÙó5CwÂÑ(³ œˆþr³½#g‡ät™ã`©m­ž®ñî–1¡k2cBÕpCÜwÜU~Ú§Š	ÂfÅå_bîœ±ø´MUdÍJÊ;¿À/¨'LX[^ÍLIg&Ì0È˜“NÃM1H'“0ò6ÿÉ56”’(ñ_JŽwâÉ×$µd¶èç‰Õô)Üúò!™üòôür†ŸßÆ«
+Þîlµ!ZAç'~Ë).2©00ZI¦áZËëEbâ¿@›|º>æß/sòãXÅµÀàÊÔR0E —Ä¢ä½¸¼^„þ$îp˜%×8ŽÏ/üŸ¤Ác²£¼^øþ$³¬bc\çÿ”Ç	YF¿¾Ø€(ùœBY‘XL6”×‹ØválL~:µãø<Ûm—O­ÝveÆ2Ú®•åõ"3¹íqqáC˜hC)óÒAÝÌè0)q´˜T½¨¯¼^&®ýßæn>rÓãXL²þä>éŠŒBãæÏDIi-¯šÉýSñ=˜ÿ”ŽßÃßÖq´âÄCN‘{Â™ÔÀ#Ë8ò'>ëõå½ekõúdLôÉ˜è“1Ñ'c¢OÆDŸŒ‰>}2&údLôÉ˜è“1Ñ'c¢OÆDŸŒ‰>}2&údLô)gâviKéu–·`òßmc¢°¼ÆD_y‰¾ò}å5&úÊkLô•WŽÉ9Â›bãLž3õj&×Th†3äçn\ƒµ’	·Æ$Hºíâ–t“w·]QÂá²–IXtz7“<S˜…L’uÀO193ÆsYÅ$À¸îß‘,/A{çŒ80K˜TVÉ¿Éä´ Ëe>“ú¶Åw™üÌ€ÀLfÒÜGú8“Ó”—™L =crÙS3Ig§õLvI@áñnÒË[0ù·P—yçÇq uw÷=¡ž¬dq‘f‚MÔ˜tÀŒ@H
+OÍ˜ T).´dŒ	Ä$r(9º1é2	~epáÄ{7?„eù—à`&Hc‚gÜŒñ3¿Å{5“h®!Å$r7T„¡.È˜0˜¯WƒŒõ=îûñ\§þ›È$ö¢ã[L¸ñ‘3¼ˆÂØ¨ùNéÝLn03™Äî™Æ¸`òGe6“a(¿
+âžsÄ(&übHÞzQÁÜQ®4>Á„…ÒŸ”Gˆ©¿ƒ	«SÁ,«wÄÈ$²#aÂÒÝ{êy½Ï¥zú3LPsF(D°Y—j‡ŸÀd—:~îóÈJP„B¯P‚‰×Künºö7”HãõD.W•öº0™G½“Æ·˜Ð ”ŽI“yøõ]’ù dWVË ‰ÞÃÑJîkL(PŠ½ßaY7’ƒ¹/ ,/A¯MEC‰»cy Iâ~aæýLÎâVŽlŽ´’®ÿ‹L°í—	~Ù½šÉUÈê	lìaÞá¨@ƒ—h%“JQ»_äø“ÐvpÀ’_¡5Z!äpyÇ´«?iÖœ,DÏF¬8µíÝL ªp’o23vF¬åÅ¸°iÕ½s¾kÔA&ìéËL’N¥‚fˆÉÀáÓL<”Zv‹çÖ‘AÛ·™œPšÝ½ãÂ"òy&m ‰8ƒ@&—’
+&Àˆ¸acÎ8‘‡0Ù%ÈoÕ€HHí(jRŒŠÔ“ŸáùwÓr ŸÄÔò¢´“Iä:@µ±t¤›Ï1)€\‰6æ&º´‚ó-&U ×š©ußsá|ˆIÈï,ÉÆÌõý8_a¹BlŒÝ…nÃ¹½›É¢ä
+Œ·‘C$‹XÀ¹?€	
+Èmã‘,|Èöj& Wx¬RóÃ$9ª½ÂÚ{g£0èë™0ÞµÚÓšBäSý	9JÇÆID¾rË2x?~‘]åJØ´ù}ZJiã ëË
+Ø´ýg÷ŽpnÇ"Æ¤a]åú®UDŒIË¼üº•uDŒIÓ¾øÚÔ•@6•÷,3`“&ÿ‹‰<„É.Ý™ÏsU[ËÛšgÙºDRO¶1Ù ä0&0‘=PŒ	@$lý-•1iù=—Èú“Ÿ63ùùw=+j”w3qÞ¿t"Ñ{f9¿!cÒ"ž©¶Ê«™\C'‘è9w‹Û/cÒ 3Yå2øÍLÏ«¯…‹l\Å¯q|€IŸJ=L¶V?BVÎk–ún&Þã"ùsSWAyy‚¡T£ÌÆÙPüZÎ7˜´«T‡*ûñ²ŠÄôLµq&õªÒéjš¾Ëë^íü“’J·ó¯^K$†!M6O|‡I5«zO€A'Ñ/1	Tp³–ÆuƒÊ‹~ë	Lv©áÃejõ«-õ”÷§ù÷ýýn`ãIª;âõD0[’¦RPZ?ÍO1¹x`©@÷Ÿp`Sù“PCPÚ6
+@’ø“´ÍBQl„Bý“²Á@Ý>¥3Æy7“_^ïÖûT`¯³Û¯‘O0i9¿¥ãs&”~´W3ˆ\ç¹6â¼Ë‹ói&Vc#ÚÁÄ”ù“´Vö',½ûa÷Î“+ÃÆàGD ïñ~÷”ýøÉ¦ôŸe;×‘“`ÌÈó QP°Üc®‘˜oÍÈó Q7.÷œk$VØÃö`¯Séw$W¨ãIûñK*¡àÇT€ÓqD’ªdL‚IôgF.EøŠþ¸k$VÙD|ö`ß÷ÈAYìLv	ãOÀý<":Ë»ñ9Žÿî¦¼LX¨e°ù&×¥”	æ9wí2¹ø3—ˆ1 }“<³£vÝ
+5_!ée¨°Wâ‡ˆ“”üù]ØbýžÑ‚\=NÏWDª™\U…ã›Þø%	Ù:ÃÈWBzÖê¨Œb	 1&P\z©Â=ˆ€Í“ä|e¤cïW–Ê¾NùL“­ùrè‘p/ÙW3ÞŠM¸
+"å7MÝ=`\–âÚÕŸPàœèí¨ü@;h75DŽ3´},Œ€s÷œî¡9÷ÀlËwCÌÑv&8—Ýæ¿1¯­šàj"ÌéaÒ†ƒê³¡V
+6†	4A
+™4àœ4oß!àÂpÁÄ¥™IM½)Âzñkc0	Táô½Bà‰“Ÿ¿5_°æÅôS{ÊìTTOÜÓHD"zÊ2{ŽM•]Ùð³%¸T½ÒVbèhÂ$4`ßWà‘"ÄÏžØ*“LÒ ,Æ„ÄÄÑºlç§œ8Æ„ÀÄ{G%…ãS5“³èRLb7¢~îé…Ùù:K	çþlL°L\áU‘f„ÚxàÕL®BJ0)=
+Cš¦f/c‚`Òüã‰t¡DXÞÌýlt˜Is°$u<fr|£?áR)ÖQp^†ÃCLî¿¯f’Àá1éÿ¶»GÒ³PjW˜o0aQÁMó!o'&Å¯0aP[­ÄË”yK?È‡˜P± ‘DnF3ìø<ïgCøôÇ˜ Ÿ‹þ7^Ãyør3…agÜð9&˜—ßyò†-%4tò	Lv‰âcÂ=swàœºò.Y«ÿ³¡s‚Òaæ2µ(OÑ¢ýWÃ#î\o†²nO« ’|'Ž„Ë/Ýˆè ÛµrŸ1¡’B¹,‡ðR(k÷~}V´dÌ	 ÊsÚ¯åûñ÷¸#?Üµ´îÓ7BÙ°÷[Ç_ºÂ»ú)PÖ3aÕÈ¯ƒ²zï÷’‡%^A:„DÜ©µL²r,Üwygbœ„Ä…Û)ùýxà¾yÝÀÍQþ&@QOE¼?A¬£Ô6%îlýP&íÇW½¡¢])4T=”9óx¥˜uA3¸v(ßÁuˆ¾pBH‹ ÊÄy|´ŽÒOµB…õsFWzÒË4um¥;‹‚ãYfó‚ökÅÞ/*Ü‘î³øU1”é×H ×\.ÝT†<öt(êöã³¯<¡PeÞs$þ<›|Á¾ŸQ€	ºªf3G³˜”`*Á;ÎµîŠ'	YUs™¢yï*¯sê¾Ðùå³í×¬w•·Ï@ÏŒ}4Þ„aâk„2I¯ç¨×¡_îÅeÈc˜ø
+¡ˆ3éuæÿÕÛ°k~’›'@E ÈbÉ¿«•B®y©ü*#ÈKœ	)xúµeã–çAÙù¼ú8<ì¹ÙTtµ_{ß!pGAyï¶‡AÙþ®|m¥­,Ý¨š lgrSÁ;@åIPö?7õ$ÚÙs©0S–Ön&wÝÂÏÚÙXe3ßÜ9‚³§QQÒ~©zéôŽåPv2‰ÇÑž/š
+ÇX* ìc’ŽÒ’ý“™•¥_Uèi
+kW}'ÍeÄN*û¡¨ÛÌ@˜WDOSÖžgÙ:Ä=AXo3©°ÏÎ×&%à9Üˆ2ˆSÙe“’ÖuõÈ¶‰Ñ„)†²ã¾ßêá¦…Ó*K‡
+-1I­fÒ@Ò»wnÊº±V(ËŸYÐ:›¹Ê¾öké½Ø@ Ì¥°¨„²	xZ®Ë£²Êº{±abøaÔutgêƒ"Í¤åø^»†.ü„ÊRA§"§	÷Ç×Àô»¼Éò•E”ýIÁ¥K„øŒNœÃe¨lh¿¦Þ÷õÃí–®,š Ì~æ3b„ÌbrˆW–fÀÚ	‡š³4}ÎˆÄÂÝÊE]£=¸Íw=L‡4™É‚ËÀBRÓM¸ªôÊ ˆfþ}¿©ÍÒL„+K%¾ýŠ9ÄerR·¸v¤‚TÒPÁ\<_Lvqæ>Û£m0ý°N@:ÊJÍ$Aù7ÄEé~<C˜TPaÎÔ0?±FI&Þ‹ÝqªrÝ
+W‚TO Ç2‡IŸH
+Fˆ	ª²tƒ¸:’ÓÃd(Ôîüiñ½Ø šÝ°K‚\<êT˜ï9$–ný½Øó¹ +Kë¸wdÝ½*ÿHe“gÂAâïÅ–Ã¤âº+§+ H3áI¯ááÂ¨,¨‘
+ŠüýñÌØ¹;…FÇøµŽ½=üb€A—Iš	;vÍ]Ã`úIø „þã|P	ºªì½`â]:ÈYYšMR£ªÌ„¢šÉí±1.¸ÊÒ^-Ï96”˜’(¸fâ}6¦öqqn€	Ê#˜¿±¹€qý&’Š›e÷½Øx&Þ³\.Í˜Ñ4±yél6Ø`Ò‡ò,&·k™\Ó·6•ôä<(Ïc¼ËS‰•{xÃ˜ÜîåpÉ"UGUM(LzPÌäö/KzSNdIEy8“àbú'÷ü½îµÆ x”70¹}Lãr…ïÎq½
+dÙ{öã\:.>Ï‚!Ö0yºˆˆT¦@|“S.=§O‚ò=&Br¹__OÅ©|“ÉŸ\zË*nÀ¦W39ƒI¯gv¼1Ôæ’]±ŠÊwÛ®Du.•Exc²Vôj—1™©„¸Û>Ž1)å¹´—»FvHŒ	Sà(wÒ8¤öa&§ ×ÏƒâZïÿéóLÚ³Ây5Å˜€r× ³¦ðg†Æ¤-÷/º«$c0¯71&&—y½‰1ä¼—J.sº“‹7`“1¹ T|7gAøÊ°É˜t¡ˆRñ×\6“&”	LBbÆ¤-WºË‘cQæaLÚJ/Ë§‰rl2&ÕŸñ$ñ7À&cÒöÛ<"ÆRef²‰1TmÉ)³l2&(
+1&Ú;Zb@ê›3€MÆ„èL	 ÆTïRá1 ÀýÝ€MÆdÀ±ÑŒI[}‡Ó½°kdÆ¤-œ¯Û)Ä-cÒ¥ar=QÒl2&|¬ä¿›Iz³;9ö “½Œ‰o*î¯ñ)rbÆDD?Ï*ùRZÆDDÑågiyÏ5Š˜¸»²üZ²ós­Qk§eLD?¿æbrù}&¥eLD”09<“#`!¤eLDTeÒ‹uÒ2&"ª0ñý	Š1‘Q:îŠGÆÖvíR:ƒ÷ýú„Å˜È(tèþOÄ„Å˜ˆ(]ïºÇÂ¾?©Lï¡ÄŒ‰:“Q¥#.‘É˜\4â2&JdõDŸŒ‰>J½Ñª–_ŽWç]ú5?^Mß˜PO¯ž=þäw/zùGô19^ÏÀ˜P6Gü×èÓõ1ÿ~/½dÇëŽ\XYL>E+Â~‡¯¯'nLÈŠ7[L¢ÀQR¯¦oL¨ºÛ.“¤ªÔŽW20&T&·ÿÃ§´ÿpaq89Ž×30&TEc§ÚW˜{ludLÒãõŒ	Uañ=¬ÏßŸÒùJøÛ:^ÏÀ˜¨“1Ñ'c¢OÆDŸŒ‰>}2&údLôÉ˜è“1Ñ'c¢O+ß5#1&€¶@¯ðø<“P:W“õPzq“õPz×¦“sEcò§¥PúWp“?-„‚¸¨Ö˜œZs³1ùiÔ¥çÆäÒš7/c¯ùÍöæ2câ5
+ú~?ciö;if“X«
+áÆ2c’hÒ}ÊÆ$Ó*Ä§%“\òP¨7ó“RÒo.¥1&U	Vb³uÊ˜Ôä¤¨°žAbLê¡Â|*Œ1ij§Ù:eL PîëÉ˜€âQr“®Ë c‚‘#pr¤‚K¸3yPÆ­6ç%’‘1¡É5$™‡14ŒKÆDŸŒ‰>}2&údLôÉ˜è“1Ñ'c¢OÆDŸŒ‰>}2&údLôÉ˜èÓÿÏ­Îþ-N`    IEND®B`‚_Ehttp://www.brokenthorn.com/Resources/images/virtual-memory%5B1%5D.pngO½bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_Ehttp://www.brokenthorn.com/Resources/images/virtual-memory%5B1%5D.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlr&_ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Sat, 27 Oct 2007 05:26:20 GMTVApache_Mon, 12 Apr 2021 11:23:12 GMT_max-age=2592000_Sat, 13 Mar 2021 11:23:12 GMTT6376_Upgrade, Keep-Alive_Ø
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTE6MjM6MTIgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTE6MjM6MTIgR01UoR9UNjM3NqEhXxATVXBncmFkZSwgS2VlcC1BbGl2ZaEjXxAUIjE4ZTgtNDNkNzJiNTBkZjcwMCKhJVVieXRlc6EnXxAdU2F0LCAyNyBPY3QgMjAwNyAwNToyNjoyMCBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCxALMAtgC4AM0AzwDsAO4A9QD3ARcBGQErAS0BTQFPAVQBVgFsAW4BhQGHAY0BjwAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGv_"18e8-43d72b50df700"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí5:ENTW`ikmt|‡–˜šœž ¢¤¦¨ª¬®°²ÁÃÅÇÉËÍÏÑÓÕ×ÙÛÝßìôÿ*/>IRW\jtwŒ¬³Óå
+ ü06;QUbg{“             ~              ¡Ô$%&'O%sÿØÿà JFIF  ` `  ÿá Exif  II*          ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  ‚x" ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? öh¬Ò÷QÔši®ÿ wp¨‹Ôˆ y1œaX¤šœèö£6û§üÿ Ïÿ ÅÓ´ÿ øýÕ¿ëíôDUuˆÏ&€3Îk‘ûÛÜôâþoþ.œ4kR?Ößà|ÿ ü]yß†f[¯øv}:OÍ­J–O<—O~Öî¤ÆnfýÁ3!†Ï›mu‰ãÓÅ‘è7b’Í+CI|¯t¥ci7É $ePÛ‰ù“*	;@6±­ç­÷þÏÿ ÅÓ[Gµýmö?ëþþ.¹È||â½¼Ò-:]"}f	¢dg‚1P…Ä›eÉ*8›'mÿ x®Üß[+éÒOj‘Hï¦_‹¸J¹pý¨Cæ6Êã€Täç Oû"×Iÿ óñtdZžD·ÄúŸÿ ‹®oPÐ`“Ç66ÆóXX.ì¯.eŠ=bíÈ²Û… 	ÐŽ009éÀÅÁâø—Å±hs¥ŒrM+ÅI¨+Ý)´å„’6T$6â~dÊ‚NÐì‹m¹_g>ß?ÿ N5©÷·ÿ ø?ÿ ^‰õ?øUþ]Ü3[^Kái¯-o>Õ¾g1BÝð>F-"2á˜Imò×A}ãëK6ŽE—îî ³‘$¾	tÒKåíhàÚwÆ<ÔËnÚü£pAý‹kÿ =o¿ð>þ.¢Úùk}ÿ Óýž´h ÿ ìk_ùë}ÿ óÿ ñtcZÿ Ï[ïüŸÿ ‹­
+(?û×þzßà|ÿ ü]U¿°ŠÊ§‚kÀâæù¯%`A• ä9­ªÏÖãÆ?úû¶ÿ Ñé@QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE géÿ ñû«×Úÿ èˆªùPj†Ÿÿ º·ý}¯þˆŠ¥Ôî^ÏJ¼¹ˆ)’E22‘Ÿn(ºV™‘¤Xé°<¯œ	4–eE
+ 'JÊÂ6ë×éw|RÖî[»{C(Ç$« ”à.[q•Ûæ$©áv©*iÂA¬~Ãÿ ßÿ ‹¤:ö®NKØŽ-ä?û?á@º?„å›P_ØßE¦Á¥\iF›´xÌR‚Ç–Cyj±8ß YNäÉ$a;3K’ÄJÓê—ú„²`y—LƒjŒàQGS“·qîHÛú¹þ;üèô£_Ö Æûüþ.€:9tÈeÖ-µ2ò	­íå·Em+#FÄ‘Ž¹‰qõ?†d~³‹V¶¿[Ëí¶·rÝÛÚù£ÉŽIVA)Æ2ÛŒ¬ß1%O
+UISCþcûö?øÿ ü]'ü$Ç÷ìðÿ øº ’ÛÀ0èÒi“êz•Ü?Ù²ip4Æ%k{wUV	²5‰Ë†?(ÇVÎ›xv?íyo¡¿¾‚9æYî-!uXç•UT;¾`áW
+Bà‚nÈ> Ö?½cžp>Îÿ ür”ëúÆHc× ý¹ÿ È”×Œæ–¸ñâ`Œ‡°Çý{¿ÿ Kÿ 	±ýûüþ.€:ú+BÕo/în¡»ò”‘²˜‘—ïÎrO÷EnPYúÏüxÇÿ _vßú=+B³õŸøñþ¾í¿ôzP…V^›â]Y¸k}/[Óo§T.ÑÚÝ$¬ d…$ã$ûŠ Ô¢°ôè:í…åí–§hÐY<‚å¼ô>R£ºïl1
+Œ²“Œ¯5bè7(^oM•»]K¤`!V*Òp~à`An€‚(RŠ§­¦Ý\Eoo¨ZM<¶âê8ã™Yžp$ ”'Ý*¾›â]Y¸k}/[Óo§T.ÑÚÝ$¬ d…$ã$ûŠ Ô¢±ü?âÄðO.“}Ç‘+Å"G*;.×dB“…m…”ž«ƒZ“Ï­¼·Ç!y$‘‚ª($“À sš ’ŠËÓ|K ë7o¥ëzmôê…Ú;[¤•‚ä¤œdŸqRišî­ù¿Ù:­ÿ “3ì—	.ÌçÚN3ƒ×ÐÐ…câÏêw‘ÙØxƒJ»º“;!‚ö9°	8Prp?…I¦ø—AÖnßKÖôÛéÕ´v·I+È!I8É>â€5(¢±ü?âÄðO.“}Ç‘+Å"G*;.×dB“…m…”ž«ƒ@V]ž¿¦ë6÷M êZn§<	Ý«(bÐì›Š‚Aç¡àâ©ø_Æ:?Štë9lõ¾šÑ.f±†í%’…Ü¬?)`¤9ô ‚ŠËÒ5Yµ­^Þ{hà}>÷ì ¤¦A"˜£•_•]¤¬ çOZ4ßè:ÍÃ[ézÞ›}:¡vŽÖé%`¹$)' gÜP¥V]–«5ö·¨ÙÅm´°q³´§y˜¤raSn6l‘~bÀä·J(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€3ôÿ øýÕ¿ëíôDTš÷ü‹Ú™ÿ §IôK§ÿ Çî­ÿ _kÿ ¢"¦ëÇÔ³Óì’ÿ è€9*âZÎÊkÒ\øPjÎ/#*Ù¶³Ãò~õÔúž˜çëŽ»íöó÷ýü_ñ¨a›M·–âXn G¸K+	‡ÌÁUëÇ
+£Ž>´Ï_k‡4{d¸¸†â{=%»Q×/3ªÙuâÅN$|‚K|‡7/u­F;Ûƒm¡µ¶¿¶±‘d½¼Ã	2+Ž’íGmÛŽ6Z†¬nûy‚PÑùL¢à uç‚°‚I\çi9<Ön¥¦Á¨k	7™§y?i‚àÍö—)ÿ U‚ŒçnÏ3*Á_n0ºˆ¯/u¿ @Íl×S[[€„F\y†sû·Ç Ÿ”åž#²û‰´˜ÿ ²ôýGwMäß>Ô\<0;‘ŸNæ´¢¶Ñ!¾‰,^nâáMÉ1«6w2Æ[j±Ëd€	ÜÙ<œš…¶‘©Í×dK
+²¤_<,m,2Ž2	U?€ 
+íÚ5µ†“£éÓ^ßŒpÑcÉ‘¼Î2àÇÓã†wXj:ïˆôÒÓÀ,ÑMÆØ‘á#.>n3€@ ¶Ap[èöâ .¼Ã¦hÚ{Ö••Ê'.Äãk·§9Æy¢;m+˜.#š4–3![¢emòdnÃØ89 ŒPM¿Š/mt3XÕ¢·û=Ý«ÌñÚ)gB!.77 ªK‘ÆF¼€XôÖŸiûlò~Õå¯äçfü|ÛsÎ3œf±¯ ¶k-;L²žÎ;+y`fg¸ËÆ°º:(îÎÜXc9ùºV¸¿³Çü~@}Ì£'ëÏZ ßð¿:†¡ÿ \¡þrWQ\Ÿ„çŠ[ýA¢‘|¨FUdÿ ?ˆ®°PYúÏüxÇÿ _vßú=+B³õŸøñþ¾í¿ôzP‹ûo¶i×6»`o:'y±œ‚>tÈÜ¼ò¹dW/¢hZÝ¶±·‰VîC.©.¤ÂR¥w£MÉaˆÈ®ÝÃf\°ì( IÓõ!oíã2Úù·W6Û¤uy¤šV˜+¤Dª\®G˜[†ùq´×ðž‡y§Arº¶™¥E3jêÍi1™Œ“<„“º$Ã*8pÉ+‘ÀâºŠ(Îÿ á
+×¦²´ÒgŸMM>ßBºÐ„ÈîÒí‘"U¸ÚTO”3FÞO˜ùÀê-—^¼¿¶mSKÑ­à·s*ÉÓÝI»c/È(Â1Ëdñ•ÇÍ‘¹E aèZn¥¥Muk+Z6žn.."u,e‘¦™¥Ã 7²ð_äÆÓ±<Ëmo,î$)alì@áTÇØOj’Š ói~$Õüá˜eŠ´»AäNÆI'Y…´–ã|Dpd/÷˜€†Ü,Cà‹ëËÉŽ¡Ùín4û6e]væùü¹Â’ègL#)F Ão$Ÿ+zæÿ aÕ¼a¨ÝCuw›Y4Këqý‡qaä¼æ¿,îL¼FÇåÆ6ò~aW-´K­.þÛVÕ,$H,Ê¦-gQÕ¤,ÈÑü²€$9l6Fw/yE cØø–ÃP¼ŽÖ}U$|àÏ¤ÝBƒ ž]ã
+:w<ôëTìtjÊ×SÓà¼´¶‚W»šÒíPË(–y^PÌ‡
+¢2äc-¿ƒ”ÁSÒQ@>•áÍjÃ\M_ì,‘ZMl°M¯ÝÞó68mÓGû¼4H¤(9Iå´š¯Aiá‹R64B³ZÝ¼ÍpËnð`«DÎæÆÐ0s‘ÚQ@\Z½¨Zx®ÇT‡M³ƒ]I
+Íkv÷5¼p`«EaˆËgpê;Ñ¤xbþ=nÊòúÎ8RÑÚTfñî wdùRP¨§~c»Œ€>mËÚQ@s~€é:¶±¥´Wb7¸6²Ê²KæCäÂ¤½Ãgsù‚@Ø¸U×IE QE QE QE QE QE QE géÿ ñû«×Úÿ èˆ©ú¼Ò[h·÷¶Éb·‘Ñ°) óLÓÿ ã÷Vÿ ¯µÿ ÑRkßò.êõé/þ€h™þÒÕè)?ýû‹ÿ ˆ¬Û¯Åcpö÷~-¶·>ôrËn®¹ Œ© ô9÷Ïnµj¹›9µhõ½|XYY\Göä,Ó^<LÙ ã&÷Ï¯×ij¿ôŸÛÅÿ ÄRhê¹Õ'úÅÿ \±{sám+[[Éä:N›qP$L@*†c)ÉW(@XðÃ’YjÞ£ªÞÇ}pðê)oz­¥‚[4HDÈþK’8Ü$Ä®3’6©só ×ûKUçþ&—uýÜ\}~J§}â‰4³Ô<K§™Ÿhh#ÝŒg”tÈüÅrú~©ªÝkQ3$ÿ c–úæÐ‰~Î-ö!)Œæ™	‰sœõ‡ cõT¼“ÅzP°¸‚>ÃvKO•Hßoü!×ž‡9õâ€:ÜjP™¬¼Aö˜•¶<y.ªÝ×!qŸñ«Úz¨:´ÃO—øårú„šÌÙ6Í©Û,÷W­“Ah òü‰€®ï“¹N3Œ©Ž›%ÝçŠ4Éç¾˜´j6åB¦$\Çfùs–Â“‚T` H ¹ÔuPNu;ŒŽ¿º‹#ÿ £ûKUjN1ÛÊ‹ÿ ˆ®ßXÕ¬|1¤k7RDÝZ––…cG„<x ’Èý§ŸáJëmcž8#¹ŸÏ¸HÕe›`O1Àå¶ŽNN­ tž½¼ºº½Šêéç¤L…•F2_?tîŠèk—ð¿ü„5úåó’ºŠ +?Yÿ ÿ ëîÛÿ G¥hV~³ÿ 1ÿ ×Ý·þJ Ð¢Š( ¢ŠŽxVæÞXÈD(Æ91Ã)O¸ ŽÔ%å~½»mÃ÷ú,^ Ô5Cd&Ôc¿ší`¸es…{ÝÓù8hùÁ$|›ªM?Çywo¦jwÒ-ÎŸqS^iÚ„IæÚÞS·\•x²Z1@¡Ey|°j‘k†-"ÇÄz}÷ö&¡5¤Z–¯ö„šå|•ˆí7'Êdo¾ ùç<-m¨Gâ;F‹UÕg„oûLséšŒHÉ±±–¼”|û>â—íÂï4éV~»ý£ÿ ö§ý‘ÿ !?²Kö?»þ»aÙ÷¾_½Ž¼z×Ÿè¶×qêa›U×'³KöÈÆ™ªÄZ/-¾ë\ÎØmÛ1å)—8¸Ð¨TpÏÊ‚Xå@ì…‘ƒ ÊÅXqÜ0 ŽÄ^à»BÚãÃÝÉâ	¥½ÑÝµÔ-î
+¥ÊÂ),¡# -Àãð¬ÅË+žÓáÑlu6{mp6ò[‰L×2¨‰¦‘¢ò›q-#Fû‰‡-¸ä> î(®Á¶oµ»7Þ'Y#¸º‹Ë¾k¨Aµye*™ $íÚþ`&U8Âü”xKM½mf$»ºÔ˜è6ícpÒê2È··Û„®…ÈÏ”R@à>Ò Â0ÞQUïü¯ìëŸ?Ïò|§ßö}þfÜìòþ}Øé·æÏNkÎü7ˆm5:ÛVËA=–Ç7qÍ ‹{IFç`v2[Á’FHÙüªé”V~»ý£ÿ ö§ý‘ÿ !?²Kö?»þ»aÙ÷¾_½Ž¼z×Ÿè¶×qêa›U×'³KöÈÆ™ªÄZ/-¾ë\ÎØmÛ1å)—8¸Ð¨TpÏÊ‚Xå@ì…‘ƒ ÊÅXqÜ0 ŽÄ^à»BÚãÃÝÉâ	¥½ÑÝµÔ-î
+¥ÊÂ),¡# -Àãð¬ÅË+žÓáÑlu6{mp6ò[‰L×2¨‰¦‘¢ò›q-#Fû‰‡-¸ä> î*8æY^dQ 1>ÆÝ('ho”‘†aÈÈÎGP@âünÓ¬×ÞøŒOowp«¤.³K'’˜™Fÿ —coæAÂ–òU}"öûû/Å¶:"kŸkýäÚ;jp\ÿ Ï´A@’ècývÿ •©ÆÞhÐ(¯/ÑmµXõ0Öz®¹8KæÆ4Ëè‹/–Ûv¶¡;D~ÌaKg á7š¹á!uˆ"‹ÌÖncØÍ%Ì©¨Áûéu#8!ã“ÌÉnÀä€všnµe«Ëw“Nÿ e•¡‘ÞÚHÐº³#vP¯†Fi8Ç¸£I×4½z)åÒoà½†	|™%÷¦ýªØ8nzéÔYþÿ Ïý…u/ý-š©øSRŽë]ñ[]Juz·0µÖ<
+ñ‹kxÉ"(Îäa·¯ãÐÆ›â3V¸h,ç‘œ!‘Á$k2x™”	S•ù°ù—Ÿ˜dÓ|C¦j×œò3„2!x$f@@/2*r¿22óóòþ¶¹‚K;¸_FÐ¤°½3[¼j³“l£0Qû™>d,¼~eÎ‡‡u(õídêwVº•µâÛº[Û\éÓÀ¶Ð³!`Îèåb¨X@Úäw è ÕlnµKÍ2˜ä¼²HÞæ%äÄ$Ý³w`HRq×=ÌvZÕ–¡¨ÞØ@Ó‹«-¦dšÚH°°VRê©1¾r:×à«}fÇÇZÔZ¶ŸOqe—°™Þ)¦ÊÄ,
+©fU¹Š""‚û[gIgÿ %Yÿ °U‡þ» ‚Š§a=¥ËÞ=¤²K‹‚’±gd*ª°LñŒœÍºŠ Oÿ Ý[þ¾×ÿ DEK­£Ë¡jÆ…Ýí¥UU,J =i4ÿ øýÕ¿ëíôDTºÓ¼Z£,nÉ"[HÊÊpT…8 Ð¶oùó½ÿ ÀI?øšb[´m#&t­+o‹)vÀ?/' ÀzSó0ÿ —Ûïü—ÿ Š¬©üEoäö¦ï\–X,¾B^J•ÈÎÖ¯z ¹u¦Á|ñ½æ5ÃF®Šf°w*®0Àexpq×½fßøzâÿ V[©a›ÉÝ9Ò¤3€Ž²Y@â=è¬ARyl‘ˆg{ˆRhu¹"u’%ì¥]HáÐö4âÓd¶ßàd™ø÷õ 
+é¦Â—Ò_&*^J¡dœiÌ$aÇ‚dŽä=)—ú=¦©åÿ hhowåçgÚ4æ“nqœnCŒà~Us3ç‹ËügµÜ¿üUP¿Ö¡Óf†ïµf–ug k™‰U*	Âd¼½}höºE­Š*Yèon©!™Zs¨Y
+í. LnÚHÏ\xÓ C0Ñ¦ÀÎÐ¸°|Ä\’å~^dç{æ‹-@ßÂÒÅuª¢†*~Ñ%Ì'<v|9ôçœt51Öe…µµ•Ô²Æo¤Ü@ 7²@Ü2GLZ £y¤Ïq•¬·ÖVòG#EŸ('ËexÕ E99šÑÛ6,¯qÿ ^’ÿ ñ4f~¿l¾=zÞKÏþ=ô¤>?ãöûÿ %ÿ â¨kÂñÌ·—òIo<jÑÄË&H2dž£ó®˜W1á‰%{Ëèä¸žUXâ*%•Ÿ™3ÄúÊºz +?Yÿ ÿ ëîÛÿ G¥hV~³ÿ 1ÿ ×Ý·þJ Ð¬}P¼»mNÒüÁ%Öv-žh#1¤¹Š9C,Åp%Ç;sÆp6+ŸÐté_SÔõÍCOû=åÜ¡mÄû{{qkåRÀ)‘MªÄ|ù8b@ ÜŽe•æEìmÑ²‚v†ùIa†ŒŒäux!º·–Þâ(æ‚T)$r(eu#x Ž1QÚý°ùæóÈ•¼•‡'lc…ÜOV8,p ¶ó·sX 
+ö6zeœvvZZÇÁ$“…’OãV(¢€3ôÍGÑ<ßì*ÆÃÎÇ™öKt‹~3Œí8ÉëêjÅõ…ž§g%ý¤v²c|3Æ$FÁeOøUŠ(ÇÂ~Ó/#¼°ðþ•iuvM”qºäpÀdd?Ø¢Š (¢Š *½…ž™g…¤–±çd0F#EÉ$áG$“øÕŠ( ª÷Özœ–wö]ÚÉðÏ‘•<áV( {	øoL¼ŽòÃÃúU¥ÔyÙ4QÆëAÃ‘HükbŠ( ¢Š( ¢Š( ¢Š(ž“¦é÷WZ}¥´÷o¾æHaTi›$åÈc–''ÔúÕÊ( Š( ©Ùé:nŸquqe§Ú[Ovûîd†F™²N\–9br}O­\¢€
+(¢€3ôÿ øýÕ¿ëíôDTš÷ü‹ºŸýzKÿ  ]?þ?uoúû_ý?V‚K­úÞ%Ý$¶ï™%Hh®bÒZMk_6–0Åöå.,ÞV'ì°r
+È¼c¶=y®»û7Vÿ  Tÿ ÷ò/þ.ìÝ[eOƒÁd\ÿ ãôç^(˜øsNŽÒÆk&Ÿ§²™/-Å†åHÐ‰Øêÿ "§€ÌjÖ­|ñë#êPÝRÊ+{xäeWµf„1(8Ø]¥S'\€›°vžïû7Vÿ  Tÿ ÷ò/þ.³®|+©ÝÞ‰¥µÔM¿˜’µ¡žºU²X¸ÁU8V ‘È9l€rš]Ýäþ*Ù%Ô"ayp³BodyZÜY¶	²!dnä—æçˆî ƒÄš\—:ÙÒA³»ýÿ ™–;íþ\È¬9äôÏË]ön¯Ôé—ú™bÏþ‡Iý™ªÿ Ð*ÂH¿øº âå•/WG‚ËÄ“êÍ©4rÜA<Aˆû4¬bÝ€Àí»A+é…ÄÚCÜÝÊdHõ;h7Ü¸Þ±\ª(Æì3Á$œ’$’£áÓub:\øôó"ÿ âé³ulÿ È.~¹ÿ Y'þû >·›SÓü!¢jÖ×ÞÝÏj«(»”º<“D¾VWŽ|Õ‰ìËrÌÕÚZÛ›[HmÌÓLbEC,íºG c,{±î}h½ðæ§~öþmè†SËÙX2%‹|¬ à9Èâ®fêßô
+ŸþþEÿ ÅÐ‡…ÿ ä!¨×(œ•ÔW;áÛ+Û[»Én­^‘"TÈrA|ýÒ¼+¢ V~³ÿ 1ÿ ×Ý·þJÐ¬ýgþ<cÿ ¯»oý”¡EPEPEPEPEPEPEPEPEPEPEPEPEPEPEPEPm?nÕ€òô¿ú&*ž+û9üƒÔ}¦#<$ÍŒmù×•ù“‘ÇÌ=Es>%Ãé:Å»ŸÝ]ê–vs)?zšÚ)Û(ì20Fr<ÔòÙ[Añ6Âê8ñqq¥Þy²1$ád´
+z(Ë2Ìq–b@6-uíûP›O³Õ,n/`ÝæÛC:<‘í8;”®	 ç¡£L×´hKý•ªXßù8ó~Ép’ìÎq¤ã8=}qzl]xKá¥½Ä	,¤I$r(eu:là©‚õ­KýIÞi|Wgg=å®Ÿaq”P£»ê+DÛ£
+ˆó¨|ÁÙ°+8WÌRÉ4qK¼,UVÆÅCa½ÖSƒÙ…Kžq\ÃQð‘ÚÄnžA©$ÓÍqe-±–Y-¡2>Çii´}ÐË€®Vç]Ôã×µ–M]<­?W±³M<DŸê®E²–ãy’FLmùƒd°@u¸õÇáÜQ“ž‚¸X|Gx¾6ÓíVêækKûÛ›U%º[……$/å(o?z<jŒÏò\€7%eEâÝbÓOƒQmR§¸ðµÎºld‰‘(²·äüÎªÍÃeØãh§îúRäúf¹]êï¨j6Zˆ¾Ù0ËÔ^Óís l‹c´Gò.Ò@$ïä™y®ë‡Åw‰l—_d²Ô­l¾õªZ‘`g2a1“÷Í·gˆÆîº'™£pÂYê:ÜÓÚ´Ú¼žV¡«êbG¼j-âíEeNéÈP	Êà¡l±¯á95A¥øL‡Stµ—C7w!¡FiRˆ§h
+ ®pI\½‡ ü7ÜÛÇqo*Kª$·+©ÁzT¹9í^XÞ*ñ,ú=•Å±º–h|;g©É$_dŽšE·ÚLÅvÅû¯ùe´€_‘òã£¾Ôµ(<RÏ%äñéÑÝÁlºA%º`$êOž%f“
+Sä¢foÖAuÕ¼wòÇ,¨xäƒ+©ÔxªšÏüxÇÿ _vßú=+;ÃCÊ½ñ”yX-õFò›S¿=NdšFç¦ì  ÑÖ?ãÂ/úû¶ÿ Ñé@4QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE `Ë§A«G¯XÎÎ‹5ÀQ$D¼˜Šº>WV
+ÊÝA Ö¥½®RÚ{¡·±Ãå™Ò-v—Ú	%T•nOA×PC©[ÞÞ¼ö“Cq0y—„b4^@CÝ}jA.° `±ÿ À×ÿ ãTxgAŽâîá4M9g¼GK©ÕN®ráÎ>`Ç’sÞ;Ã:‘p×f‹§YLÉ°ÉmklW íÊÆ@8ö/¬Ï…þ¿ÿ £ÎÖ?çÂÇÿ _ÿ P¸í ‰¦h¢Dy˜<¬ªvÚ,{ª£'°µdÛøvÎfûSš(..gºûE¼/o˜"…•[’qŒƒƒœU¿;Xÿ Ÿüþ5Iæjäÿ Ç…þ¿ÿ  'N]AïÆŸj.äuw¸/˜ÌªQX¶3¬Ê`Ät5¢ø]ôÝeõ®-]•%D6öBÝ¥2´m$“H’SåGó(A÷¸éo3Xïcbíõÿ øÕ “W?`±Ïý~¿ÿ  	tí#MÒ-ÚßLÓí,`góVÐ¬J[ d… g ûQ&‘¦ËªC©Ëalú„)²+¦‰L¨¼ð¯Œó7CÜúÓ<ícþ|,ð5ÿ øÕv±ÿ >?øÿ üj€']:É|½¶°)ŠWž<FÉvçŒÛß'©Ü}j;=LÓÒ²Óí-–xâX`T«°fUÀà :	¦yÚÇüøXÿ àkÿ ñª<ícþ|,ð5ÿ øÕ $š7Ø<Ý*Åÿ ³ñö=öè~ÍŒcËÈù1µ~î>èôé42MR-JM>ÕõSdwM
+™QyÊ‡# |ÇŒÿ õ¤óµùð±ÿ À×ÿ ãT†]`õ°±ú}µÿ øÕ &¥ÿ fÙ2É;Ou<¯=Äåv™$c“Á$…
+ ’UUW'¥ÖF,bô÷mÿ £Ò.°>Ácÿ ¯ÿ Æª+˜µ[ÕŽ)-lâŒMŒËtÌ@IŽ–3÷}E kQE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QEÿÙZimage/jpeg_6http://www.brokenthorn.com/Resources/images/paging.jpgO‰bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_6http://www.brokenthorn.com/Resources/images/paging.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlr.Ó ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Tue, 24 Jun 2008 04:04:12 GMTVApache_Mon, 12 Apr 2021 11:23:12 GMT_max-age=2592000_Sat, 13 Mar 2021 11:23:12 GMTT9587_Upgrade, Keep-Alive_Ä
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDExOjIzOjEyIEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDExOjIzOjEyIEdNVKEfVDk1ODehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIyNTczLTQ1MDYxYTcxNDA3MDAioSVVYnl0ZXOhJ18QHVR1ZSwgMjQgSnVuIDIwMDggMDQ6MDQ6MTIgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsgC0ALcAuQDOANAA2wDdAOQA5gEGAQgBGgEcATwBPgFDAUUBWwFdAXQBdgF8AX4AAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABng==_"2573-45061a7140700"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí&+6?EHQZ\^emx‡‰‹‘“•—™›Ÿ¡£²´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÝåðþ /:CHM[fi~ž¥Å×÷üÚñü!.3GK_             ~              mÔ)%*+O{ëÿØÿà JFIF  ` `  ÿá Exif  II*          ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  Ú" ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ÷úÉ´¿Õo,àºŽÂÌ$Ñ¬Šñ²ý×½kV~…ÿ "ö™ÿ ^‘è€;Xÿ Ÿüþ5G¬Ïþ?ÿ ¬ù|O7öý•—‡u[ÿ °Ê°Í4l©¼Æ’`y“+–Eí[Öúžmg'™kuMí#r0N# Ž´_ÎÖ?çÆÇÿ ÿ Qçkóãcÿ ÿ Æ«BŠ Ïóµùñ±ÿ ÀÇÿ ãTyÚÇüøØÿ àcÿ ñª¯«kÇLÔm, Ò¯µ«¨¥™RÐÂ6¤f0Ä™dAÖUéžõbÇVMB(ÚiÃ‰L71>Õ{G
+X‰ï÷@Û»;Õ†Pî ÎÖ?çÆÇÿ ÿ Qçkóãcÿ ÿ Æ«BŠ Ïóµùñ±ÿ ÀÇÿ ãTyÚÇüøØÿ àcÿ ñª±o}ow=Ü0I¾KID3¤lr‹ õù]O¾¹«Ÿçkóãcÿ ÿ Æ¨óµùñ±ÿ ÀÇÿ ãU¡Xz÷ˆ¤ÐLlÚ&¥{¼Q‰íZ¢I$¢ò«d³/8ÇÌ9ë€žv±ÿ >6?øÿ üj;Xÿ Ÿüþ5V,n%»³Žy¬§²‘³˜'(]0Hä£2ó×‚zúñQÙjPß]j6ñ,ì.¼¥€Ácråyé¶Eã~¤?;Xÿ Ÿüþ5G¬Ïþ?ÿ ©4ÍJVÕî Yâ{r wE+DÇ‚xÜ„ltéW(?ÎÖ?çÆÇÿ ÿ Qçkóãcÿ ÿ Æ«BŠ Ïóµùñ±ÿ ÀÇÿ ãTyÚÇüøØÿ àcÿ ñªÐ¢€3üícþ|lð1ÿ øÕv±ÿ >6?øÿ üj´( ÿ ;Xÿ Ÿüþ5G¬Ïþ?ÿ ­
+(?ÎÖ?çÆÇÿ ÿ Qçkóãcÿ ÿ Æ«BŠ Ïóµùñ±ÿ ÀÇÿ ãTyÚÇüøØÿ àcÿ ñªÐ¢€3üícþ|lð1ÿ øÕv±ÿ >6?øÿ üj´( ÿ ;Xÿ Ÿüþ5G¬Ïþ?ÿ ­
+(?ÎÖ?çÆÇÿ ÿ Qçkóãcÿ ÿ Æ«BŠ Ïóµùñ±ÿ ÀÇÿ ãTyÚÇüøØÿ àcÿ ñªÐ¢€3üícþ|lð1ÿ øÕv±ÿ >6?øÿ üj´( ÿ ;Xÿ Ÿüþ5G¬Ïþ?ÿ ­
+§ªjPé6w2Èà:F‘Æi$wˆ2@Ë3*ärH4¬Ïþ?ÿ £ÎÖ?çÆÇÿ ÿ V}§Šb»×-thàßxb–[§MþD^^Õ‘c” 0‘ÕHÆvÖLv~(šêþÄ›×KÔn$¶±º[‚ÒJÈ’>óÀ¢&X•ÕÛp(p7 žv±ÿ >6?øÿ üj;Xÿ Ÿüþ5YúOˆo/uk[ý+ì?n´{Ë@f- a–d(¾\ƒÎåÆwð7I¢ø–{TÔmìíäk+D„Ç}RáŸq!1Ø(Fýá"°€.yÚÇüøØÿ àcÿ ñª<ícþ|lð1ÿ øÕHum5oÒÁµAxîÈ–æeó•°œ’•ˆì†ˆõm6mRm.-BÑõS|¶‹2™Qxå“9æ^Hî=h?;Xÿ Ÿüþ5G¬Ïþ?ÿ ©-µm6òâK{]BÒyãyãŠefVB¡Á ä.€ŽÛ†zŠ4Ý[MÖmÚãKÔ-/ W(ÒZÌ²¨l‚T‘œqî(?;Xÿ Ÿüþ5G¬Ïþ?ÿ ªúßˆ¬ôx'e‚}MbWƒOó‚É3;ˆ£äª´Œ©¼ žz°šÅ˜•–kËV”Ço‹L›Y#lƒŒ0•ü²£<•Ëm ¬Ïþ?ÿ £ÎÖ?çÆÇÿ ÿ T–z¶›¨\][Ùj—3Ú>Ë˜á™]¡l‘‡ åNTŒCéYw¾7ðÝžŽº¯öÍŒö-wŸÔl‚Ge-»(míÎB‚qÅ hyÚÇüøØÿ àcÿ ñª<ícþ|lð1ÿ øÕI&­¦ÃªC¥Ë¨Z&¡2oŠÑ¦Q+¯<ªg$|­È¥êÚmÍé²ƒP´–ì#9&Vpªæ6;AÎ‚¤ö Ž´¬Ïþ?ÿ £ÎÖ?çÆÇÿ ÿ UÈg†åÁ,r vBÈÁ€eb¬8îGbªvzî¨Y›Ë-VÆæÔJ°¡¸GA#7Ä²€:ÃÖ€;Xÿ Ÿüþ5G¬Ïþ?ÿ ªsø¿A…ôpº¤É«Ü5½œ‘NŒŽÊ¬Iw#r„ã?3¨ïWX³yVÞÒòÆk¦”Gä›§ï8|c$°M…Ç&&Œ ;Xÿ Ÿüþ5G¬Ïþ?ÿ ©,õm7P¸º·²Ô-.g´}—1Ã2»BÙ#Êœ©>‡Ò7VÓu›v¸ÒõKèÊ4–³,ª à•$g{Š ÎÖ?çÆÇÿ ÿ Qçkóãcÿ ÿ Æ«B³ôÍOûB}JÝ¡ò¦°»6Òa·+eE`p:¤‰‘Žpä Ä ‚öóûF;K»X#ó"y¢œÉ÷J‚(¿ß•Mÿ #ŸýzOÿ ¡ÃE hV~…ÿ "ö™ÿ ^‘è´+?Bÿ ‘{Lÿ ¯H¿ô@ý¦‡©\xƒÄ·ëZ®—º„f4‚r’inƒ,NO ¯/Lƒ\ÿ tyí4áe¢hžcYi^^™(²–öDd1ùŠ-¤@¨ÞaËHJ…Ñ…>¡E yŸ‰m5ë‰®ôë¹/]ÓÎñQ¶GiæZ©F—!vyÂOÜäÌ$ÙœI¢i7éãŸ´\'—tš…Ü³JšL‹$¶Ìe¬—¥öKV„ˆÔ1R±Œ-Šö“x{L¸Õ£$÷¬Œ‚yR:ãk¼A¶;«†e$lL•q©@¾¹v4Ïh÷óÛ_Ijº}ì,ö–S\ív’Ø¨"%b2ºúÏŠÂò]zÃU“¤ž kÕWŒ‡Š¦¼¤_àÜÈ‘½A
+ÙQÜQ@F<9-—…|ºtd]0›øo´‰µ?ô¶HX8uT•CžFÎQ[¦,Iâ-3RÕ4{8,¤6Í4év¦_9„ˆÌ-ålÃ™Š2Þv=Š ó»!a%®‘$fãX²¹¸ò¬Ø«M¶í0.&È»‰,Ã¾qhQjXA•<Zø¦·µ6ïn‘Ûÿ gº0hˆSm>ðU€¼äÿ 7¤Q@^¦Ìž<¸²fŒéú{ÉªÛÂ	ÊIt6Î2Nõ¿$€&Lg &Ç‹ šçG·H"’Wƒ•E,B­Ü,ÇŽÁA$ö šÐ³Òí,n.®!I÷OºY%•äcÉ!AbJ ,Ä Â®ã€2jå y¿Ä»[û´=†‘ö‹Èôöka%Ü‚Q¼Ÿ%ƒªÚÈ˜FóZBT(fŒ).´ðþ/Õš-:øêòkvSZ]}–o--–;_<¤Äyi¹el0.!ÝòŠôŠ(Êõ*õ ±7vQ¾ž·º»Kæ.¤žcÞ–…þÏ’žaY9 1Æ3èš½Å§‡´ËkÉg–ê+H£šK‚Žá bøf‰ÎpÍÏsÖ´( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( Š( ¹ÿ üú¯…àošuSæFyWÙkq"äwÃ¢0ôeSÔ
+è*9 †åOr up®¡€e`Êyîb ¿°ÜMã/·ÍÛ[]?É¶uaó¼²f`Ã¯Ê ƒ>ûuþoLÓµËm#Dµ}Bþ²&%kˆ”_Ý$°fÛV—&EF£8á…w”Pi§êÚž¨ÆÑ_iÅ×•çj7iyª&8ÖËG]Ê ueó.YÍèÚ¦‘¦ú™±Oµ]îŠÚÎ×ÉH’5XÞ8ÚÑÃãnHç·QE yÞaw®Å-×ödq.«©Åª`:´ZÃ:Él¥8pæ8ãP¸
+‹–ÞY}Î‡âk·Ùwuw¦yV÷oÏ%¤6ƒSL1˜CÎØZâbüä”'-}B!µ·ŠÞÞ(á‚$	q¨UE  8 1DðCuo-½ÄQÍ¨RHäPÊêF ðAb€<Îÿ K›Ä×úœv:$úCéš}­ŠF¢Ø<‘4ë,ÖùVxŽ"…Fä(óÎñ²@k¬ð¾•yÅî«©K©5ÝÚE¦ öæDŠ2år E@KK'F~6œƒ•n“¦èÖío¥éö–03—híaX”¶ É
+ Î ör€86Ðµ;›Û]>ïHŽKe×_S¸ÕXËà;Ënb-•XåPËó-x<%«ÝØ3Ïvz¢h÷i?˜?Ñõ×’Kœ2å”FÂ0¬¼…v~Þ‰E yºø[T»±3<Z®Û8¢µ·ÓïÞÉ<Ë:'‰RÝmxáXÔ3àîe`«óÍBCU}.éü?$(úœ?lˆË	Ÿìñ+¼M#À	pQö£±Ûë¹’ºÊ(‹HÔçi3ØHµí)µF’6IQ.DÑ"€Þc8DŠ/™T(S‚B¨lvÒµ=	4‹[híµ­].íîL~Y6÷·mÄ“ü®‘,àI	dçpôÊ¯ö?íí²Aöï+ÈûO–<Ï/;¶në·<ã¦hÄIàì=d†(RÞ$Š6RÍn›âfU‹F¬˜“*ÙÃpMa_ê»_VŠúêBîÚ;Øõ7µiÖÛÌš<¬(#ù§!Jƒ&Qº©'o Q@]¦‘©Å¨]XHlç½»»eY#"ÚUŠ+h$c¸3…&8 í3 Ã*gŸ	jóh6vöðÇ§êÛßjw7ÈÅªOE—$ ûDÀ¸1ÇÍè”PÁá­F{‰&´Ô¦Š#§C§j2YÇ¾ÚGí	Úªª“j±“ º…qØðÕ¶«mª]ÜÝZêBÒt†ÞÔÙî 	ç1-$d—‹æE]Îòn,O±ë( 
+ëq+yy²wÊñ¶J|Š7aÎî¶ÑŒe¾uÈ61ü)þ“««Ž#Ôõ	'ˆA GVþ%u…dq‰2NäðCuo-½ÄQÍ¨RHäPÊêF ðAb¤ ù¿äa³ÿ ¯Iÿ ô8h¢oùlÿ ëÒý(B³ô/ù´Ïúô‹ÿ @¡\ÍÃ²|?µ
+qæ[[ÄÞêå‡â	-×ŠÊVÆÔ\ 82¼»½×‰y vÆAÍCÿ 	Mçý ÿ À³ÿ Æë¹][TŽOiwâoìxÎbMöéæ3<¡ŽeF'§OÆ€=þ›ÏúAÿ gÿ Ñÿ 	Mçý ÿ À³ÿ Æë‰°Ö.Ž‘o)³»Ôe’I–6·T_2$ªJYŠ§Ì»‚7nÊ à¼ñm…­‘¼Ž»»e³[Ù$·‹;"`Å	ƒómaÀ;q–Ú9 Ûþ›ÏúAÿ gÿ Ñÿ 	Mçý ÿ À³ÿ Æë’›^‚÷¶6÷sGo5Ò…òâ•öìBo$ù‘òœdŒ3]’ëÏÒmmoe´ûUáŠIaTfÚ •ð7«¨½¨°ÿ „¦óþàYÿ ãtÂSyÿ @È?ð,ÿ ñºáŽ£6qq§ÝÝÜOäµ›%ÈHÄŒ'˜Æ€q¹X v·rî3/‰ ‘Ãc{#‹§³‰*™åBûÂ`6mÄŽ-• Ÿü%7Ÿôƒÿ Ïÿ £þ›ÏúAÿ gÿ ×|CÅoök+»›‰¼ßôhü°éå0I2Y‚ü®BðÇ$ädsP¯ˆöêºŠ\[Ki§Å{ö™#ÁÃy…²¹Þ8NPAWÏðä¶ÿ „¦óþàYÿ ãtÂSyÿ @È?ð,ÿ ñºã$ñ4ÖóÉyc{m,{vE’M²Éå£0 °nÝòž9›ûzs¶÷\‰¡‡ìÌÈL€À;•~|HýÔ˜ÎÚ ëWÅ7[†ý6=™ù¶\’Øö 'êGÖ·¬o Ô-„ðŒá•¸dnà_þ±âkKÃ®É®´jp²Û38õ*Ë·òÞß u´QTõiä¶Ñ¯®!m²Åo#£c8!Iš ÏÔ<F–Ó´–ÿ i‘Œ›ã8$‘ôÇ^r1U?á)¼ÿ  døøÝbÆ‹k*€ z\ïˆu´Ötëiõßì{Y­î$iwB»ÝZ «™U‡GsÏå@çü%7Ÿôƒÿ Ïÿ £þ›ÏúAÿ gÿ ×¥ë§Cq¬D—^M¤ð,e®WËV-¸m
+ÆEÏÊ>M¼·['ÄvÆ+vŽÚîY%óKCaž!”‘Ÿ›c¸MÄ“ò†Ðaÿ 	Mçý ÿ À³ÿ Æèÿ „¦óþàYÿ ãuÄŸÙýŠ´µ»’³ŽúwPƒìÐ8$3‚ÀžøMÇå<r3gÄSÜ[é ÚÜ=¼²][Cæ¢©eW°œ1ê u¿ð”ÞÐ2ü?ünøJo?èþŸþ7\åôúÚ`»Ô.îá:}Åà¸1Ä'‹ÊØ(
+²$ex*rXäÞ#¶Šæú³]±³‘!v€¯$‚?-’,dÐ`î*
+’ØÂSyÿ @È?ð,ÿ ñº?á)¼ÿ  døøÝqÿ ðÅäÇ•ßÛ>Ñöo±~ïÍó6y›s»gú¿Ÿ;±Ž>÷Ä×.%×ôûÓ®#‚æÖydyUU£xÝæè7HÈT‘’ ;?øJo?èþŸþ7Gü%7Ÿôƒÿ Ïÿ ®$x®ÏìS]½­Üp-œ—Ð;?i %$pÉÃí?0ãƒ‰¤ñ´Ló[]ÄÉoöˆã’0¯8,T,jNK“³å8 Ë À ì?á)¼ÿ  døøÝmiÚœœLÑGC‡ŠL_BpHÁõ×¸ qµkIv_±(qæ‰½×c6?4SøPkU¯¯ ÓíŒó“ŒáUygnÀ_þ¹8 š³\—ˆŸ]XØåb¶VAèY›wç±* ™¼Su¸ìÓcÙŸ—}Ép€~„ýhÿ „¦óþàYÿ ãu\¯5Æ›¤\ÅâŸíNãìÞvºØýò¢_‘8Ø¬í×¹9 ÐªÂSyÿ @È?ð,ÿ ñº?á)¼ÿ  døøÝr«¬'ö’ZIgw
+K#EÄŠ¡%‘C1P3¼pŽrT)Á9\Ó‡Å¶|òCwÎKôžH¾G·M¿¼I<‡n7 9# ·ü%7Ÿôƒÿ Ïÿ £þ›ÏúAÿ gÿ ×1§ê‚öi­ä´¸³¹…UÚ	öØÅ‚¶Q™pJ8Æsòò9Í‰5-CVÖZÍÅºÚ],PÀ!‰¢Ç‘üÙMäsœ88èGZ îá)¼ÿ  døøÝð”ÞÐ2ü?ün¸8<WllcÔ'ŽíD–vSµ¼h$	ö‡d]¸˜ç¯°FIáñKr"’ÊídŠ	æ>YX&.ØÛ’yÊ†_˜sÁÀaÿ 	Mçý ÿ À³ÿ Æèÿ „¦óþàYÿ ãuÉG®	¦•`Ó¯f‰HÒtTÙ,‘’Í•9V\¸UÈûÜ®iéÞ$šçCÒ.dÓn&¿¿µe·òÁÚîp]Â…Ë¦mØaÇ Ïü%7Ÿôƒÿ Ïÿ £þ›ÏúAÿ gÿ ×|OhîE¥­íàû
+ß«[ÃÑ0r¸É1Ù€½IaÆ¿i©Û_\Ë«yÉqÈgŒ†·‚B†“´+èè{ÐUkâ€Ò…¾µèN©.õ_vÈRN@=ó€3]pÔøiÙôpÇ>Y’%öTvU€ PµEss¥»Ï;„KåŽäô½K\ÏŠÖŸ	?»Ä²ãý¡µAü¿: ÅS—&5|¾ÞuÆÖüB«ÔÒÂSyÿ @È?ð,ÿ ñºÇ®õæ[]FuñNuH..–ßJÝmûÆŽWX¢Ù³Ì;‚¨ÀmÇ<E z§ü%7Ÿôƒÿ Ïÿ £þ›ÏúAÿ gÿ ×+s¬%¥êÃ-ØƒÌHšïjˆ–G *òw6K(Ê©P[’0Ø…<Gm&¥˜¶»Ûqq%´7XòãdÎFÓ/Ì'•Ü °ÿ „¦óþàYÿ ãtÂSyÿ @È?ð,ÿ ñºä´ÝzJhãK{ˆVxMÅ¬’…Ûq+—]¬H:páOÌ8àâµÂß_xšêÒ-ZîÊ,à•RÝ!;™Þ`I.ŒzF½1@·ü%7Ÿôƒÿ Ïÿ £þ›ÏúAÿ gÿ ×ž%HmMÍï›¾ÞÞúIR]’iDlÀ1È'ª®pIÀ5fãÄÐ[£;ØÞìŠ´Ü1ESo	,GV`Ø!íP\‚ àPgÿ 	Mçý ÿ À³ÿ Æèÿ „¦óþàYÿ ãuÊ¶°ŸÚOiÜÉ‹×ª”ŠF
+ÁHÎóÃ¡ÈR 7$a±COñ$ÓibæëM¸[™/§´‚Õ<½ò”wèwí,m’X£c9\€w?ð”ÞÐ2ü?ünøJo?èþŸþ7\|~#¶–{#¶»y®üÐcÊ1:¤Îp6–<äƒ´à’T4ÖÝ¶£%´p$»æ·3º°ƒd€•÷nõÇðš ëañKùƒíV\]Þ|Â¾ä^:ôÉôº(äIcY#utpYNA¡¸*è|(ìl.¢'äŠå• *®ñæcøÐé¿äa³ÿ ¯Iÿ ô8h¢oùlÿ ëÒý(B¹›„gøjTgË¶·•½•
+3Àk¦¬]6âöÏJ³µ“G¼/	xpHP?yí@ÕSŽÃËÖnu3>}¼0y{~ï–Ò6sß>géï[wZEÃJZÆÂöÝ	É‰ÖUö\J¤¼{c b þÇÕ¿ç„ÿ øÿ $P?®è)­ýœI$[#Ü9íÖt!±ó*·A•ˆ`6Tæ¹½gE¹±Ñ›J³ší¦ŸGNß‘‘g1«„PÀ‘KÅÆ6°ÚÀ©aèŸØú·üðŸÿ âÿ äŠ?±õoùá?þÅÿ ÉËMáX%ñê›l‰’hçv–ÉdYTå'ä_‘xÚO,A‚·õ}:æù¬e´ºŠÞ{Kƒ:´Ð™U³ÆA”ôž½«kûVÿ žÿ à<_ü‘YúÍ¾±¦XÇp°9/wmoóÁ1,Éé?_ŸŽÙÆp(1ô.cy.îÒKé&¶y&Ž‰²	DŠŠ›ŽÞä’räôD7~ŽïKŽÒG·™¢¾šö1sl%ˆ´!Úñî€œr9 ûWSý«Ï	ÿ ð/þH£ûVÿ žÿ à<_ü‘@Ì~šÎ+Ó®m-îmc–.lÇ‘¶VWp±£.Ü2.>cÆs¸ÔûµÜ×Ââõä·¾ÓVÂ`cRTÉûÀÃå‰[#f3ŽƒŠèÿ ±õoùá?þÅÿ ÉcêßóÂü‹ÿ ’(™mæé¥žúú'º’KBZs‚o5FÒìrI`Nì`Ž89$´ŽëÆ\­¼¸µ·o:VGUó:C´œÂKrÜ»æä.:oì}[þxOÿ €ñòEØú·üðŸÿ âÿ äŠ ¯Z^F}u¤Q•ŠÙ•Ï¡f]¿žÆüª²èÚžá¾­™ù¶Cl{9 ýAúVí‹¾Ÿl ƒE¿ÆrÌÏgnäŸ3¯ÿ X  lÕ=Z	.tkëxWt²ÛÈˆ¹ÆIR æ£þÑºÿ  5÷ý÷ÿ £ûFëþ€×ß÷Üür€8èÝedC•`Pj¬–f³m¨y˜ò-æƒËÛ÷¼Æ³žØòÿ _jßÔ4Ùîgií4ëëiåÔˆ	îqæ‚	úã¯9ªŸØú·üðŸÿ âÿ äŠ ÅÖô¯í{$ƒ|Cd‚O.â:8#l‘änäŒ2©íŠÁ:7ü#vºz[ÜÝ'íQ}¢?ÎÛÒ‰
+ˆã+ü£km(6œ¯*+¸þÇÕ¿ç„ÿ øÿ $Qý«Ï	ÿ ð/þH ßÁbçLÒMÜVBæ-6ÞÎán¬Òå£Ø§ýQ'j¶Y²Hpp¼qÏI¬iòjzwÙá •f†d‘ã2(häYTvã¨ëZÿ Øú·üðŸÿ âÿ äŠÏšßX‹Ä6Zoûn-..	0G»1¼*1ûüc÷§99éŽø ÉºÐ.u++ÕÔo¢’ê{9¬â’sB’¸ì.Å‰!IËc
+ æ%÷¾Žú×U‚YQÖþê; ¯dVb
+¬¹ùÔ˜FGGk£þÇÕ¿ç„ÿ øÿ $Qý«Ï	ÿ ð/þH Zµ¥Œk-•µÜFê3ˆŽÜ1ŒÄG”¬	õ|îç8jâiwÚz}ô·é,–ðÏÀÁ0HÈß.ä
+c gqÇ“óVïö>­ÿ <'ÿ Àx¿ù"ì}[þxOÿ €ñòE rð‰Húd–êbM—L³+Nª3'Ìw°òÓ‘°}î9³¬ZG¯i‹y] É3ìp‹ßÝÏh;°½6–ÏMý«Ï	ÿ ð/þH£ûVÿ žÿ à<_ü‘@êÖ’&¿bgË/+{.Æ\þn£ñ¦ÿ cêßóÂü‹ÿ ’+kNFÓ"e‹GÔ]Üåå‘íË7 8@={’Hír^"FMuda…–ÙU©Vmß–õüëwûFëþ€×ß÷Üür«_;êÆ	ô[üg*ÊðFìAó:ÿ õÁÈ$P3Tô›ì½ÇOó<ß²ÛÇ™·níª8çÅj¶©î; ºÙŸ—|0–Ç¹€OÐ¥'ö>­ÿ <'ÿ Àx¿ù"€94ðš'ˆàÕÍÄEá¸’`M²ùÒGR.rBï@À
+ Ü•§hÒ_ÌštÏz, ÒgÓYd´04*æ%Q¹²%“ùt%>UÀù½ûVÿ žÿ à<_ü‘Gö>­ÿ <'ÿ Àx¿ù"€9ýBMíOG›h+ab¶É…Î	bOÌy-Œc rK“ªE¨ßÍiª[Áo{2ÊêlËÊ„F‘®_np€Œ¡ žAWGý«Ï	ÿ ð/þH¬ýzßXÒ<=©êK–³´–à	 nQs‰ÉÇ†h%ü1`¶Óy0$v1GÒÛÚc '' íöÆy¦MáX%ñê›l‰’hçv–ÉdYTå'ä_‘xÚO,A‚½Oö>­ÿ <'ÿ Àx¿ù"ì}[þxOÿ €ñòE aXéwv7L©~Ÿ`3K8„AûÂÒ3;rÄÜì@
+§…äàî§káûÛ%-µ¶iÖ­f²ÉjÍÄv ß»NwcïqÈÇSý«Ï	ÿ ð/þH£ûVÿ žÿ à<_ü‘@þŸ¤C¡nž9e’tû{EO,»í‡Ì ü¼±!úÔq×Ï
+éë§èä6gdWÈo(äA¤C›æÍtØú·üðŸÿ âÿ äŠ?±õoùá?þÅÿ É^ºŸ#&nXcÌ2J¾êîÌ§ñÅµÒ.P×Ö·DH°"·³fV$tàß9ÐhÝÐûþûƒÿ ŽP…s>*FZ|Ä~ïÅŸöŽÖòFü«[ûFëþ€×ß÷Üür¢¹¸’îÝàŸB½xÜ`©x<ùœÔÔÊÕ=2Ãû:Õàó<Í×Ï»n1æJÒcðÝ|V³èÚˆr!‚óËíçE7âVe ¦ÿ cêßóÂü‹ÿ ’(“Ôü&š–²šƒ\D
+\Ap¬öË$¨ce>ZÈNV2 ¹‰É©§Èñ”¿³ÚjM–…D‰6\ÍÊÉ—”mU …c¸¤¯qý«Ï	ÿ ð/þH£ûVÿ žÿ à<_ü‘@·‡ü+0hVÈ,pù´K®¹Ë&IvùG#h$’Aãm›­3RþÙ›PÓïí ó­âã¸´i~ãHÀ‚$L¬>½+ þÇÕ¿ç„ÿ øÿ $Qý«Ï	ÿ ð/þH ZóÂ±ÜZ=¼WNìo-YÝ3=Ã+4‡îRv€ÍÆ Å×…`Õõ1zËdÌð¬}ªÉnYˆ18FùÛ$†Ç;zL®©g%À¶•B\Ü[áaŒÿ ª™ãÏ3Ž»3ŽÝ2z›ßØú·üðŸÿ âÿ äŠ Â].îRââÚý"¶º™g¸ŒÁºBÊŠ˜W-…R#PARyl‘¶²è1[*Ç}žB{ÛWkrU|Ó&U×x/+à‚¿ÃÇ=7ö>­ÿ <'ÿ Àx¿ù"ì}[þxOÿ €ñòE söØ®ínMÏ˜ñGt$0ç•%b9ù@e Näã&ÚF—:¥ôvòÅÍÇî<äxØÇç(Øaûé'<€~n>]µÓcêßóÂü‹ÿ ’(þÇÕ¿ç„ÿ øÿ $Pzè|(Œ,.¥#ä–å™¨
+¨ñåaøVT:5ï˜>Õk}$]Ò†2ÞÄ™›Ž½0}®†;ÙâcC¼D@UZ   e :oùlÿ ëÒý*8šæçY‚áì'·Š+yP´­ÉfŒ€6±þé¢€5(¢Š (¢Š (¢Š +Ÿñ—ü€í¿ì+¦ÿ él5ÐW?ã/ùÛØWMÿ ÒØh ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ¢Š( ®~óþJÿ `«ÿ ýi]s÷ŸòPôoû_ÿ èÛJ è(¢Š (¢Š (¢Š (¢Š (¢Š (¢Š (¢Š +Ÿñßü“Ïÿ Ø*ëÿ E5tÏøïþIç‰ìuÿ ¢š€:
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€
+(¢€9ÿ ÿ ÈçþÂº—þ–Í]sþÿ Ïý…u/ý-šº
+ (¢Š (¢Š (¢Š (¢Š (¤=:Ö.Ÿ.³}aktnìcóáI6}‘‰Œ‘þ°PÝåkóýc×þ|Ÿÿ ŽÒyZÆHû}‡þ¿ÿ  *+?ÉÖ?çþÃÿ  Ÿÿ ŽÑäëóÿ aÿ €Oÿ ÇhB¸ßkÚkZ.ž.]C¨ÙK$mŒ$w1Hç$`áž:öÎEt^±Îoìý¹?ÿ ¬oÂÓëæ#u}f’ÇÀ–+FG÷Nd9ÿ ýf€6ôÝ^ÇXä±™¥D;Y¼¶QŸL3øzZ½Xö¶:¬v¶÷Z|PÆ6ª-“ñÿ ‘Z˜Ç¬Ûìyéþ„ÿ üv€4¨¬ÿ 'Yÿ Ÿûüþ;HaÖ@ÿ ûüþ;@4Vp‹W#þ?ìsÿ ^oÿ Çi|cþì?ð	ÿ øí hQYþN±ÿ ?öøÿ üvÅ¬Mý†?ëÉÿ øí hÑXºŽ¥§‰üÉm¦e=Â“›p\ç;Lt«¢=`±ÿ N±ŸèmÓþþÐ•åêüfúÇõäÿ üvE¬tû}ÿ ·7ÿ ã´¥Egù:Çüÿ Øàÿ ñÚ<cþì?ð	ÿ øí ^‘Äq³°bB©cÇ Ÿ ®&çÅ:4ž2Ó/Öó6°é÷pÈþSü®ò[Æy¿åî+¦òõ~÷öþÜŸÿ ŽÖÏ‚þ×¬IîlŒ™Üð‹FòäoV_3óçç' M­ÔW¶±ÜÀY¢nBÈW#×SVo—¬gþ?ìð	ÿ øí^±¸·Øç¯üy?ÿ  *+;ÉÖçþÃÿ  Ÿÿ ŽÐbÖGü¿Øÿ àñÚ Ñ¢³¼­`ô¿°ÿ À7ÿ ã´¾N±ÿ ?öøÿ üv€4(¬ÿ 'Xÿ Ÿûüþ;HbÕ×–¿±Çýy¸ÿ Ú´£E`O¨êvÒOÉjò)¶òÝ`e_ÞJQ²œàðE]Xõ“œßØÿ à~òÖ€4¨¬ï+Xÿ ŸûŸóäÿ üv°åþÃÿ  ßÿ ŽÐŸäëóÿ aÿ €Oÿ Çhòuùÿ ±ÿ À'ÿ ã´¡\5{á}wG2°¿¹Ó§ŠŒl7³ÆÁpØÛÉ8ÎqùVç—«ÿ ÐBÀÛ“ÿ ñÚÎÖ|=u¯Zˆ.ï,‰C”’;Fž¸>gOð£¦ëÚn±#¥…ÃLcså:éÉ ~ÇÒ´«KÒ/´›³³¼±D^I6O¹Ïv'Íäÿ ž•tG¬#íö<Ó“ÿ ñÚ Ñ¢³¼gþì?ð	ÿ øí!‹Yÿ O±ÿ À6ÿ ã´¥EgyZÁéaÿ €oÿ Çi|cþì?ð	ÿ øí hQYþN±ÿ ?öøÿ üvÅ«Ž·ö<ôÿ Cqÿ µhFŠÀþÑÔüÑmæZùßmû?›öv³Èós·~sž:ÕÕYÛ“}c‘×ýºÿ ßÚ Ò¢³ŒZÇ#íö ÿ ×“ÿ ñÚZÁÿ —ûüþ;@4V“¬ÿ Ïý‡þ?ÿ ¤0ë Çõþ?ÿ  £©jö:<i%ôÍ9Ú­å³údÇÐúT~^¯ÿ Aÿ noÿ Çj+«BúÒ[k›­>hdYM“àÿ ä_ÿ U bx?^ÓVÑ´ópÆêmFöXãXœå$¹–D9(ÀóÓ¾0k²®WCðµÆ„e6—¶,d–Í‹þèÄƒ¿ÿ ¨VÀ‹X9o±ãøòþ;@TVw“¬ÿ Ïý‡þ?ÿ ¤1k ócÿ €mÿ ÇhJŠÏòµƒÒþÃÿ  Ÿÿ ŽÑäëóÿ aÿ €Oÿ ÇhBŠÏòuùÿ °ÿ À'ÿ ã´Ó®½oìsÛýÿ øí iQT´»™®¬ËÜlóVYcmŠT²2ƒ‚I ´PÚÎÐ ÿ „wL=Í¤_ú ­ÎÐ?ä\Òÿ ëÒ/ý Poß^iš7Ÿ`Ð­ËÝ[@4m"/›<q–*IÀrq‘Ò©CªjZf²,µËí>Xd³šì\CnÖ«
+ÂÑÝ¾G(9ÊíÚsœñwÄú1Öôo±à•Õ´²Gp	GŽ9ã‘ÔŒåTŒcóÅG‡,tÝ6öÒËG¸¹‡jÏod‹±À;” i9ÁÇZ |>)Ó&µ¸¹3ÍÛ…ó"žÖH¥ùŽÔÄn¡Ûs«´Ì<¢ñ†5œ·Q]É*ÅqöWŠ;yo;`vŒD{2«e”.Wœmlroá«Ý2ßVÕ/æ†ìù¢¯nnÖ#mpÒ‘$ò‚Dm•Ë…
+€±*vxí4»ßZê„RÚÎS[[Ø>Éy,Î¢Å +Ä>³.õ_™£`UrB€w±_KL7téºDqÉ6Çhò¬`AS‚ í5…¥êZë_êßÚú®º~•9ŠwŽÆH‹¯Ùã—~ö‚æsFôÏÞÓ•¢ÃfÂ%!¤™Õ%y@gvrwÈK9Ë±ÆãÎ8Á¤_DÞ"h.¢¶ŸRŸÎ¶SÌ0³Åb­€HhÉÆpF? 
+z§Œm-ôyo —Éò.m#¸[ø$·1E,éHDH]¥ðçåÊžNÄÑÏq£­‰.—zƒZ\,ð¼RDE¼²€QÀd$¢0åX÷®v?kq®¥r¿eóîN’yµ+›€Ÿf¹iYZy˜†B€	ÆÞ76­¿‡õÔ-õ;“kçV7÷Ã#H¨¿bkPŠ‚ç;XåW©‘– ÚÓ<G¦ê×fÞÎyÂRðIÌƒxÙ”,‹ÊüÈHÃ©ÏÌ¹×®'Áþ¹Ð.mšdŒ‹+?±Ã1¿¸¸iTìËäÂ[ƒå©(‡ üÝµ QE †ŠC@ï‰ yì›ßý¥] t®Ä½'ÿ °MïþÒ®†€0|G{©ZI¤[i’ÛC-õé·in i•A,Ÿu]IŒ½Þ«Zë—z}æ¥i®]ZÈÖpÁp'¶·xƒ	^DXÄeÜ³n‹ó
+#&ø~-uô•¹¶¶º³¶¼3ÜAr›Ã¯‘*.$4Šyã\R\ø~+=æÃA·³Ó|Çl·Œ[£ò7©dBê
+y‹ó.w H€%ÿ „§L:y½NWÍòDÖ_?ÌÛ»g“·ÌÝ·çÆÜíù¾ï&5ñ†‹%Œ¶÷r]ÁpÒ,?c·’áÜFÅ‚F¬ÅoÆÜ‘ÏÌ¹äÎuá{3©ßÝY¬«¬ýº1uw;BìþÏåËs v\Øv1 ]áU–Ô5M#OÕ#xî%ŠãRÇ—}>ž“G=Ù‘fY",ÛE`¼«+ƒ»€Hy4óßi«.“yj²LˆðÜ<~|ENp®¹{ƒŽG^•‡¢ëZ«i÷:¦»¨iÿ d†ââØGkc"H^;†…H&WÜX¯$¸ “×wK°]/G²°O+Ë³‚8Uc*íP ,@ã¡$ûšÉCÔ`ðÕå„1Gs-åÅÂ²;(d’ååØ\ÈYauÉMÛ”@#Ô|eilº]ÄRí·¸ÔÒq5¼‰4gÈ’EO,€âFej•ËAÜ¤Ø>'µ[ŽxWMšÂîê[‰C…áRv6mó0a•+ƒŒÁ³ðž½¦¢\Ãö)î×Y:ˆŠ{éÈ›/³ì3:ÈìÊÇ©àüÚ%›Á·WV-·D.¬uH&hÁ*KÉ’Q´7ªía“´ž 8P«J×,µ†™mZpñ ^+‹i-äPsƒ²EVÁ!€8Á*@äi×3á}çL¹¼»º·Ž®8ŠFâù¶¡r3,Ø ~ðáBŒrrrôÔ QE R”´ çu@©qú‡éKWC€+ŸÕ?ä)qÿ pïý)jèO"€9ÝfóX Ót½*âÊÜ\ZÜ\I%Í«Ïþ­¡P ,‰Œù¤ä“Ò¡²ñ#Z[ß¦³2<öW‚Ó}¥´™¸cs‚ï²¨-Âàd	5¿Zë^ Ónµ+ë+kkˆš+˜„„Hï	VU Žl	8<ýi5]
+DÐíì48­í`†]ÆÎ	ZÉ%C»äY"¢ùÈ|¯R»OH ³7Št˜,àº’ðˆ§/ŒDä¢¡ÄŒê˜Â¸	Ãm<Toã-­n>×#Åun—I$vò:ÇŒ¬’§ÊB2wI´a[û­ŽN;|‘-æ«¦ÅsÔ k‹é%Ž³Ü,Á÷¹%¤P«û¦p[çýçÈXÁià»ëïèÍ4÷úžuÅõÍ§‘±;ãˆ;>i7)‚¸ó z 5)aUÒîím¦ó=Å³N¥p{,‰ŽqÎ{tïXzˆoáÓõ½~îÕ†¡ÛÛØXËætÞP(yB?*‚1Æ3Ž£ä{éëþ}«—_ê–þÑ´‹yb70CÄQÝIn·#ØPLƒ|cpWÈ;6œ8 }×Œm-µM)<Ýöw¶·R.ÞG¥ŠH—ËXÔ,É¹vî]„¡XU…ñ<ªÞ‡žÓ¡Óí.áž d3žeqû¼´
+Å°2H‰¦øg_ÐF—%·ömôÖ«¨$æ{¹¡W)2°b’±á0Cr~óc%$ð5Êi`K”‘#Ó´»h›sÂÒ=¤¯!®Z Û”RÅy<2ÙiZ­®¯nóÚ<Œ¨ûe…âtl†G”à©ä†¡Þ¬ii—>|QÅ5Ôæinæº ìT¦”îs„íP6õ QE ‡µ-µ s¸[Àktíÿ UÐãåÅsÿ óÿ ¸·þÙW@FF(™¾»×®<Qw¦i·–°[ÙApZæÊIÙÚG™N
+Ê€ "½h²ñ\1éPÍ¨ï7&{‹c´“4†Z&u8RT÷¶ïU,r	Kïéú§ŠnuWLÓ¯à{8 ƒí6âV‘æfá† "Eès‘ô£_Ð¯n­ìmt¹#·µ…FÞ9æ´	À	"˜Hv€ÃÊÜªÁùe*(Æ£ãJµK›½I>ÎÖÿ i3ÅKÄA*ìÈ(|¹?1\ž*Äþ#Ó Ô†žóÉçïXÙÄ.bGlaP¥ÎW
+Ì	Þ¸rçÎ5Ûøb]]Ø}¾ïÃ0é†)K«K$1Ì¡m”ç»™Jà)”$6ð§§¹ð•ÌÞ+šù„RÛ]^ÁxÎú…Äb7‰bEº‡0«fÊ°A¸KÅ—úÆ™ ÞêºUÅ”bÆÖk™"¹µy|Ý‹¸(e‘vç±ëÓŽf:¬º,*ºåê]ÝÊÍå.›§LX 'ÊV•ˆŒ·A¹A#3x‹N—XðÆ«¦Àñù×¶S[Æï¹t*	#¶HüÍUñ“©ê‚ÔY\ªD»–D2Ûàœm—t%Yöÿ ºÜ¡÷ä°*(¼ž3±¶×å´¸¼ƒìgO¶¼‚hQ¤Ü²4Á¥,¹2d8UÝËr*Âxž+{gíçdvwékÃÉ, ÛÅ.(,Íó¹;G
+¤ô×8<­Á£ÿ e Óš¯Zè÷S5Ä¢hÖUwDþð~÷ L•íœÕý[Âw——WsÄÉ#Yu"[ÉmŒ‹ö5¶*ÓF7ÆAß(9 „à®Óï Ô¬’êÚBñ9 ¥H T© « Œ‚8 ŠµY>ÓHÑ¢³dù%eŽGwg?;’ÎrÇ,q¸äí\íÔ QE RžJZ;ÐvŠ1c'ý}Üÿ è÷¢—Eÿ ëîçÿ G½¡YÚü‹zf?çÒ/ý Vghò.iõéþ€(uMQ4¸¢ya–Q,žPX€Îv±Ï$qòžõœ|Qài—üŸîÇ×þû£Å`-µ†;Ýÿ í9+üñ@ð“ÂW6ûo\â1ßƒ÷þ´¿ð“ÁŽ4Ëâ>‘Ÿýž¼£H×ú~“rž'ú•ÇÙÄÖ ÛŒ‚_‘?È¬í×œä+ªMY¢–ÒØÜÀ’JÐÃq*(ŠY1*wŽÎH …8'+¿þ‹|çû6ÿ ?Hÿ øº?á)·ÿ fßçéÿ \4^(°`$xî¢·kI/£žH²’@›>u*Iä8;H1óÊæí†¤·²Ë¶—w*ÈÐÏ°¶Æ$+e”‚U‡\ü§Œ`°øªé·ØúGÿ ÅÒÂQn[þA·¼óÏ•éþýy¬Ú„Ï®ê°Kªk,QXiÂtbÌ ~w3u>•£/ˆíì’ñjHî§¸òBí„ïÌŽ8Ã,å@žààº+·$§_÷ý×ÿ Nÿ „®úßþQÿ ñuçãÄÞAÖ^úÊå-ì¯"µ£A!pâ Õb[æ“< pW9é×mÃžÞxîÐÄ-ÎÃ!óBÊÊ|Oú©1ÂÐd|U	i×ùúGÿ ÅÖ®›~š•šÜ¤r"³2… FÖ+Î3ÜâøëŠéü0öG¿›7þz Ø ô4Pz ç¼KÒûÞÿ í*è{W?â^“ÿ Ø&÷ÿ iWC@zžµ™4Éo<Æev¼m+×$xU#â˜0 ÓoÆ9ácãÿ ªþ(u8ùã7óŠ¹]Mcá½RîÙ¶O¤²FÛAÃ*#¨h­ÿ „šÚeècˆÇþÏKÿ 	<Ä²ÿ ëˆÿ žúó«J«ØÃaâA¬ùòš=öïåF#vßˆ•HùÕ$ãêT$ñª,²^ÚÝXD¶ït²\Æ?y
+½Â©,1¹8`æ6 ;Qâ‹pr4Ûÿ Ê?þ.øJmÇM6ÿ òÿ ‹®#þ(#7I=äé	h$EÜÍ+²FªÁŠ6J»vÑ¸r-ûä¾YsMž\ÐM·tl@`ÒG*ÊÙðGCÀ éÏŠ­ñÿ  Ûïü‡ÿ ÅÐ<Sn	Î›{ÆOü²ãŸ÷ëËíu)§k¦¸Ö5èäK»ˆü»],IªJê¸anÀð£9=Ö·Ä6ñêZ{°°O¼÷ ‰EŒÇÎrw´òB‚	 íGŠà:øç¿îþÏNÿ „®úßþQÿ ñuç–ž)-§Eq}§^,³êZEhŒIC.ÞŽ@â=¤“€Ù$í«J=fÚk˜­–9|ö¸–Ý£ÀÝ$»ä!>’Çýá@ü%Pžšuøÿ €Çÿ ÅÖ½•ÒÞÙArªÊ³F² Ãgó®#§nÞ•×è@é¸ÿ E‹ÿ @¡A¢ƒ@ö©ÿ !Kû‡éKW@sÆ+ŸÕ?ä)qÿ pïý)zè`çó C^†Â÷ì¯is3yk&b€	aŽXtÕVñDq¦_ð1÷cÿ âêˆ<Bãþ"ÿ Ðä®cÄ÷’Xhm<wcýý¼oq„ýÚ4È®~pT|¥ºÐh|Mñi—ÀäãýX?ú­/ü$ðdÄ²ûþùŒìõçzn«ê.–ÚÑÖ­VÖYç‘R´L…6  QË“‚	%80:#]†8§ûM•Í¥Ä^_ú4Â2ïæ9H¶•b¿3†Q’1‚NÑƒ@§ü%ã8ÓoÆ}ü]ð”ÛŽše÷åÿ \@ñ,¯Zå.… µ1ªÈÒùBR,I;·a¶¤‚¤èÙ]ÅiçÄ¬œ¼lŽ du%]N	VpHÈà‘@1ñTñ-¾ëÇú¿þ.š¾)·QŸìÛÑŒþècÿ ¯0ðþ§-í–™qq¬ëÏ<ÑÄò ÒÀ‡y‘¼[ãg=wQ[Qø–	&hã²½ M5º1U$ñ—ÌjKäFÄòö, ;qâ¸ i·ß‡”özwü%pÿ Ð6ÿ òÿ ‹®Jñ/Úì´!uer/u;8*¢”\y{‰;°«ûÀÃ' ÇÞ ÖZÕ¶¢öësnšÜÎÁ€Ì!vIºû‹Œc¬n?„Ð]/‹ Š'é÷ÁQK–>ÃÙë¡S‘Þ¼êûÙ÷CòÉ»{ôP é@AíEµ sßóÿ ¸·þÙW@IúW?ÿ 1Ñÿ aoý²®€€zçó K¯Ám{=«Y]ÌÐ¬Ñ„ÚrªÝØzŠ…¼Q	<i·ùÈþùÿ Çë'R kÚì%Oýs^'¾6+¦Õ?³ žóËžç÷cjùR0‘JŒ²¨õíÞ€;¯øIàÈ'M¾ÛËÛøéG‰à2øv1ÿ ³×Ÿéz°| ½“Zµ…!dšŒò»º´`ÄÆyè–;q‹¿Û°ù6w+xgû?Ø–%ó|¿3nwyêþ|îÆ03»å Óþ‹|ý›¤ü]ð”Áÿ @Ûÿ Ê?þ.¸„ñ@lìon¦ç	D±È)<·b$eWå'wÌ88v­©øCïµ]6QŸ°Ism.ßö+ GÓ‚(´oÛž›}È#‹ÿ ‹ xªÜsýz	8Ïî¿øºà4«‘%ü*5mvã$þîëLòbnÞBã§aœw¨n<d§Ã÷…•às`×–‹pŠ¢`wn)uÎq‘Êï@=x® 04Ûÿ ÃÊ?û=;þ¸èùGÿ Å×7ˆ"†åí¿³µ	.b²oF¬B3åvæ2»FI,1‹–º•µõÔ±[7iùñÑ6ü•‡}¡XGSÜPV¾(…åŠ?°Þ§™"Æ•00PNúÖð9®1ö›Aùzƒ¨ÿ ¦‹]ðéÒ€ŽôQÞ€3ô_øñ—þ¾îô{ÑI¢ÿ ÇŒ¿õ÷sÿ £ÞŠ Ñ¬íþEÍ/þ½"ÿ ÐhÖvƒÿ "Þ™Ûý/ý PŠÈ6Ö±wÿ ´¤¬;ãóÐxšHRÚÔOkö×EûCE´ìs»+ÏLÆ¹òmˆ i$û
+ÏþSI³þËÒ,l<ï0ZÛ¤O»»jœgŒã§?¥d/…<C­öˆüÈn$”fÔyîv<¹ÜÁw £ Pîè¶ÿ  G#·ö¬Ã°Ïo ü8Èä!6¸çGãÓûVð &ÃEšúXôéZùlaÒgÓØIh`1+˜Õ>c••ö£eÐ”ù gæè4==§!tèÚm£6Km žHÉ$üÇ«v’u¿Ñ{èÃ×?Ú“ñ>ßç4¹·ÏAÏ§ö¬ÿ áÒ€1N›«C¨_Ía¨ÙEäË3Å=“;+’<YG@zw4·šßCª,·‰æê:zY9H°72ÝÐ™OËœŒ}ãž67ZàìƒŽ ÿ ‰¤ßOJ\ÛŒÿ Ä¤äuÚ³õéŽÂ€1fÐä–âùÚò1Íõµâ,îFˆÇÆK|Û„C½Šd¶‰uãg[yXZÛ·›$ŠÁ<Î‘mc€ØInË‘–ù¹Ån†¶^Ž@õœúR¢ãÙñÕfÏò ëÜýHçñ®—Âí!Ÿùk7þóøW5›c×G8ÿ °¬üþ•Ôxu¢“H…àƒÈ|£ËóLì'“È'ñ zCE¡ {Ä½'ÿ °MïþÒ®†¹ïôŸþÁ7¿ûJºÓ®(˜ñAQÓÏý2ŸùÇ\æ«b5MöÀËåý¦ÞH|À7lÜ¥s·¾3ÒºOÉ »³I¬¾Ðì’•?kxv S#äç#¯¥c±·# ý?µgçô  È$F8n¸íïþ}k‘Šßír¼Þy›OžÎE·¶Hæœ>Ó½ä-óËòœ³àÀáy-×f×œi%€Èÿ ¬Þ½øÏ©éõÇBmF?âOôÿ ‰¬ü~”ÇÛé7ôÚ£_<ÑZ(iô÷‚3$R<›|™>b‡)»$îÜÀ0/A¢éi¤Y¼-w2´¶[xºò¨9è£©c’y >Ê1tÆ©7¿O—Þôl4‚}@ÕgéïÅ bZéšÕ—›¦«§­³\Í8éîÌ¾d!‰€8-Ž½êi4A(»Qs·í:…½æ6çËò¼œ/Qœù=F1»¡ÆN®ëf`K»ÿ Y¿N8¥Í©i;ãþB³sŸltÿ  Å¶Ðä‚KR÷q°·Ôn/cUŒ«bU—(NîH2Ÿ˜ÂŽæ™aj’x«Q¿Ky„kD²JŒ¥¥'•À¬Vø#+…ùOÞ­ÝÖÄýpxÿ ´ãúQ›\ÿ È$ç9?ñ5›?Ê€Ó¹þµ×h-Ÿé¼ƒþ‹O÷r$Ûu:9ãŸù
+Ì¥v9GÒ,¤†?*¶Œ¤{‹mFO'ŒPú çµOù
+\Ü;ÿ J^ºçµOù
+\Ü;ÿ JZºÏc@†¾Añút‹¿ûrV&¥b5T‡ÍòŠÏÁ€Ïú¹VL{gn3Û5»¯Imý²Qôÿ >Qn„È/d‡å,øAÎ?g³1¤3ÏüMg?J ŠêµÙÜ[	¦‡ÎFU’Úé‘Ê¼:‚:cÚ¹oøEWL¶Ô."h·ÍöiZvž±$o¥Õ„jÙq’	Þv°S’ª:ÐmJçû Çö¬Ç·Nž˜ÿ 9 &Ôœyÿ ¬ÿ á@}¿‡åÖmoe½ØûµµAöë"|@±Ð6Ö
+ðªH#j’[«tÚ]’éštV‘ù?»,qKd¶HTR cŽ¼¤ä›Cì¿ôëÇü…&ÏþƒK›lgû'#9'ûVr?• ai:^³¦ÙYXRÂk+X’>ÀáÝmÆ|Ü#¾8ÏCŒTðè¾WØ±u¸ÚßÜ^ýß¼eó¾LçŒyØÏ íè3Z»­·È ‚OüMf$×µ.m¸ÿ ‰AaïªÍÛðÿ 8 ]'B}8iAï#•¬,^Èãò÷©hÈ8,qÏPIì8¦xzÕçT¾ŽÞh¢¹¸ýÉ•]$1ãqÊ¶~öIÎXóqòí­ÝÖäcû!±ÿ aiÿ Â€mxÆ“ÿ •Yÿ Â€+ßÿ È>äð?tßN†½[p¯>¹’Î;id—FÊ*Àê“7ôÅz3éõÍ >ƒÚŠj ç¿æ;ÿ qoý²®€œ
+çÿ æ;ÿ qoý²­ö$… q:–?·µ/yS¿ý2Ž³nìEÕÞŸ?›³ìw|c;ÿ w"c=¿Ögž¸ÅjêrZfõN™æº:‡“ûBX·Ÿ-H;Tc¡ðªŒmºÿ d¸9Ú³ÿ ‡~Ÿžh®¥eý§¦Éfe(\ƒ“–RC®~doºÃ#r’8Ís£ÃßØV‚KgÞãPûbm7tQ‡Ê+äFÛ™Ý€¤·Ì¤äcÖ“mŸùnÉÎµf#>½óŒ‡ì§ƒ£Œÿ ØVð >×ÂÍ¨iVrÝ$ž)nš?íK!2ºM9pÌ™M²ž6î`W°è.´¤¸ðÌú2Må¤–miæykò‚…7l]£Ø×€hƒj	?Øø'ž5I‡|ÿ vŒÛ ?âPHíÿ Yúûqþx ëHu¡p­{a4#ªCfñ±ôÃXpztç5'…Äº=µ€¾â]3Ìgp‘c]øÝÛËÎÓœç¨Åt;­Ili<§ûVnüzR“lOü‚	ïŸíYò?N´›£YÞ]jWùŽöÇ*ÛÆÙ&##eTcŸ3 rxà“Š¯áka¤œ@Ðù³HÊÞX;"Ü	ÈÄ)ÁÁãæç5´ZÜùßþBÓÿ … Úç#è«?øP.mý=Aÿ £»õ9Îk„…íòÔ¶“´µÄJêS>Ö. 8#œá]Òúñ@£½w íþ<eÿ ¯»ŸýôRè¿ñã/ý}Üÿ è÷¢€4+;@ÿ ‘sKÿ ¯H¿ôZ5 ñá½3þ½"ÿ Ð Pñ_Ú~?çïÿ iIX#9ëž+sÅD›{Oµþº’°ˆÈÇ¯h„ÑÏÒtI-$×dÕ]-^F¸kÃRPÌy˜±³ÌÁúmç¼<FƒÄ)¤Ê¶«$²<q¢Þ+Ü¨dH€Â©U$ÄüÊœjiöQišm­ŒŒV±$H_` “Žøýj¢ž¶MN+¥ººÅ½ÃÜÃo¼•ä¼ãŽZFl±8?wh$P(üTÂ»¸ÓÞ;9téµ(æŽ`ÅáMŒ©md}Þ˜cÎ-hšüZÄ×6û¬ÞKeŽF{¡qÇÜ .UNÿ ‘ŽÆ
+óÍei¾’kÀ·–·qXÇa-Ž{…dòÜÆ!)ÎÅØÃ{€ä2ƒžÝ%‹Úionîäló”ùT€TrO8ÉèI  ÌÈ%¹×õ¥’Ë\¼Xî’%k-KÉÛÄHÚgNìNqŽsš¿u¯Í¦yÐÇ¥È`°Óâ¼åº£Œù›—¿˜àDHçœ¸ÀÝmô9~Ýwsm¬ê‚éÖI#ˆBSpS#|LyTñN¸Ðáº‚ùn..¤{ë±šBUIEócn7!Î= gÿ nê6­M=šÏ¶£­´PÌ7•”B ù•Fy¸džXŒ€ ›g]xnÅ…Å¢­ñžÒ˜2º:’î® ]“ðy>WA¸
+™ô$¸½v¸¸+uuÛD6â7ˆÆW‚#L‚OCŒfšÖ’\xª+¦´Ùµ»F%/ï\íÚPN“,<ÆÆC1 n‡ýoóé]?†9Ðb?ôÖoýõÌ=p+¦ðÁ?ØpçÞÌ1ÿ m^€6h=†€9ïôŸþÁ7¿ûJº3\÷‰zOÿ `›ßý¥]8Ìx§þBZýqŸùÇ\§‰e–
+ëÀî“%ŒìŽ„†R#b#k©ñ9'RÓóÿ <§üyŠ°uõ=6êÂbëÌM”#pVdc84…f"þÚ³þÌ:ÙÛ#¿·²¾O–ý<ÿ —>g—Ó×øwR§Œ-ÒkÔºKpÖ–³]¼V—‰<ˆ‘d@I>a€CsÇ=(ÀÇ0Ï>¿ýzçÿ á´ŠBÉ=ÐK9¬¡µ¸ŸdK?”ex@»Ž[’Ø mÇˆæÓÒýu+(­^Ò+vgûP0»M#F§yPUQ¸•|Ø MíX[·ÓÈßo9‚F¶œM	l+…Î¨9 ‚ëYZv…=ÕÅýÎ¡ý£Úc·U{¹bóüÈäY?wº0ä tbŒYzîè,­Ò¯uqrìróNA$ã…
+ª1Øêy$JÉd»ûd’éÞ »-}t¾l¯•;…á6à ¿ttï[3x†Xu¨Žž~Çky¤—q’dìÚ˜É!¥PÄ‘‚7“€ôÐg·3]wS·ŠI¥˜D‚ªÎåØÑÄõ&¬É£[H×Ežqö«Èo$ç£FcÚ œ)IïÏ ‹=wV]>ßí\^]jw61¬w Ó’Pp¾^ÒpNÑ»–;kFß]ê1Øl\ùóG,~`ýÜH,™Æpx>PsûÞ¹S‡[h0Àaýüòù7²Þ¢¸GH8+™\Œœ‚GÌ@á,­$j:„–¦tHb2m/!·Ê6“…uŽpÄD €hTqÇ§Øhcþ$oýzÅÿ  
+äÓØÀ®»A9Ð4ÞzÚDñÁ@4(4ÏjŸò¸ÿ ¸wþ”µt8®{Tÿ ¥ÇýÃ¿ô¥« 'úÐ!âùŸþ½"ÿ Ðä®cÅ<z&Uî«Uv¶glkˆÃÙód‚Gó]6¼Iñç¯Ù"ãþ-d_XÇ¨[¤—
+³E6PŒæ7Wé• =5¶jm&›¯-ªÚÊgKÆœ3J
+yAMÉ$y½7Þ-ŠêÞïËS\BÐ"ýŠôO	iÜÇ_`+ó˜m8œâ·î­`¾´šÎá7AqE"r2¬0GËƒíÁ•bOáñµåÐžöþòe‡qyÑ\¤.­"°'!p²Œõb@?ŠM¬3}®Ò9’ýl•noB\Â%É“i!$/‰Û¸.N54mR=cM†þ2¸bÈZ7ŒÈÅ£nBUˆ=HÇ‘¦xzSmu%Ô—¶·2^}ª$’6ž6¬L[†-ó£!UÆ0pCkoöh?6iNI2LÙgbrr@ {Ð 0(ðÂ=Î—£Oq¦ø‚Wxa•îVÌ%ˆm†ã§$íØIô­x<Eu<ê¿ÙŠ©5ÕÅ”×8ófˆÉƒ€§bdòCq³q›NÐgÓ ´·‡^ÔÚÚÕQX
+². SˆƒcuÎ;Š±‹o¶Ui³ow5âî=d”KF3´y§çÔÐ^®ê3Øø~+‹4žçP²ûTÓ,ÁUU<¬±ÊŒdHN}ì/L°¿¥ëÚsÅn¶å&ÅîÆð~Ï(s—Ðoù’nGüóÏ!2iš¾šºxK›‰†Ÿlö±I(Sû¶1Ÿ›jŽTF :‚z³C³’95¹ìÍ«ÝÜoX_i’4Ú¿+$Èe|ÖBO,ÔzôçO¹íû¦þGŠô|Wœ_Ÿø—\žså?_¡¯F’3@AíEµ sßóÿ ¸·þÙWCŠç¿æ;ÿ qoý²­ö8Äê_òÔÿ ë²è¨ëšñ4’²I|–ò^•›ìM0‘”A1÷?9 ñéÍtš‡:ö§ÿ ]“¿ý2Ž¨]XÅwqg4›ói)™‘ó1FLŽ˜vühÂåì“SºµK×Ó£†&Oí¥åüÒÏ?Î'”I ¶E>×ÅöÙ>É¥ÅÓÞ5]ï·gXüã‰D{¶ù`»Ã9­›ë(µG·‘™rVDtûÈèÁ‘€<pÀ79rbÝh&ÎÍ¤²}BêêK±rfI£3£˜¼­Ñ‡21‘´àvÛŒ( æñhŠÖØ¼V¶wÉtˆš•êÂˆ!“ËmÎªÀ¶H8\ç›Z¶¦.ü	«Y™ ir\ÂI
+è"ÃîžÈéïPéžxtëoô‹»¸¤¸thäI$H¥˜Éå·˜¬¬Ã
+rr¸Œ“¯w¦Ãw£O¥Èò¬[µ¹måŸiR¤îl’y''9ï@:]¾ÝB&:^»Ìí–óTF¤ƒü{îä€‡çBçÅz„Þ–ò=m..4©/í\	6„U.[
+@Ç˜¥GÍ¸}í™Àè-tÛË{„’MoQ¹UÈ0J°ílŒs²%oCÁ³š­'†,ŸMƒO2Üˆ`Ó¤ÓU‹˜ÜFÏ7îÆ;C@	6¯¨­ôö0é)5ÄIvûn€BïæŒ$´jÀ,N ÚÓ5ˆ5ygk52Z¢Dë?MÌë¼®ÒCÏý4Æ2>;/±Ë> ­surmR€¥òÌ…vàWc!‡#Ú/Ø5†—²Hy¤Æ€Š\ùhq‘”Œ"`À Pšô›?úúƒñýâ×ŒW §6}ãîç¯úÅ®ùNG\ÐÑÞŠ;Ð~‹ÿ 2ÿ ×ÝÏþz(ÑãÆ_úû¹ÿ ÑïE hVvƒá½0žŸd‹ÿ @£YÚü‹šgýzEÿ  
+ £âiZ+[aäZÌdœ&Û¨¼ÅGl‘Ï®q?óÑ3ÿ `ÿ þÎ·¼V1maŽ?Òÿ ö”•ƒõéÞ€1ÈÆ¢`sÿ  î8ëüä
+ ÿ gh›xÁ:O¿Åp>Ò¢ŸBÐšËÃfÊìGg+jb8r®ÆïV/ó®åÆ2w @Öòx‚á|CodÞ\‘\\In¾U´ !UvÏžvçäÁ@RHÉØr¿XìÝ7¾ŸÏá–¥ÿ PÝ
+3ÿ  þqÿ }×'‰õm"¾¹‚ÕígÑçÕ’8Ë+€‚6X‰9å“—“ÑW6ž‡©]ÞMsâ3Ç£%ËióZ+XÛ&I+´AÇÌ8àÐÖâ8:v‡»¹~}?Û¤(ÈÓôO\ÿ ggÛ9ßÓ<Wt†¾×õÉO‡´]G7ˆ¾uü˜q›hîœcrHêjÕö­¨éŸlKk[-´Í2+É"›$y¡¢Lm ˆ ädmÀS¨ÞHãNÑ8ÉÁÓúcþï×ð£vÐGöv‰ŒŽÁëþß×ó®Yõ-^ÍõéVH.Y5K{kheWE@âa»sc‰p¿{,WæÚ-É­^Ûêi¤Ê°Iy$¶á$TdŒÆèÌû9û‰ö‘Ìy'æ íçiºOýCÿ û:ê¼=/Ÿ¤Ã'“#|‹²Øœ;.@çÓ?rØíø]?†üHb?ôÖoýô±Aèh ô4Ïx—¤ÿ ö	½ÿ ÚUÐ7JçüKÒûÞÿ í*èHÍ s%•’êÎ/²ÙLdI7Py»q°p21œþ•¸Ÿù‡hø/ÿ ìë_Åj:póÆçr>+ÿ ‘;\éÿ  ùúÿ ×6 mçŽŸ¢í':wcÿ õþt¥˜uÓ´OA?¯¶w×/g¥ÆºÅ”Ú†ÎŒ •ÞyŒP'”'î™‹eÊ6ÇÊI9¢-žÜ]´Ñ¥ÊG§O|žTÂ¤E·å¸ÄàïâD `·0Õ‚2HÓt0qÎtþô*vòr³t<Ž3ýŸÿ Ùû×1u®jz[jV÷¢ÖW¶ŽÓË’Þ>fžVˆ±,ÇiPBK`ò7 ºz%ýÍí´ïyWŠm‘ÌÖ’[	†Õ`ê’|Ê>b¼“Ê“é@eø?ñ.ÐÇ¸°ÿ ìè)tíÐìßþÏã?q~†nîSá}ïuýçúEÜ˜‘±q ç÷, |Ý…jÉ­j1ê7…c¶û¶¡žÀ­æÉçrAÎkÍ»£n íÊ1§èdc¾ŸœgïñÓñ£y Ä»Dë?³¸íþßÓò®JËQÖÓNµA=­ÅÍÞ­uoæË…Ž5iÈ ob@1.q“#ïV•¾·qq­(ÇŸÄâwÁ	å F]÷âxs‘Ž$ÇðÐàçþAºþñÿ ³×a£ÊgÒ,fòãÌ·GÙíUÊƒ€;JãúŽœW_¡xMÿ ¯X¿ô@(4ÏjŸò¸ÿ ¸wþ”µo·N:ö¬SþB—÷ÿ Ò–®€€zÐ%¯L¶?cÓ¥Û>û«o5¾f~>ðÀýk4±ëý¢q×þ%ÿ ýhxƒ8ÿ §H¿ô9+”ñr$šI ûB5å¢´SæsWæã‘‘Éš ÛÜyÎ¢ã!yÓ»öòúRÍÔéÚ!'þ¡ý}þÿ 5ËYZ¹u=4KhlæG/“n“9*ÈÄÄXaBÉó‘òïÎM$~%¼e½·Ø²\ÆÖ«e5¢æâS“„±
+FI’>R3@@ d®›¡õçþ%üþ?=83F›¡äœgû?úïö®VojñÜA8nR1Í´³€>Î'ÞbR]‰äåÈå¶’w4{©ïôØ¥º·hnž2¯D[T0VÁPÀ òÆhé`xþÏÐÂñÿ 0þ1ÿ }Ñ»hÇön‹Ó§öv:vûý³ïÚ¸
+èÅt}ïþ bÚ	¾Öe>wÝRýOÞï€ßˆ­K]gU’h·-œp\^ÝXÀ¢&fCœRFù€À•(¼wÜ¹À énçû;C#×û;ñþÿ éÚämNÑ	þÝ9ÿ ~¹mQÖ$³ðÅ³KÏu§ý¦æy•Ì˜_$Œ|Çs“'ý®ƒi»£kw¥ÒÛ´q+ÛÛ“vÃ Dò¹Ï—ºOÍÎ}ó@3ÜyòËý—¢7–ŒøÎÿ n½…yÝøO¹ôòœŒú`×£Š (=¨ ö {þc¿÷ÿ Û*ßn¼uëXóÿ ¸·þÙW@@=E qZœÅµ‹ÈþÃ¥Éå:¦ùíŽß"œ“¸zãðªÛ»;DÇýƒÿ û?óÍO©È{Sÿ ®Éÿ ¢£®[ÅqC4š"O§ÿ hÆoÛ6»Q¼Ì[Îz9×“Ú€:ÍÆtý$ðNƒ‘×øÿ Æ‚ÄuÓtNyÇö~ÿ ÇÍs¾š…í®œšE«ÇqZÉ®$Á¤òá-¸Ñ€ †r»xàÒÚø†öö4µ‰c[¦Ô>ÇçKi,H1ž[Èbp
+…,;6qÅ tªB—MÐñž1§ÿ ötíÇþÎÐ€9$ÿ gà{ÿ ½rGÄÚƒÛÙFËsÉx¢´šõA0‹hHðÇvàwð2>ï<]Öç’óáö£q5³[Í6•,’A ÃFLD•<Tçµ o±ÁÓtLsòÿ gõôþ?ÓùP_nâ_¢‘Ô‘¦ŸÏïg·ç\ö›¢}“QI_Âú˜]ÊÓZÉºQA W9è~lsß¥d\øƒ[›Âr\K%¬3Þè’ßÄð+æ‹ì±`Ia( Œl#«ãà’Oüƒ´<úÿ gç‘Ç]üÑ¿‘ÿ í éÝ8é÷ëKÍlê·6æÃu½‚LÒÍ®é›Í\áwF	9ÈÁ–Ü³hš×öãÏsf;$HJ‰ïw<bS6ì’<cœ‡íŠ Ú‚sÝ±þÎÑÆg3ŽÖFAßÔg?…wIÐçÖ¸$éVyýªýµßŠ (ïEè?Eÿ ëîçÿ G½h¿ñã/ý}Üÿ è÷¢€4+;BÏü#zf?çÒ/ý Vfh„Â9¦€2>É_÷ gøºEŽÎÅäpª·YbÇ .AüÈ®oíöóõýü_ñ¯AÉP	äAŸËü÷¥ó=O_J ó{Y´Û;{KyàH`b|ÐØE$ç¥R]?Ãé¨­ø0„v‘Ï$#2°b«»»q-¼pÇ$
+õc'~^ÔŠûÈü;Ð‹éšUœ:“Ouý”±­´¶¦8î©:HÈH*ÜEØq,¿;cîÛ²J°247*ÒI€òÏtÓH@è7»“œœu5êP3Æ½sŸJ òiôÝâòk¦½™%™ÃÈaÔåˆ3
+Ôp3…§j™í´iaž'•nmEœÅî‹4‘ ÀÅ³Ÿ¾läç­z˜`OCùRƒìhÊÚßFi®fó¢ßs43Éþ’pÒÄWcÜ ?"ôÆvŒçx¤ñwò\Ù$ÖÒAË€Ï'˜Ñ±b0m1ã$îÏÁõrGN¾Ô`s@uý¡gÇú\°ýâñ]o…¤WÐa*AY±ƒŸùjõ²Ç šbçxöàP”†šÍ…'¦=iªÙþ,äP‰zOÿ `›ßý¥]gV‰:ÍŸúÞÿ í*Üs‘Æ>§µ rþ,–8oôç–EEò¦b É1ãùç®åÓo¬ç´¹¸àž6ŠEó@Ü¬0FAô5èû¶žóÿ Ö¥ßÙÔq@zu3ÖêO_ÞŸÇ>ÕŽºVoçIkö$àxÌþjm¿»Ú\,A€@q¯Z/×·oÆ•XHz‚1œf€<gIÒìbkÙ.ÚÉÌPÄÑG~óŸÝ—eÌÛ_xÞ÷PŠCtµeý—§ÄÑÛÜF76÷’IüÉ±Œ³±,Ç ’x t½;å÷íFáïô ":F…æHë{q‘ÞFXµY£]ÎÅ˜€² 2I<U×‹H“ÏÝ,?éÇs'ïúÉÍ­×þ™§9Íz€`{Ê—9ìhÊâ·Ñ­Ù^9£]·R] 7¶ÈêÁØÜd;ñÓ’@É¨ìž5Ö/µ››$3E¼iÀ“÷q´„1$[ÌÆÑœmêsÇ«ä:Ð çhÎ¿´,Ïü½Aÿ vÚnðþ›Óþ=bàsUö<pi«ÃŽ1Ž(J1Ü*äñîhVÏäÐ©ÿ !Kû‡éKVûg¶*ÀÔñý©sŸú‡éKÖãÄp? ä<I<Px…Œ²¢µŒÌHi3×ê+æm6î5Ž{ˆYVD”4™:žfP
+ô}åzò[¦?Çüõ¥ó2q×žœPMu§\C$3MlñH¥dÝX09È9êOZÆ›KÑ`±¼[6´3Ü*	æå˜Ë±‹.é70Ë/ÊGÜ½y¥ g<uü)Êw“œvô Ó4Í>+;¤º–Ú6¸ºûNÛ{×-ùk+7Êìì–n	ÞÀç$¶Í¬ºm•ºÁm<1Æ¹<J	$œ’I9$’I'’I'šô¾§SFáŽôävšN…``û5íÂ,DqZ}€/A·ÌÆ8éŒUÄ‹H‹ÉÛ$
+ ¸’ê1ç}Ù~ã×¿˜ütãê CùRçÚ€<ªÎÛFÓ¢µŽÚh‘max!r_dlÊÅrÌxÊ/\à  ¦i2Gn×÷w6iq{sç¼qNcÄiˆ]ßsvpÍí“êçÅ(À'õ 2½¾µ{·0³˜Û
+$'éŠÁ‡?N”ŽsÇ?ycƒ‚hôÔÇ|Î	8æ•[w|ó@óÿ ¸·þÙVùÎ}« kdŸúí•n7-ž>¦€8}ZæuýHK<hZT#s‘å þ`Ö|³iÓÍo,—³ÛÈeˆù aŠ²×û®Ãñ¯HTíîyéÿ ëÿ " îs¥ yµÔºeí³ÛÜOÄØ;|Ð# ƒÀ€A‚Î@¬‹­7JƒO0iŸbÞ×á–KÇ‰™ö….³+G8\°·Íœï${“n>½)Ë‡'>ôãú~•¥C¤Ák5Äcy¤CgtÐùBIÌhÈT”Ø6Õ;F r&m2M8Él¶o	¡Ž@‹å‘£`cŽ:W§àuêqFñŠ ò›[="Îån"¿¸wü²ê“H‡#«HTõî(k	¬¢´v…­â´{O´!p¡“;³Ñž¼u¯Vvò¥ÈÆhËUìlËÏk<uäGó®ÏÏåî(Él}öù°I$“šfŒÖúvœ!’òÔÊÓM;ùrªÒHÒà»¶äœg8©ÃzñÞ•pPE{l÷vkÄ.ßj‡åÿ ¬ZôU9Ö<Ôuéšázu9â€Gzc>ã>¼R©Î=hŽ‹ÿ 2ÿ ×ÝÏþz(ÑãÆ_úû¹ÿ ÑïE _=+‘·šây<-¤Ç3Ã–FöfŒ•2,+ˆøäó#žDeH`Æºæ8RErVÖWe|3ªÛ • µ[Yc-‚`™c,Ê>ex£nOÜß€[m dµÎ§oa¯ÁyªO4ÿ ÛÖ6¯*f=±L,Ä‹1®%p0w.s¸¶XÞ·ÒÁñ¥¡®£ª.Ÿ­­Ößí	ZV‘ÚáXyÌÞ`_ÝÆØWQòzfÙÍ£’U7×QÞ—VPa–5ˆ#¦F0¦l0 râ¨]x8^ÚÝG>»©½ÅÑg¹"y!Œ±XYD[yw$Ë ’¿- gA{yo¤]Ûé·“´z…úÚèW¹„m³ÌMÆEV[™ó‡¡NÖLîx2ygð><òÉ$²i¶îò9,ÌLK’ORrIÉ xZÂî]XµÖGfŠMRÖÝÚ=Árª5 |¹é’O=[Ñt{=B±ÒìSmµ¤b5Ý´#«6 ‰Ë1©&€1t/Þj°Z¼ú+Àoôã¨YÅÂI#ªˆ÷+d*©-*ùŽG-³¥Acãèîí/¶®ŸuwlÖÈ‡N¿ì×˜£&ÐT‡°
+v©n'Ïø.8<3§Zks<ƒI[K6án®ˆ'Eeù°YVm»@B‹ÅY»ð°†ßQº:†§¨\-±gšxÕó†Hž0F®¥²6*7}çb×ÆÒçíöv–QjCMÿ L¿Ûïû:Ï½¦Úv¡RÁ~RIÙ•RÇnî­Ç¯èÐêVâ0’4‘“žbGhØ£ñ¹	BU°2$•£xfy­/&»—Q´»“Rûu´³KÜÄÞB@Åøx²Ø—
+P²¡xÛÖXZHà73Ü2çt×—‘‰É'°É'   `    qv_í¯´ëëÈRÊo+K›T†kõ–@‘…%.ßÜ¹Þ£xÎþ~Q™uŸë‘ÛI¶Ÿ¶¡Íƒ˜å¹Îmç¸ò‚±¶”eePB†Ü®äbµ#ðu¸Ñ®ô–ÔµÓå²’Ævtm.Ý©…ˆ] 4›È¯ÌÙ›Uðµ¶©-ÔÆæê	gKEWƒfc6Ó4Ñ•¤gsœä€(…÷‰&{ëûVÓ$–:¥™¸[³’I^Ø®Ð£vÎ;À`†m‘éþ=²ºñ2é
+,¾{©ìãŽ;Õk¥’3sIÑ²3å¾q')7ºóxnÎc{¹æîþßP|Äù; ùx_Ü&Aç–äq‡Yx},µ'‡P¼æY'K Ê!Y$,Îü(vÉw;YÙAl…] ö:õÏ‹ìïìížAãšÞìK=”¹Ìbæ)ŽL€Lye;$VaŒ7A¡j?Û:›ªˆD?lµŽãËÝ¿ËÞ¶îã8Î3Yrh—Zd2ßXÜ]jŒVïm§%û«%°v\‚@Vt#f,ZM±ðK_HÓâÒt{-.Ü¹†ÎÝ-ãiXª(Q’8<´ŸâLæ\cþAWí•2â[ëßËcmsä¹@T²K4Í"FÎ ©*‚'ùs†2ò”SNñ+eÁÇüJ¯ö•=¬n ñhÔ"e‚òØZÜ‚FcòË¼LÇËûÙUºœ˜ð Ý@Õœ—wN§ÝjWÒ‹­zþÒæo<Å4‰»dãÚS˜£û»x]¸ÚvÕ»;8&mrÚûVÔaÒô«Ò±çQ–"±›x%f’mâB¼Ÿyöáú|«·aü5j,£¶†êæ	`¼šö˜ÙË+ÈÍ€ÊT‚&‘@e8Ç#"¤Þó¡n»©¤Âëí“Ì¢ÜÌQE1ùhUP
+† ° 9¿j:Í¯Ã»›(.n­µ	 ¿¸†i2&†ÆìŒwÛŒfþb$S)c’]Þµ©Ãú–©äùÆÎÖ[(¾fÅ-·<ã8ÆHïYwþ	Ò5.[]bõ+¦·{uÔ.- 7H§v
+0@©o—ëš±âM(ÜøTÒ´»hÃI¦MmkmEÄQt r é@×Ä×‰©Î›½Õœ1Ý*ÉtžX†FuV–B B¾S³…ÜGÊ\ñUl|nÚ„a‚ÊæýïÍ‚o¼ËGq	œ‘8MÅ|°F|¼ïqš®§…mZ+‘-åìÓL°ì¹’@Ò@°¹’­Œ6ÇbÀ¾âÙ;ÙÇFóÃM§Ù<Ö-ª^ß6¡öÖ.!7))‡ÉgŒH¾Q%F
+6C¶ÌmE \üCHl¬žk{->âê[´êÚŠÛF‚Þo)”Èªà¹%HPÆï›å·‰-‡„‰„S}‹ìoòð<Ï/Ëó6ã8ÝŽ1œg½cèþ•4k3ö»í:þ).Ú9£‘f•"¸œËå¹•]]°#Üy;“†Æwt“i–·<ºUÂ¼ÖrÛ›gIerÒFWkäî$Ž¬NyÎs@´–kÙ"†ËP¹µ–ÑLzN —1¸¸›ÊP$*€Hc´€1·æùŽ×Mâ]fm[H´ŠÖÖV6ZŠ-Ë2mZuØÆ,°ÚCBÉ·•%†¿ü#Bk&†ÿ VÔ/ÉžÞc%ÃFòeYTT ²òvî ã<.ÛÉ¨‹ást“Mu“aÅ¸·(C)ù`çø²Nâ€3í|G6¥¨X‰´É ‚MZâÂûQÚ$ºå å‡XýâN>E/WDø‘eª‰Z!¸?ÙòjA§]-ÍÀ6e%‹åÊw !†xßƒÃ–væËl“±êñîe9’o;pl/Ýýûà$ó˜ôïEajöƒP¿šÍ`6Ð[4Â4·‡ mCVÎ@w.ë·†± —^%¹Ô|+¨ë0½–tƒöµ“LÔEÔy`´3m\3&å;”…óÔ³/n£¡àƒßò®SRðÔï¥ÞÚ‹«­BëVŽ;«Ë³´VŸ>á„T …’P¤);ä]ß(ÊõŠIü?3@Z§ü….:Ì?ÿ J^ Œê:¶³­ˆ/Þ×ì-„ .à¥£Žie ð\¬ˆ«¸6ÃFàì†]UˆÕ§ÁëýŸØŸùyz}……Õ—ˆu&(¯g¨ºi7cUbe#®Ò‰\ÊÉ¸ýÚ æôg—Y°ðeííñ†çAkÉÌ7rÃ$“ ¶ ´ˆÁÉN	lHOc­Þ‚÷šÎ«©‹{K««H’Ù¢;RæX£ºe’W`#@»1Q¹›vÈð¼ØivÖ:…í”Úe¯Ø º„Æò¶ (ÁÑ”äÆ„ ü¼	ÍwðhÝg%®¹©[}—Íe-ÙZYYšYŠ¼L<Æ,ÜŒÊ¡A`@0µ]K^];Ã–Ý<”¦Ük.›c%ÄQyGhÆüÖ%Hv‘‡»wW}JûbZItæâ1°RÆIR>	ùAó‚G#ŽµŸ¨ø#@Õ VÔôë[»ÀÐ¼·²ÛCçÍå”?;mä0L0î±?‹´¹u]ì«35å£¾É|¶XÒæ7v*B«‚s@äñ]Ô:5ä÷6–V·–+mtg¿ÚFY@ÆfPÛJÈ‹Â½€Á_š’ÓÆrêVÚséš|ww+s#¢](’ÞEŠC˜Ã’Ì<½Û)ËéV—ÂÑ…èÔ>Ò.ÿ ´WÊó¼ï/ÊÎ6yg÷_&6c8ÝóV]ï‡F“gbš]¾¯r› ÏiyÚvO –H÷JFP°æ@ÂPUprXÐ[ÏŠ––sGe—KƒT–«ñ­€.ÃçH60ÁØ9N~c·©×õÄðö6£0b<qƒ$‚4ò,j]Îv , O8ÁÈÓ<ði:T/©]Z]A¦ÛØ^5Œ€-ÂÄ½72oQ–“…ç'9oA©éÑjš{ÚLî™$GŒá£t`ñºä•eRrâ€9˜<x÷–Vícims.¢tæûòÉo»ìæpë.ÐY@ 7Êùð­´u—ˆõMCÅT)ØÉk|·iç"{y’&+û¼²†8S¹w$ª• ìGáäÍ„·:…åäÖ·fíe¸eË9‰âÁBª…~*ò2y,LV¾¶´Ô¬ï!º»Þ’¿!YÌ¾k†ùsÃ…+´‚1É#"€1-¼gçiöšÞ£¥Okš5Ö¦±%Ï˜ÞLknÄBÌd%I9 í.Ê²Ù|@†æÇT‘SO¹¸±XÛNÔÍ²¬¬Ê¥åØ¥•f”ìO›ž@ÓÂ`Óì¬eó¥·µÒ¥ÒB;ýøFqPìD¼©ÉöÄñhRˆ§ÖuK™¥Û‹†‘âÚw.Å2	$åî¹@ "MvæïNÒõäx%üv¬,¯EÅµÔSH±²`µÙ%n‰ÐaX±ì”`öÁöú×-qáéU­¬ÒI®VãPŽÿ Q¾HíÃB€Å¢„p»vFù!ˆÏP¤œ1@-Ÿí¦òî3ÿ .UÏëWµç‚|W¬ÚêsÚº}¶8Ö>Z(­„‘…CÀViœ¾ÝÛ_n~TuÞrßÛŒªpµ8àõûCo <úf½ ^+>ñ§x§Ô¾ÛÏ"ç³«¼˜ùqµ£êwPwV©¬xºúÆîêùmmtûi¢K[Émþiá\Ÿ)—§ `ã9Å"êûÀvÛjzŒž"½Ó¡kâ»xãk¶„2(†2¨ãx.ÛÕ€RÅˆEã«Ô4Cy~×öz­æ›s$K²Zˆ\LˆÌT*8K¿#ßÎp Ï>\Å.Ÿ®jvÁj–vÐEäH¶ð TóbfÂ–;‰b«“ò¨ µ=Júh¶Ö·N–—mtŠ.&{I¥
+Ü„Aq•c0èc­Ý{Y¹Ò†ŸÛ./®M¼hfªŸ&I ¿»ÁÇ @$ `ŸÁžŸU³Õ‘cí½Ùº3Em¼’Ãçm¹l3†õÜª{S|O£Üj—:å…mõ4“Ã(G„}ždVëóº¤09Á¤Š «yã!Ñ­¯Ä:}«4óZÌÚŽ ¶Ð$±;FÊ²,Ä²9_eU‰Úp*ïÉ‘.«¦é][C¤G«N’Î°È±H®P(Á-‹å†Ñ»ÉÛZðŠZ­¼ÝìÂfOu™Ä“«¿.÷‹ VR>BƒŠç¼Cá)×G>“¢ÑK¤¦˜."º‰U‚+¬Fç8eD.[0òûœ2  —Þ=´³ñCilwu›Æ÷¡.šIvlhàÛóÆ<ÔËR0ü£v—‰|Jž²µ–Sju8·îîE¼
+ÛòòÛF€ùNX¨Ç9o¡Õä¾†þúÞ)¥Iî-beXæ‘UUYŽß0p‘‚ªÁHLAmÖum)5H`æ{k‹i¼è. Û¾'ÚÊH¬§(î¼‚0Ç¸ `ÁãKM4´Òtønå¿Žé¼Ï¶·ŒÛÌ‘1Þ–‹¬“…Ê®æ+J?_3ëºZ¤š<>·Õ­¡iq!,%l0p[aSó°ŒîltöúV÷Ö7usqskð¬“8bþkÆîÇŽ¹Œ`.Õ   ”ž±ŽÂk»¾û<Ú,z4Š4Q«ª>JdI‡qœíçx 
+÷~*þÊmFïQ±û4ÖöÖnRkÌÆžuÄÑFãd{J‚î»¸'‚Í‹âhRÞÂš{¼7¿c–á5 lQ¼±&ãs³!6•\ìÿ XBcÇnûÃ–—÷—2I*Ms²nB?t`‘å‰×#ïr~mÊvŒ‚2	ý…/özÃýµª¡(”^‰Ì¿wg•·oË·ËÛüXßóPzj—/ªxP$,Z¦û9!ŽàKb7š9£qÃ.#p0ºÌ¥°P(êÇçÍE¡4¦•Jÿ bÓÞ{ç¸vS$÷rùŠx±,ÌÃjŒ¼{8J¤œ1è(Ž‹ÿ 2ÿ ×ÝÏþz(ÑOú£þžî{Óy( Æ9ÏéZŒ0höKèx­ãYØ¦nvö}« oº~”‹Þ€3ÿ µìóŸ&û=ãÂþ"—ûbÐo‡ÒÂþ"´h á¬Zùcÿ €ÿ ñƒW³Ä7ÃþÜ'ÿ â+JŠ ÌþÖ´Î|›ÜãòŸÿ ˆ£ûZÓ;¼›Üÿ Ø>þ"´è ÄÕ­ª¾öÅ„ÿ üE/ö½Ÿüñ¿ü,'ÿ â+JŠ Í½˜ßcÓìÿ ñ^Ìt†ÿ ÿ  gÿ â+JŠ ÍþÖ³ÿ žßø?ÿ Ký±iÿ <oÿ ðþ"´h ³ªYö†øsŸøðŸ“ÿ |Sÿ ¶mü²¾ÿ À	ÿ øŠÑ¦Kþ©¾”ÍjÓÿ hƒ7_&›vŸ5´‰ó7—€7(ÉàôÍjk[oÏ“{€qc1Áÿ ¾=êû™¿ÞÊ¤^Ÿ‰ ïí{0säßàÿ üE/öÅ¦0!¿ÚÂqÿ ²V›ý±fF<›ì×„ÿ üEÛŸóÆûÿ  'ÿ â+JŠ Ìµ $ˆorzÿ Ä¾þ"ê¶dÜÞóÁÿ ‰|ÿ üEjQ@£W´ æ+ãŸúpŸÿ ˆ£û^Ïþxßÿ àÿ üEiQ@¿ÚöxÇ“}úðŸÿ ˆ jö€qøÿ ·	ÿ øŠÒ¢€3F­f1ˆ/¸à Oÿ ÄPu‹LcÊ¿ÿ À	ÿ øŠÒ¢€2ÿ µ,Æ1ð äìùÿ øŠöÍ¯h¯¿ÇþÉZ4É:÷‡ó jòoµ]]\ÇÑ~Â kiŽÙÙ› ¨'ƒØÔ]^×vï*øŽßèqÛûžÕ|}áþñþu"ýÑô ïí{<cÈ¾Æ1ÿ ôÿ ¾)N±hFWøÿ ¯	ÿ øŠÑ¢€3N±hzÃ}ÿ €ÿ ñlZv†øÛ„ÿ üEiQ@ƒV´^Þóÿ Pùÿ øŠOí[Lq÷\ÿ È>~¿÷ÅjQ@£W´U÷þ Oÿ ÄQý¯fåö=>Á>?ô
+Ò¢€3N¯fF7ÿ ø?ÿ AÕìÈ Ã}ƒÔ}‚þ"´¨ ßí{<çÉ¾ÿ À	ÿ øŠ¯fx0ßŸûpŸÿ ˆ­*(,j¶ŠF"¾à` OÇþ9OþÙµyWßŒãÿ d­c}ôúÿ J æ„ÀÞý´Ãtb:–ÿ øö6ß²mÉ]»±»ÚµWµä´WÇ#þ|&äßyN@ÿ r¦ ßí{?ùã|~¶ÿ ñ§X´=b¿ÿ À	ÿ øŠÑ¢€3N±hå÷þ Oÿ ÄPu{LcÉ¾ÇýxOÿ ÄV•˜5k@0!½Çýƒçÿ â)?µm8Ñú‡Ïÿ Ä{Ö¥ý±iŒyWÇþÜ'ÿ â)?µìÿ çÿ þ OÇþ9ZTPiÕìÎ3÷ôá?ÿ AÕìÈÁ†ÿ ãÂþ"´¨ ßí{?ùã}ÿ €ÿ ñ«Y¸Á†üýl'ÿ â+NŠ Ìµ b|«ïü Ÿÿ ˆ¥:Õ¨_àÿ üEiTr¸ÿ ¸hŽ‡“§»2:ï¸Àt(per2#ƒÜ
++A{ý¥ÿÙ_7http://www.brokenthorn.com/Resources/images/paging2.jpgO‹bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_7http://www.brokenthorn.com/Resources/images/paging2.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlr7H ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Tue, 24 Jun 2008 04:04:14 GMTVApache_Mon, 12 Apr 2021 11:23:12 GMT_max-age=2592000_Sat, 13 Mar 2021 11:23:12 GMTU31723_Upgrade, Keep-Alive_Ä
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDExOjIzOjEyIEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDExOjIzOjEyIEdNVKEfVTMxNzIzoSFfEBNVcGdyYWRlLCBLZWVwLUFsaXZloSNfEBQiN2JlYi00NTA2MWE3MzI4YjgwIqElVWJ5dGVzoSdfEB1UdWUsIDI0IEp1biAyMDA4IDA0OjA0OjE0IEdNVAAIACMAMAA4AEMASABPAFcAZQBqAHkAhACJAJcApQCnALIAtAC3ALkAzgDQANsA3QDkAOYBBgEIARoBHAE8AT4BRAFGAVwBXgF1AXcBfQF/AAAAAAAAAgEAAAAAAAAAKAAAAAAAAAAAAAAAAAAAAZ8=_"7beb-45061a7328b80"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí',7@FIR[]_fnyˆŠŒŽ’”–˜šœž ¢¤³µ·¹»½¿ÁÃÅÇÉËÍÏÑÞæñÿ!0;DIN\gjŸ¦ÆØøþÜóþ	#05IMa             ~              oÔ-%./OÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      ) 1;    Â        ‚     €{    È        €€           Ø       è       ð        „‚(     }=     Ui          õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  ) " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ÷Òq\ï‹|[eáM4\N¾uÔ¹[[Ul4Ì=û(ÈËvÈêHñw‹¬|%¦‹€eº—+mj­†™‡òQ‘–í‘Ô”Ú%Ö¡©KâzQ%üƒ…Æ…Q’œ¼’I$šãÆc#‡™ÍˆÄÆ’Óq.ü?¨ø†9õÝgPhu–Ä°:‹læUSœ¦:Œƒó’r–ÿ /tûxí5Þúî!¶K•Ô<7Ð”Bœc88ÎH p-XY_üBÕÂÊWµÐíŸwŠ9r9Ø™±È=Â‚	çjŸbÓtÛ=NƒO°·ö°.Ô9¹$žI$’I$’I$šÃ.Ž!§R³ßdc„]e'¹óùºÔ5^\x:ëhÛX ä"‘´g#wI&Ÿ¬Kæ\ÙÁ{<öúD’(ºžÝ’(Ï?/_NÇœ66ŸYñÏàñU¢ÝZ²ÛkË‹{œ|®:ˆäÇUÉ8=T’Gp|žÚâC5Æ“ªÛ47Ð.h$$ŒvÎä‚ ò+—Ft«,GÄŽ|E)S©í¨÷ÏM°Ñ¬íô……tõŒ<–Ü¬§Á¿‹9Îã’IÉ$œÖxg†|Qsàk¿²]4—óò‚ÍjÇ’Ê:‘œîQÉå†C{\)soöÒC4¨xåI2®§AAë^½
+Ð­h•±©Äœô®3Ç>‡ÅV«wlËm¬Û/ú=ÆßË“”É8=T’GRgÚŠÑÅIY—(©+3æéµQcowe­Û47–ÙŽh%É uÇ±#‚ ž	ÑÓ>üGŸN†m?Z“H´ŠÉõàhÁ$ó)
+OÞ#¨Ï89{âOü–ÿ Ü?ÿ JÞ½ÄtË†ÂBŒ¥ËÔä£‡Œ±ÿÙ_4http://www.brokenthorn.com/Resources/images/left.jpgO‚bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_4http://www.brokenthorn.com/Resources/images/left.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlr>… ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Fri, 24 Jul 2009 23:29:22 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1540_Upgrade, Keep-Alive_À
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDEwOjEzOjE0IEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDEwOjEzOjE0IEdNVKEfVDE1NDChIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QEyI2MDQtNDZmN2JmOTViMTg4MCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyMiBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCyALQAtwC5AM4A0ADbAN0A5ADmAQYBCAEaARwBPAE+AUMBRQFbAV0BcwF1AXsBfQAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGd_"604-46f7bf95b1880"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$)4=CFOXZ\ckv…‡‰‹‘“•—™›Ÿ¡°²´¶¸º¼¾ÀÂÄÆÈÊÌÎÛãîü-8AFKYdg|œ£ÃÕõúÔêõû ',@DX             ~              fÔ1%23OdÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      )       Â                     È                     Ø       è       ð          (       =                 õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  % " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? eÕíçuKCR¸’ÖêÙÊZÚFJ›&S‘Ø6íÀdðI¦ à¯>¥/ö&¶-b1”|anÔÿ µÆHöÈèÁ[ã>©'öÞˆ«µÓ -Úáoö°8cØ {à#0x‚×ky–º…«äVX$RGÔ`ŽG\Ž ŠñëU«…­Ï-`ÿ Ëœêaê^Z¦{ÖáŒçŠ+„ðWŒßPŸû\Û±ù¢Ý¨þ!þß#ñ^
+W«
+‘œy¢zPœf®ŽÞkˆm­äžâdŠÔ¼’Hvª($“ÐÞ¼7VÕm¼Mã6Ö4ËakeˆÚà‚­wâuÎ FìNpªž/ñœž1»û£<:NS”k¶‡aÙsÈSþñç2mÍþ©¨C¡hP—¼¶HXTpYˆûª23ß$–â¼Ü]gWýž’½÷<üMgUû:h»©üC«Ùèº,mQ[Í[…b¿fÚFX¸åœsë€l
++×¼!àë/éf¶ýõÔ¸k«¶Pf8þ;Tp9êI$®¼.4)(^çM?³®yÅ=×Áwö÷:Qhíµ¥²ŽM¹Ùè§xã.ë¾ð…‡„´Ãkl|Û™6µÍÓ(3ÇÂ£«Ðdõ$’Q[Ó„T¤Ò*Š›i=QVnÿÙ_5http://www.brokenthorn.com/Resources/images/right.jpgO0bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_5http://www.brokenthorn.com/Resources/images/right.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlrE³ ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpeg_timeout=2, max=98_Fri, 24 Jul 2009 23:29:24 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1380ZKeep-Alive_”
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDlppbWFnZS9qcGVnoRBfEBF0aW1lb3V0PTIsIG1heD05OKESWlVzZXItQWdlbnShFFZBcGFjaGWhFl8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRhfEA9tYXgtYWdlPTI1OTIwMDChGl8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoRxUMTM4MKEeWktlZXAtQWxpdmWhIF8QEyI1NjQtNDZmN2JmOTc5OWQwMCKhIlVieXRlc6EkXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyNCBHTVQACAAhAC4AOQA+AEUATQBbAGAAbwB6AH8AjQCbAJ0AqACqAL4AwADLAM0A1ADWAPYA+AEKAQwBLAEuATMBNQFAAUIBWAFaAWABYgAAAAAAAAIBAAAAAAAAACUAAAAAAAAAAAAAAAAAAAGC_"564-46f7bf9799d00"ZUser-AgentUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë#(3<BENWY[bjuƒ…‡‰‹‘“•—™›«­¯±³µ·¹»½¿ÁÃÅÇÔßíôü
+)27<JUi‰°ÂâçòŠ «±¶ÌÐÝâöú             z                          1   <   N   d   ‚   ‘   ¨  ö¹  öÃ  öÉ  öý  öþ  ÷  ÷  ÷& Ù â  
+Ø 
+á GP GZ GŒ P< PE b¯ b¹ bó k) k2 „ „f ' 0 ²§ ²² ²ë »x » 7p 7ª @9 @B FJ F O O Tx T°             4             \ä

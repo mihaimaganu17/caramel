@@ -1,0 +1,791 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameOjã<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"><html><head><title>Operating Systems Development Series</title> 
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><link href="Files/reference.css" type="text/css" rel="stylesheet"> 
+<meta content="MSHTML 6.00.6000.16441" name="GENERATOR"></head> 
+<body text="#000000" vlink="#666699" alink="#000000" link="#666699" bgcolor="#ffffff" leftmargin="0" background="Files/watermark.gif" topmargin="0" marginheight="0" marginwidth="0"> 
+
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+ 
+        <div id="ad_main"> 
+ 
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+//-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+ 
+     </td> 
+  </tr> 
+</tbody></table> 
+
+<table cellspacing="0" cellpadding="3" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td class="tblhdr">Operating Systems Development Series</td> 
+</tr> 
+  <tr> 
+    <td align="middle" colspan="2"></td></tr></tbody></table> 
+<table cellspacing="0" cellpadding="5" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td> 
+ 
+ 
+<!-- Title --> 
+ 
+      <center><span class="title">Operating Systems Development - 8253 Programmable Interval Timer</span> 
+ 
+<br><span class="author">by Mike, 2008</span></center> 
+ 
+ 
+      <p>This series is intended to demonstrate and teach operating system development from
+	the ground up.</p> 
+ 
+	<p></p><center><img src="images/Intel-P8253-5.jpg"><p><i>8253 PIT Microcontroller with all pins labled</i></p></center><p> 
+ 
+	</p><p><i>Please note: This tutorial may require some knowledge of hardware interrupt handling and the 8259 Programmable
+	Interrupt Controller (PIC). Please see <a href="OSDevPic.html">this tutorial</a> for information on them.</i> 
+ 
+	</p><h1>Introduction</h1> 
+ 
+	Welcome! :)<p> 
+	This tutorial will cover everything you ever wanted to know about system timing and programming the
+	<b>Intel 8253 Programmable Interval Timer (PIT)</b>.
+	</p><p> 
+	The 8253 PIT has had a long history, and has played an important part in nearly every x86 PC. It is the "System clock",
+	and is responsible for many very important functions within the PC. This erm.. "chip" is no longer distributed as an independent
+	chip (as a <b>Dual Inline Package (DIP)</b> to be more precise), but rather integrated into the motherboards southbridge chipset.
+	</p><p> 
+	Everything about the 8253 still remains, however. Because of this, its input and output facilities, hardware, and
+	the way we program the 8253 remains the same. Because there is not of any difference (besides speed) between this
+	and the older DIPs, we will be looking at the older 8253 DIP to help keeping things simple.
+	</p><p> 
+	The picture at the beginning of this tutorial displays what we will be looking at and programming.
+	</p><p> 
+	<i>Lets have some fun ;)</i> 
+ 
+	</p><h1>Programmable Interval Timers</h1> 
+ 
+	A <b>Programmable Interval Timer (PIT)</b> is a counter which triggers an interrupts when they reach their programmed
+	count. The <b>8253</b> and <b>8254</b> microcontrollers are PITs avialble for the i86 architectures used as timer for
+	i86-compatable systems.
+	<p> 
+	These PICs include three timers that are used for different putposes. The first timer is useually used as the <b>System Clock</b>.
+	Timer 2 was used for RAM refreshing, and timer 3 is connected to the PC speaker. We will see all of the connections a
+	little later, so we won't go into much detail now.
+	</p><p> 
+	Instead, lets take a closer look at one of these famous PITs... The 8253 Microcontroller.
+ 
+	</p><h1>8253 Hardware</h1> 
+ 
+	Before looking at the software side of things, it will be helpful to learn more about what we are actually programming.
+	Because of this, we will look at the 8253 hardware first, and learn how it works and is connected to the rest of the PC.
+	We will also be looking at internal registers, pin layout, command words, and more that will be needed for the software
+	side of things.
+ 
+	<h2>8253 Hardware: Description</h2> 
+ 
+	The 8253 PIT has a simple interface, and is not that hard to program.<p> 
+	</p><center><img src="images/8253.gif"></center><p> 
+ 
+	Yep--There is the chip that we will program.
+	</p><p> 
+	Here is the complete pin layout. We will be refrencing these pins throughout this tutorial, so it
+	is important to know what they are.
+ 
+	</p><p> 
+	</p><ul> 
+	<li><b>D0...D7:</b> 8 bit data lines. This is connected to the data bus so we can read and send commands.</li> 
+	<li><b>CLK 0, CLK 1, CLK 2:</b> Clock input pins. There are 3 pins for 3 separate counters</li> 
+	<li><b>OUT 0, OUT 1, OUT 2:</b> Output data line. There are 3 pins for 3 separate counters</li> 
+	<li><b>GATE 0, GATE 1, GATE 2:</b>Gate data line. There are 3 pins for 3 separate counters</li> 
+	<li><b>GND:</b> Ground</li> 
+	<li><b>Vcc:</b> Input voltage</li> 
+	<li><b>WR:</b> Write enable. When this line is active, lets the 8253 that we are writing data</li> 
+	<li><b>RD:</b> Read enable. When this line is active, lets the 8253 that we are reading data</li> 
+	<li><b>CS:</b> Chip select signal</li> 
+	<li><b>A0, A1:</b> Address lines. Used to determin what register we are accessing.</li> 
+	</ul> 
+	Not to bad. There are a couple of important pins here that we need to look at.
+	<p> 
+	The <b>D0-D7</b> pins connect to the <b>systems data bus</b>. These pins carry our data when we are sending
+	or reading data to the controller.
+	</p><p> 
+	<b>Vcc</b> and <b>GND</b> complete the circuit (Voltage input, Ground output.)
+	</p><p> 
+	The <b>WR</b> pin tells the controller that we are writing (expect input on the data pins.) When the signal
+	in this pin is "low", we are currently sending data. The <b>RD</b> pin is very simular in this manner, but
+	it tells the controller we are reading data instead. The <b>CS</b> pin is a special pin that determins what
+	the controller should do with the <b>RD</b> and <b>WR</b> pins. If the CS pin is "low", the controller will
+	respond to the RD and WR pins. If CS is not, they are ignored. <b>WR</b> and <b>RD</b> connect to the <b>Systems
+	Control Bus</b>. The <b>CS</b> pin connects to the systems <b>Address Bus</b> for port i/o operations.
+	</p><p> 
+	The <b>A0</b> and <b>A1</b> pins are connected to the <b>Systems Address Bus</b>, and are used to determin what
+	register we are accessing. These, in conjunction with <b>WR</b> and <b>RD</b> allows the controller to determin
+	if are reading to or from a register.
+	</p><p> 
+	<b>Notice that there are three groups of the CLK, OUT, and GATE pins.</b> Yes, there is indeed a reason for this:
+	<b>The 8253/8254 microcontrollers contain 3 independent timers.</b> 
+	</p><p> 
+	Lets look closer on how this works...
+ 
+	</p><h2>8253 Hardware: Counters</h2> 
+ 
+	The 8253 consists of three counters: Counter 0, Counter 1, and Counter 2. Each counter has 2 input pins: <b>CLK (Clock Input)</b> 
+	and <b>GATE</b>, and one pin for output--<b>OUT</b>.
+	<p> 
+	As there are three counters, they are used for different purposes within the system. Each counter are 16 bit down counters.
+	</p><p> 
+	Typical computers connect the first
+	timer's <b>OUT</b> pin to a <b>Programmable Interrupt Controller (PIC)</b> to generate an interrupt for every clock tick.
+	This is useually used as the <b>System Timer</b>. The second counter was used for generating a timing signal to the
+	Memory Controller to refresh DRAM memory. The third counter is used to generate tones to the PC speaker.
+	</p><p> 
+	As you can probably guess, the PIT uses the OUT pins to signal these devices when its counter reaches 0. When the PIT's
+	counter reaches 0, it simply wraps around and starts again.
+	</p><p> 
+	<b>CLK</b> is the clock input for the timer. It may be used with the <b>GATE</b> pin depending on the current mode of operation.
+	The following table describes the operation depending on if the current in GATE is low, rising, or high.
+ 
+ 
+	</p><p></p><center> 
+	<table border="1" bgcolor="CCCCCC"> 
+	<tbody><tr><th colspan="4" bgcolor="FFFFFF">GATE Input pin operations</th> 
+	</tr><tr bgcolor="AAAAAA"> 
+	<td>Mode</td><td>Low or going low</td><td>Rising</td><td>High</td> 
+	</tr> 
+	<tr><td bgcolor="ffffff">0</td><td>Disables Counting</td><td>-</td><td>Enables Counting</td></tr> 
+	<tr><td bgcolor="ffffff">1</td><td>-</td><td>Initiates Counting and resets OUT after next CLK</td><td>-</td></tr> 
+	<tr><td bgcolor="ffffff">2</td><td>Disables Counting, Sets OUT to high</td><td>Reloads counter and initiates counting</td><td>Enables Counting</td></tr> 
+	<tr><td bgcolor="ffffff">3</td><td>Disables Counting, Sets OUT to high</td><td>Initiates Counting</td><td>Enables Counting</td></tr> 
+	<tr><td bgcolor="ffffff">4</td><td>Disables Counting</td><td>-</td><td>Enables Counting</td></tr> 
+	<tr><td bgcolor="ffffff">5</td><td>-</td><td>Initiates Counting</td><td>-</td></tr> 
+	</tbody></table></center> 
+	<p> 
+ 
+	The 8253 Counters are also known as Channels. Knowing that the 8253/8254 PITs contain three channels, lets look at each of
+	them more closer...
+ 
+	</p><h3>Channel 0</h3> 
+ 
+	Channel 0 is connected to the <b>8259 PIC</b> to generate an <b>Interrupt Request (IRQ)</b>. The PITs <b>OUT</b> pin connects
+	to the PIC's <b>IR0</b> pin. Typically the BIOS configures this channel with a count of 65536, which gives an output frequency
+	of 18.2065 Hz. This fires IRQ 0 every 54.9254 ms.
+	<p> 
+	The is the primary timer used on almost all x86 machines. the clock rate (Signalled through Counter 0's <b>CLK</b> pin)
+	is at 1193181.6666... Hz, one third of the NTSC subcarrier frequency. This was required do to backward compatability with
+	the older CGA PC's.
+	</p><p> 
+	Channel 0 is typically programmed in most systems to act as the <b>System Clock</b>. This is made possible do to channel 0's
+	<b>OUT</b> pin indirectly connecting to the <b>PIC's IR0</b> line. Depending on the mode that we set it in, we can set the
+	timer to a good frequency, and have it enable the PIC's IR0 line at a constant rate. Afterwords, reseting itself and starting
+	over again. Because the PIC is used to handle <b>hardware interrupts</b>, we will need to first reprogram the <b>PIC</b>.
+	</p><p> 
+	Because it is connected to the interrupt with the lowest number (IR0), it also has the highest priority over all other hardware
+	interrupts.
+	</p><p> 
+	Its lowest frequency rate is normally used for computers running the old DOS systems (Are there any left?) at about 18.2 Hz.
+	Its highest frequency rate is a little over a megahertz.
+	</p><p> 
+	In real mode operating systems, the BIOS normally increments the number of times IRQ0 is fired to 0000:046C, which can be
+	read by any running program.
+ 
+	</p><h3>Channel 1</h3> 
+ 
+	Many video cards and the BIOS may reprogram the second channel for their own uses. This channel was originally used
+	for generating a timing pulse signal to signal the memory controller to refresh the DRAM memory. In modern times,
+	this is no longer needed as the refresh is done by the memory controller. Because of this, there is no guarantee
+	at what devices may use this counter.
+ 
+	<h3>Channel 2</h3> 
+ 
+	This channel is connected to the <b>PC Speaker</b> to generate sounds. the <b>PC speaker</b> is normally meant
+	to produce a square wave with two levels of output. However, it is possible to go between the two true defined
+	sound square levels. This is called <b>Pulse-Width Modulation (PWM)</b>.
+	<p> 
+	We can set up this channel by programming it for mode 3, and setting a frequency rate for the tone.
+	</p><p> 
+	We can also program the PC Speaker directly. Looking back at <a href="OSDev7.html">Tutorial 7</a>, we can see that the
+	PC speaker is mapped to port 0x61. This port defines how the speaker will operate:
+ 
+	</p><ul> 
+		<li><b>Bit 0:</b> If set (1), the state of the speaker follows bit 1</li> 
+		<li><b>Bit 1:</b> If set (1), the speaker uses the PIT, If not set (0), the speaker disables its connection to the PIT</li> 
+	</ul> 
+	If bit 0 is set, the rest of the byte contains a pattern of bits representing the frequency of the tone. We can generate
+	up to 8 bit sounds from the speaker, which is kind of cool, but tricky to do.
+	<p> 
+	You should also notice that we can disable devices from using the PIT. At startup, the BIOS configures the speaker to use
+	the PIT channel 2, running in mode 3. It is recommended to keep the speaker to use the PIT do to timing problems that you
+	will run into.
+	</p><p> 
+	Here is an example, for completeness sake:
+      </p><blockquote><pre><div class="code">; disables the speaker, and stop using channel 2
+mov	dx, 0x61
+out	dx, 0
+ 
+; generates tone from speaker
+out	dx, 11111101b</div></pre></blockquote> 
+ 
+	<h3>Conclusion</h3> 
+ 
+	Once a counter is set up, it will remain that way until it is changed by another control word.
+	<p> 
+	There is some cool things we can do with these counters, huh? Because channel 1 is not used anymore, we cannot assume
+	it is safe and use it ourselves. Because of this, it is recommended to stick to channel's 0 and 2.
+	</p><p> 
+	We can use channel 0 to fire off our interrupt handler. Our interrupt handler can increment a counter used by our
+	kernel. This special little counter variable, plays a very important role in the system: The System Timer. We will see
+	all of this soon, don't worry ;)
+	</p><p> 
+	Allright...So, we looked at pin configurations, and the three timers used by different devices for..err...timing. Whats
+	next?
+	</p><p> 
+	When programming these timers, we have to initialize them. Remember that each channel supports 6 different modes. Some
+	of these modes are very useful. Other modes are not. Lets take a look at each of these modes for better understanding of them.
+	Please note that this gets a little detailed, but I am sure you already knew or were expecting that :)
+ 
+	</p><h2>8253 Channel Modes</h2> 
+ 
+	Remember that each counter can be programmed in 1 of 6 modes. This is done by sending an <b>Initialization Control Word (ICW)</b> 
+	to the controller. We will look at the format of this command word later. For now, lets look at each mode.
+ 
+	<h3>Mode 0: Interrupt on Terminal Count</h3> 
+ 
+	In this mode, the counter will be programmed to an initil <b>COUNT</b> value and afterwords counts down at a rate to the input clock
+	frequency (The <b>CLK</b> signal). When <b>COUNT</b> is equal to 0, and after the <b>Control Word</b> is written,
+	the counter enables its <b>OUT</b> pin (by setting its line high) to signal the device it is connected to. Counting starts
+	one clock cycle after the <b>COUNT</b> is programmed. The OUT line remains high until the counter is reloaded with a new value or the same value or until another control
+	word is written to the controller.
+	<p> 
+	What this mode basically does is allow us to set a timer that counts down to 0. After which, we will need to reload a new
+	count number to it, or a new control word to re-initialize the counter.
+ 
+	</p><h3>Mode 1: Hardware Triggered One-Shot</h3> 
+ 
+	In this mode, the counter is programmed to give an output pulse every certain number of clock pusles. The <b>OUT</b> line is
+	set to high as soon as a <b>Control Word</b> is written. After <b>COUNT</b> is written, the counter waits until
+	the rising edge of the <b>GATE</b> input. If the trigger occurs during the pulse output, the 8253 will be retriggered again.
+	One clock cycle after the rising edge of <b>GATE</b> is detected, <b>OUT</b> will become and remain low until <b>COUNT</b> 
+	reaches 0. <b>OUT</b> will then be set high until the next trigger and wait again until the rising edge of the <b>GATE</b> 
+	input is detected.
+	<p> 
+	
+ 
+	</p><h3>Mode 2: Rate Generator</h3> 
+ 
+	This mode configures the counter to be a <b>"divide by n"</b> counter, which is commonly used to generate a real-time
+	system clock.
+	<p> 
+	The counter is programmed to an initial <b>COUNT</b> value. Counting starts at the next clock cycle. <b>OUT</b> remains
+	high until <b>COUNT</b> reaches 1. Afterwords, <b>OUT</b> will be set low for one clock pulse. <b>OUT</b> is then set
+	back high, and <b>COUNT</b> is reset back to its initial value. This process repeats until a new control word is sent to
+	the controller.
+	</p><p> 
+	The time between the high pulses depends on the current value in <b>COUNT</b>, and is calculated using the following formula:
+      </p><blockquote><pre><div class="code">COUNT = input (Hz) / Frequency of output</div></pre></blockquote> 
+	<p> 
+	<b>COUNT</b> never reaches 0. It only ranges from n to 1, where n is the initil COUNT value.
+	</p><p> 
+	Okay, lets stop for a moment. Remember that Counter 0 is connected to the PIC? <b>Counter 0's OUT line indirectly connects
+	to the PIC's IR0 line</b>. Knowing that, when the IR0 line is low, the PIC will call the IRQ 0 handler defined by us.
+	</p><p> 
+	If we set the counter to Mode 2, we can set up the timer to fire off our interrupt at a constant rate. All we need to do
+	is determine what the COUNT value should be based off of the above formula. This is used very often in setting up the <b>System
+	Timer</b> for the operating system. After all, IRQ 0 is now being called for every clock tick at a frequency rate that we defined.
+	</p><p> 
+	Yes, Mode 2 is an important mode, indeed.
+ 
+	</p><h3>Mode 3: Square Wave Generator</h3> 
+ 
+	This mode is quite similar to Mode 2. However, <b>OUT</b> will be high for half of the period, and low for the other half.
+	If <b>COUNT</b> is odd, <b>OUT</b> will be high for (n+1)/2 counts. If <b>COUNT</b> is even, <b>OUT</b> will be low for
+	(n-1)/2 counts.
+	<p> 
+	Everything else is the same from Mode 2. We will need to use the formula from Mode 2 to set up the initial <b>COUNT</b> value.
+	</p><p> 
+	If the speaker is configured to use the PIT, the channel that it uses typically should be set to use this mode.
+ 
+	</p><h3>Mode 4: Software Triggered Strobe</h3> 
+ 
+	The counter is programmed to an initial <b>COUNT</b> value. Counting starts at the next clock cycle. <b>OUT</b> 
+	remains high until <b>COUNT</b> reaches 0. The counter will then set <b>OUT</b> low for one clock cycle. Afterwords,
+	it resets <b>OUT</b> to high again.
+ 
+	<h3>Mode 5: Hardware Triggered Strobe</h3> 
+ 
+	The counter is programmed to an initial <b>COUNT</b> value. <b>OUT</b> remains high until the controller detects
+	the rising edge of the <b>GATE</b> input. When this happens, the counting starts. When <b>COUNT</b> reaches 0,
+	<b>OUT</b> goes low for one clock cycle. Afterwords, <b>OUT</b> is set high again. This cycle repeats when
+	the controller detects the next rising edge of <b>GATE</b>.
+ 
+	<h2>8253 Registers</h2> 
+ 
+	<p> 
+	The 8253 contains a few registers that we can access. Most of these registers are very simular to each other, so I will just put them in the same table for clarity. This
+	table displays each register and their functionality when the corresponding lines on the 8253 are active. <b>Notice
+	how the RD and WR lines determine the read and write operation. Also notice how the A0 and A1 lines determin what
+	register we are accessing.</b> 
+	</p><p> 
+	Looking at the port table from <a href="OSDev7.html">Tutorial 7</a>, we can see that the <b>System Timer</b> is mapped
+	by the BIOS to use ports 0x40-0x4F. Each port address is a byte in size.
+ 
+	</p><p></p><center> 
+	<table border="1" bgcolor="CCCCCC"> 
+	<tbody><tr><th colspan="7" bgcolor="FFFFFF">8253 PIT Internal Registers</th> 
+	</tr><tr bgcolor="AAAAAA"> 
+	<td>Register Name</td><td>Port Address</td><td>RD line</td><td>WR line</td><td>A0 line</td><td>A1 line</td><td>Function</td> 
+	</tr> 
+	<tr><td bgcolor="ffffff">Counter 0</td><td>0x40</td><td>1</td><td>0</td><td>0</td><td>0</td><td>Load Counter 0</td></tr> 
+	<tr><td bgcolor="ffffff">         </td><td></td><td>0</td><td>1</td><td>0</td><td>0</td><td>Reads Counter 0</td></tr> 
+	<tr><td bgcolor="ffffff">Counter 1</td><td>0x41</td><td>1</td><td>0</td><td>0</td><td>1</td><td>Load Counter 1</td></tr> 
+	<tr><td bgcolor="ffffff">         </td><td></td><td>0</td><td>1</td><td>0</td><td>1</td><td>Reads Counter 1</td></tr> 
+	<tr><td bgcolor="ffffff">Counter 2</td><td>0x42</td><td>1</td><td>0</td><td>1</td><td>0</td><td>Load Counter 2</td></tr> 
+	<tr><td bgcolor="ffffff">         </td><td></td><td>0</td><td>1</td><td>1</td><td>0</td><td>Reads Counter 2</td></tr> 
+	<tr><td bgcolor="ffffff">Control Word</td><td>0x43</td><td>1</td><td>0</td><td>1</td><td>1</td><td>Write Control Word</td></tr> 
+	<tr><td bgcolor="ffffff">    NA   </td><td></td><td>0</td><td>1</td><td>1</td><td>1</td><td>No Operation</td></tr> 
+	</tbody></table></center> 
+	<p> 
+	All other port addresses from 0x44-0x4f are undefined.
+	</p><p> 
+	The system will activate the correct lines depending on the operation we are performing. When setting
+	the counter registers, we need to first let the controller know how we are going to load it. This is
+	done by first setting up the control word. Lets take a look closer at these registers...
+ 
+	</p><h3>Counter Registers</h3> 
+ 
+	Each counter register holds the <b>COUNT</b> value used by the PIT to count down from. They are all 16-bit registers.
+	When writing or reading from these registers, you must first send a control word to the PIT. You might wonder why
+	we cannot just do it directly. There is a reason for this, and it has to do with the size of the data. The PIT
+	only has 8 data lines (Pins D0-D7). However, the counter registers are all 16 bits, not 8.
+	<p> 
+	Because of this, how does the PIT know what data you are writing to its counter register? How does it know what byte
+	within the counter registers 16 bits are you setting? <b><i>It doesn't.</i></b> Sending a command word allows you
+	to let the PIT know to expect incoming data, and what to do with it. We will look at that next.
+ 
+	</p><h3>Control Word Register</h3> 
+ 
+	THIS will be important to us.<p> 
+ 
+	This is an important register used to determin and set the operation modes for the controller. This is accessed
+	by enabling the RD, A0, and A1 lines. This register can only be written to, not read from.
+ 
+	</p><p> 
+	The control word register uses a simple format. At first I was thinking of using a table here, but it may be easier
+	in a list format so here it is:
+ 
+	</p><p> 
+	</p><ul> 
+		<li><b>Bit 0: (BCP)</b> Binary Counter</li> 
+		<ul> 
+			<li><b>0:</b> Binary</li> 
+			<li><b>1:</b> Binary Coded Decimal (BCD)</li> 
+		</ul> 
+		<li><b>Bit 1-3: (M0, M1, M2)</b> Operating Mode. See above sections for a description of each.</li> 
+		<ul> 
+			<li><b>000:</b> Mode 0: Interrupt or Terminal Count</li> 
+			<li><b>001:</b> Mode 1: Programmable one-shot</li> 
+			<li><b>010:</b> Mode 2: Rate Generator</li> 
+			<li><b>011:</b> Mode 3: Square Wave Generator</li> 
+			<li><b>100:</b> Mode 4: Software Triggered Strobe</li> 
+			<li><b>101:</b> Mode 5: Hardware Triggered Strobe</li> 
+			<li><b>110:</b> Undefined; Don't use</li> 
+			<li><b>111:</b> Undefined; Don't use</li> 
+		</ul> 
+		<li><b>Bits 4-5: (RL0, RL1)</b> Read/Load Mode. We are going to read or send data to a counter register</li> 
+		<ul> 
+			<li><b>00:</b> Counter value is latched into an internal control register at the time of the I/O write
+			operation.</li> 
+			<li><b>01:</b> Read or Load Least Significant Byte (LSB) only</li> 
+			<li><b>10:</b> Read or Load Most Significant Byte (MSB) only</li> 
+			<li><b>11:</b> Read or Load LSB first then MSB</li> 
+		</ul> 
+		<li><b>Bits 6-7: (SC0-SC1)</b> Select Counter. See above sections for a description of each.</li> 
+		<ul> 
+			<li><b>00:</b> Counter 0</li> 
+			<li><b>01:</b> Counter 1</li> 
+			<li><b>10:</b> Counter 2</li> 
+			<li><b>11:</b> Illegal value</li> 
+		</ul> 
+	</ul> 
+	Allright, then!  bit of stuff going on here, don't you think? So...All we need to do is build up the control
+	word by writing to the control word register to initialize the controller, right? Of course! Sort of...
+	<p> 
+	Basically, we want to initialize a <b>counter</b> for a specific purpose. So, we have to build up the control word
+	to set up the counter, the counters counting mode and operating mode. THEN, we initialize the counter itself. Remember
+	that, once initialized, the counter can carry on itself (depending on its mode), so we only need to do this once.
+	</p><p> 
+	Lets give an example and put everything together, shall we?
+	</p><p> 
+	Lets pretend we already have a PIC initialized and interrupt 0 handler. We want to set up a timer to
+	fire off IRQ 0 every 100Hz (once every 10 milliseconds). We know that channel 0 of the PIT is connected
+	to the PIC's IR0 line, so we can program channel 0 to do this.
+ 
+      </p><blockquote><pre><div class="code">        ; COUNT = input hz / frequency
+ 
+	mov	dx, 1193180 / 100	; 100hz, or 10 milliseconds
+ 
+	; FIRST send the command word to the PIT. Sets binary counting,
+	; Mode 3, Read or Load LSB first then MSB, Channel 0
+ 
+	mov	al, 110110b
+	out	0x43, al
+ 
+	; Now we can write to channel 0. Because we set the "Load LSB first then MSB" bit, that is
+	; the way we send it
+ 
+	mov	ax, dx
+	out	0x40, al	;LSB
+	xchg	ah, al
+	out	0x40, al	;MSB</div></pre></blockquote> 
+ 
+	Notice how we set up the control word first, THEN write to the counter 0 register.
+	<p>Is that it!?? Yep. The above will program counter 0 to fire IRQ0 every 10 milliseconds.
+ 
+</p><h1>Conclusion</h1> 
+ 
+	The 8253 and 8254 PIT's are very usefull little chips. They can be used in alot of different devices, and used for
+	alot of different purposes.
+	<p> 
+	For our needs, we can both have a nice signaled output via the PC speaker and a system timer that is a very important
+	aspect on all modern system software. We have even looked at another way of working with the speaker directly, and
+	even disable its connection to the PIT, which has advantages and disadvantags. It is up to the system software designer to
+	decide and outweight the pros and cons of the different and unlimited possibilities when developing their system.
+	</p><p> 
+	We have looked at the PIT in depth, pin configuations, and their connections on a standard x86-based PC motherboard. The PIT
+	itself is useually integrated with the motherboard's southbridge in modern computers.
+	</p><p> 
+	I an planning on adding more to the chip itself, and describe exactally how it connects in a typical computer system.
+	Mabey even breaking it apart?
+	</p><p> 
+	<b>Tutorial 16: Kernel: Timing and Exception Handling</b> puts everything from the <a href="OSDevPic.html">8259A PIC</a> 
+	and this tutorial together. It impliments and creates interfaces for both devices. Mabey even a little bit more...
+ 
+	</p><p><b>Welcome back to kernel Land!</b> 
+ 
+	</p><p> 
+	Until next time,
+	</p><p>
+	~Mike<br>
+	<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2/">Neptune Operating System</a></i>
+
+	<br><br>
+	<i>Questions or comments? Feel free to <a href="mailto:neon6000@aol.com">Contact me</a>.</i>
+
+	<br><br>
+	Would you like to contribute and help improve the articles? If so, please <a href="mailto:neon6000@aol.com">let me know!</a>
+
+ </p></td></tr></tbody></table></body></html>Ytext/htmlUUTF-8_2http://www.brokenthorn.com/Resources/OSDevPit.htmlP¤Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlIT¨ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlI^À ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔOaÿØÿà JFIF  ` `  ÿíRPhotoshop 3.0 8BIMí
+Resolution     H     H    8BIMFX Global Lighting Angle       x8BIMFX Global Altitude       8BIMóPrint Flags   	         8BIM
+Copyright Flag      8BIM'Japanese Print Flags    
+        8BIMõColor Halftone Settings   H /ff  lff       /ff  ¡™š       2    Z         5    -        8BIMøColor Transfer Settings   p  ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿè    ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿè    ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿè    ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿè  8BIMGuides         @  @    8BIMURL overrides       8BIMSlices    u              ó  ‹   
+ U n t i t l e d - 1                                ‹   ó                                  8BIMICC Untagged Flag    8BIMLayer ID Generator Base      8BIMNew Windows Thumbnail  
+ª      p   E  P  Z  
+Ž  ÿØÿà JFIF  H H  ÿî Adobe d€   ÿÛ „ 			
+ÿÀ  E p" ÿÝ  ÿÄ?          	
+         	
+ 3 !1AQa"q2‘¡±B#$RÁb34r‚ÑC%’Sðáñcs5¢²ƒ&D“TdEÂ£t6ÒUâeò³„ÃÓuãóF'”¤…´•ÄÔäô¥µÅÕåõVfv†–¦¶ÆÖæö7GWgw‡—§·Ç×ç÷ 5 !1AQaq"2‘¡±B#ÁRÑð3$bár‚’CScs4ñ%¢²ƒ&5ÂÒD“T£dEU6teâò³„ÃÓuãóF”¤…´•ÄÔäô¥µÅÕåõVfv†–¦¶ÆÖæö'7GWgw‡—§·ÇÿÚ   ? ôô’‚G’§“Öz>$ý«?ˆäYkÍ.Ü’›i.zï¯ÿ TjõïTŽÕUkçûM¯gý%›“þ4ú%`ý—+!ý¥¬©¿}–:Ïü	*U=œ&+Î²?ÆÆ[´ÆéuÖ|m½Îÿ ¡]Uÿ Õ¬ÜŸñ›õ¢æí«ì¸¿Ê®—9ß~E¶³ÿ IO«Lð–ÓDÉ:ÅxžO×­Yô½W yV[OþÛ2••———–wfd]”áì}¿ùõÏIZ>ç‘Öú.,Œž£‹A¬¾¶Ÿ»~å‘“þ0~¨cÈû®áÛ«-öãYéÓ^8Öý†ü&%%>¡‘þ5¾¯°³âf^ñÁ-®¶ýïµïÿ ÀÖ]¿ãs#{M}*ºék³uî{Ëý&ÍµÒÆÙ³è®”ÄøñÜ”ûÎ'P7@Ú[º·ÎÜö™îVŠóï©ÝbË:n#ßasðö{u×cšÝÿ  Ïgý¶½Žh#_€ºÕ&¯GÿÐ7øÏ¨ÙU‚(®°¬l¿×úBv¹ÌÈÄú_ðë‡cOµ¡¿ ½;üdà›zss+fç²»i1âÝB—;ù-û­ÿ ®¯)wÛy6WXònïú©EE²ILUWÓ’à²<v¿“j-gÛ·¦}>“PCgå>ÊÚâ,mn²¶5…åîhþoÛüßübB¬G=hÝXxqˆÁŽoý[·³þþ¶–QÄÎ£$¼nþ¡öYÿ AÉZîœÛ²/c_g ZÒC÷ÙC›»nßKô•XË?œ©%1qÂÚ`m.c\Ð	y‰§è·é;Ñe¿õßK÷X-u”ÔMmlZZ C€cÀk·5{Ûÿ ŸY“Ë1ñ÷¹·z±°ßJÏkw5•ÛúÏþqÿ ðHvääW½¾›XÀèØH~Òðá´9Ì¾ÍŸÍú¶[ú4”×²‹\ÐÀØ%¥ÂaÇk6ëïnïfä¬Û´Á–¶ËjgýúhYú.l;s^šè‰[¸}/eŸN·$¤Fxá0Ó¤ 	H¨“)%Ýú¡œ)êb¸ûsíÿ Œ«uÿ :§\Õë+×Âa&\ÏÑ»åôè¯£!ø¹d×«è{lhñÚwmþßÑ^¯õg9Ÿh,c¦¬–*?-íÿ :·$7SÿÑî~³ãý£¡f°uúÚ$T}[ÿ \¥¶V¼Zúsèv®¥Å“ØÇÑöÛï^öæµÞ×‰k¥®GG/úÏ‹~7Q~òkÁkÜ{ÙCÝ‡kÌ~û)ªïúê*r¯ËA	ˆl—¶t‰ž'ÇúÉ‰S¢ò(o66~(!=/­—Öû[¾¶¸9ì€däŸk¿«ùêÖNm0Ç±Âë à€Xöd{žÊöú¶:›©§mŸg}K$æR~†çÿ U¤¦uÖí¹­:XCý$”ÜÈË}ó¹­,iýO¨áý‹=ìï¨»7!Îs÷ ç × îwoßàª‘”ZÇN,’ÀÝÖ8¤í¬"×Ó³n!µú·8Îeu†–ÏúG[ôSHà‘¤iàPœö7’÷{öÅÏfÒ×Vê«vÁtÃvÔ7;è«8Ý	·=í¨1¾“ÛQmu‡—–—s¿è¤—×®`:O€“ùšÌ‡˜eîZGå]/Jú»™m¡ž«ßEÆ’ÚöãÖÒÀßçýû¿;j7Lú¾Ììug
+«¨žì›Ýfà)3ºŸHz_È¯èo±%<³hÉuž—èë³³^ñ?æ2\»¯©ÍË5ôú‰¶·ÝG¦Ç»¿òkö¨á}ZÛÓhµÃfNKO£è´ÝcËœø±î;öz¦Üöþ†¥Øt>ŽÎŒÖ9­ûS‡éÞ9ôYý_Ïýô†ª:?ÿÒôÇåã'¦eÙ×k§lnQ9²CZÓciÆ±qú-õ±½Oí¯UB¾‘uVTt±Õ—wÀ·þüŠŸU²}FU“maö˜/ ¸ŸN?67?þ¯«x‚ì|fÜëÎKœ+u5{Üæ4½õ×gº·mw§ìoïþbô^“õK§²Ú/nòÌX\CŸu‘·Õ³ó+ª†µ›Æ«¸]+ûiß[#¶WÓ©`ØÊk×í§‘•w¨ÿ ø:}4ùí_VkK¥Ù{ŽU6ß]y.k4`±¬uÎoé+o«_çÿ Ûjö?Õw·­×ÒÛEhÅ9|:öV^vÖÇ2ÁS[efæÆúžªî°ºk›UÝBÚýLü–ÐD9”ÿ Ú|Ñ·ü-¿ðöØÓ_€ú©Ú2î›2x}ÏÕöXïÜ«èS_ú*ëb4§ŒÂú¹es(Vÿ òf=-¥ùtµ•îÉ&·:–:Ë='Jßç=£àôC~oXÈ/G}Lf¸»Ôsk‡ß–jg¥ú+,®ÏCèzÌzëÿ ePÞžÞWè©cvH§u®ÿ Œ¹ÅÏ{ÿ }ÜJ.k+±¾ÊËKZ ·è3þ-¿º•)äðú:yËê–â±ùAìv7M! S ý“½ÃúK·µ™O¯ù¯Ò«´ô‹ºc,f-¡ÝS©Þo¿!âkm‡WÝWú6º×Ñê9ìýõÑ>–8µÖ°8°—0aÜnÊO´wƒçÞ<¥jàþÀ¢Šëé˜~®>#Ë¬Ì¹Žý%²IëdÜŒ½¾›?Àzÿ ÈVÒ*~E«­˜X¦Œv +ÞßæÝè~î3Žú÷†ÿ ‹Z„FƒPuÕ6Ø))§V –åØíö<lfš¶½›»÷­sYêÿ ÅÖ¬††ñÂœA‘ÂF<SÿÓôÒ›YÑ|¼’*~—Æû'ÙÙö8û<{6ÌDßKÝô·nÞŠÝ¾Ý‘Ûnß‡·nßäýóI)úpÄû¦|Ò1Û•óI)úpÄ1æ4’SôÙ'”Æ4üÌ©$§écÉ6«æt’Sô¹Ly_4¤’ŸÿÙ8BIM!Version compatibility info    U       A d o b e   P h o t o s h o p    A d o b e   P h o t o s h o p   6 . 0    8BIMJPEG Quality       ÿáExif  II*         2       :   (     : B     H      H                l       Ž
+      ÿØÿà JFIF  H H  ÿî Adobe d€   ÿÛ „ 			
+ÿÀ  E p" ÿÝ  ÿÄ?          	
+         	
+ 3 !1AQa"q2‘¡±B#$RÁb34r‚ÑC%’Sðáñcs5¢²ƒ&D“TdEÂ£t6ÒUâeò³„ÃÓuãóF'”¤…´•ÄÔäô¥µÅÕåõVfv†–¦¶ÆÖæö7GWgw‡—§·Ç×ç÷ 5 !1AQaq"2‘¡±B#ÁRÑð3$bár‚’CScs4ñ%¢²ƒ&5ÂÒD“T£dEU6teâò³„ÃÓuãóF”¤…´•ÄÔäô¥µÅÕåõVfv†–¦¶ÆÖæö'7GWgw‡—§·ÇÿÚ   ? ôô’‚G’§“Öz>$ý«?ˆäYkÍ.Ü’›i.zï¯ÿ TjõïTŽÕUkçûM¯gý%›“þ4ú%`ý—+!ý¥¬©¿}–:Ïü	*U=œ&+Î²?ÆÆ[´ÆéuÖ|m½Îÿ ¡]Uÿ Õ¬ÜŸñ›õ¢æí«ì¸¿Ê®—9ß~E¶³ÿ IO«Lð–ÓDÉ:ÅxžO×­Yô½W yV[OþÛ2••———–wfd]”áì}¿ùõÏIZ>ç‘Öú.,Œž£‹A¬¾¶Ÿ»~å‘“þ0~¨cÈû®áÛ«-öãYéÓ^8Öý†ü&%%>¡‘þ5¾¯°³âf^ñÁ-®¶ýïµïÿ ÀÖ]¿ãs#{M}*ºék³uî{Ëý&ÍµÒÆÙ³è®”ÄøñÜ”ûÎ'P7@Ú[º·ÎÜö™îVŠóï©ÝbË:n#ßasðö{u×cšÝÿ  Ïgý¶½Žh#_€ºÕ&¯GÿÐ7øÏ¨ÙU‚(®°¬l¿×úBv¹ÌÈÄú_ðë‡cOµ¡¿ ½;üdà›zss+fç²»i1âÝB—;ù-û­ÿ ®¯)wÛy6WXònïú©EE²ILUWÓ’à²<v¿“j-gÛ·¦}>“PCgå>ÊÚâ,mn²¶5…åîhþoÛüßübB¬G=hÝXxqˆÁŽoý[·³þþ¶–QÄÎ£$¼nþ¡öYÿ AÉZîœÛ²/c_g ZÒC÷ÙC›»nßKô•XË?œ©%1qÂÚ`m.c\Ð	y‰§è·é;Ñe¿õßK÷X-u”ÔMmlZZ C€cÀk·5{Ûÿ ŸY“Ë1ñ÷¹·z±°ßJÏkw5•ÛúÏþqÿ ðHvääW½¾›XÀèØH~Òðá´9Ì¾ÍŸÍú¶[ú4”×²‹\ÐÀØ%¥ÂaÇk6ëïnïfä¬Û´Á–¶ËjgýúhYú.l;s^šè‰[¸}/eŸN·$¤Fxá0Ó¤ 	H¨“)%Ýú¡œ)êb¸ûsíÿ Œ«uÿ :§\Õë+×Âa&\ÏÑ»åôè¯£!ø¹d×«è{lhñÚwmþßÑ^¯õg9Ÿh,c¦¬–*?-íÿ :·$7SÿÑî~³ãý£¡f°uúÚ$T}[ÿ \¥¶V¼Zúsèv®¥Å“ØÇÑöÛï^öæµÞ×‰k¥®GG/úÏ‹~7Q~òkÁkÜ{ÙCÝ‡kÌ~û)ªïúê*r¯ËA	ˆl—¶t‰ž'ÇúÉ‰S¢ò(o66~(!=/­—Öû[¾¶¸9ì€däŸk¿«ùêÖNm0Ç±Âë à€Xöd{žÊöú¶:›©§mŸg}K$æR~†çÿ U¤¦uÖí¹­:XCý$”ÜÈË}ó¹­,iýO¨áý‹=ìï¨»7!Îs÷ ç × îwoßàª‘”ZÇN,’ÀÝÖ8¤í¬"×Ó³n!µú·8Îeu†–ÏúG[ôSHà‘¤iàPœö7’÷{öÅÏfÒ×Vê«vÁtÃvÔ7;è«8Ý	·=í¨1¾“ÛQmu‡—–—s¿è¤—×®`:O€“ùšÌ‡˜eîZGå]/Jú»™m¡ž«ßEÆ’ÚöãÖÒÀßçýû¿;j7Lú¾Ììug
+«¨žì›Ýfà)3ºŸHz_È¯èo±%<³hÉuž—èë³³^ñ?æ2\»¯©ÍË5ôú‰¶·ÝG¦Ç»¿òkö¨á}ZÛÓhµÃfNKO£è´ÝcËœø±î;öz¦Üöþ†¥Øt>ŽÎŒÖ9­ûS‡éÞ9ôYý_Ïýô†ª:?ÿÒôÇåã'¦eÙ×k§lnQ9²CZÓciÆ±qú-õ±½Oí¯UB¾‘uVTt±Õ—wÀ·þüŠŸU²}FU“maö˜/ ¸ŸN?67?þ¯«x‚ì|fÜëÎKœ+u5{Üæ4½õ×gº·mw§ìoïþbô^“õK§²Ú/nòÌX\CŸu‘·Õ³ó+ª†µ›Æ«¸]+ûiß[#¶WÓ©`ØÊk×í§‘•w¨ÿ ø:}4ùí_VkK¥Ù{ŽU6ß]y.k4`±¬uÎoé+o«_çÿ Ûjö?Õw·­×ÒÛEhÅ9|:öV^vÖÇ2ÁS[efæÆúžªî°ºk›UÝBÚýLü–ÐD9”ÿ Ú|Ñ·ü-¿ðöØÓ_€ú©Ú2î›2x}ÏÕöXïÜ«èS_ú*ëb4§ŒÂú¹es(Vÿ òf=-¥ùtµ•îÉ&·:–:Ë='Jßç=£àôC~oXÈ/G}Lf¸»Ôsk‡ß–jg¥ú+,®ÏCèzÌzëÿ ePÞžÞWè©cvH§u®ÿ Œ¹ÅÏ{ÿ }ÜJ.k+±¾ÊËKZ ·è3þ-¿º•)äðú:yËê–â±ùAìv7M! S ý“½ÃúK·µ™O¯ù¯Ò«´ô‹ºc,f-¡ÝS©Þo¿!âkm‡WÝWú6º×Ñê9ìýõÑ>–8µÖ°8°—0aÜnÊO´wƒçÞ<¥jàþÀ¢Šëé˜~®>#Ë¬Ì¹Žý%²IëdÜŒ½¾›?Àzÿ ÈVÒ*~E«­˜X¦Œv +ÞßæÝè~î3Žú÷†ÿ ‹Z„FƒPuÕ6Ø))§V –åØíö<lfš¶½›»÷­sYêÿ ÅÖ¬††ñÂœA‘ÂF<SÿÓôÒ›YÑ|¼’*~—Æû'ÙÙö8û<{6ÌDßKÝô·nÞŠÝ¾Ý‘Ûnß‡·nßäýóI)úpÄû¦|Ò1Û•óI)úpÄ1æ4’SôÙ'”Æ4üÌ©$§écÉ6«æt’Sô¹Ly_4¤’ŸÿÙÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ ˆ" ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ÷vûÇëHi[ï­% %/^hÏµ “¥.E&((*ƒE‘@ ¨ç4 Âð0{Ñ@RPæŠ)(i	 â–Â€zÓ… PEPbŽÔ´” RKFh¹Çj^:ÑE &9£WSÔ­t{¼½wXUÑ?wHÅ‚(
+€±%˜Þ£Óµ›-[Í¦u’,oŠâÞH$Ps†Ù"«m8`%XpxûQšÌÑ¼Aa¯[ý£OûSC±]dšÎhUÕ†T¡‘T0Àê¹ê=ETñ,·¿iÐììïæ±ûmûC,Ð$lû¼Ò`yŠÊ>h×µ ný)9®3U×5ßQÓä¼žêK°²ßy
+Óˆîn,<´M¬ë±Š˜9PQˆ%ö¼5y5Å•ÌWsÝIqk9ŠE»Š5ž"Q\+˜‰Ž0)µ”˜1 “Ï­¼—¤PÄ¥ä’F
+¨ d’O ÞªiºÞ‘¬ù¿Ùz¥•÷•3ì·	.ÌçÚN3ƒù£ãr?áñÏ].çÿ E5S“TÓõïh²hwö·íi<w-œË Š†AµÙN i<’œ±MÀ„¨¾Ÿâ-W¸k}3YÓ¯fTÞÑÛ]$Œ d…$ã$sî+C©¬O+_ßëÆy×FÎÝb·-Òë¾ÐÀòJºäðw]Y\ªV`(˜÷ ¨éŽjÖ»¢Ø©7zÍŒ8ëºeÍa]üMðežs¬‰Ï¤3f€:¡ÒŽ¢¼æïãg‡ ÏÙtûû“ØÁ¼øïpr,´°iå-ü¨dç¥)G#!Oå_>]|gñmÆD2ÚZ©í9?™¬;¿ˆ>,º*òk—e•ƒª«SŽØ¡è>œ'­4ºÿ xW%¤xœkzž¢Ÿzhþ|vnõ`ê,Äu¨çCQgJ¬àÒœöªuÇ'šÐÍRw$m¥8¦÷¦ r§Ÿþ½¤ßxýi½)í÷Ö›œ (âŠâouë¸tÛ¯I©Oomkuqn–Iff€¬HŒÓ2FÒ®ï-›x!S)•}§xmEq:ÏÇÐi_Ú6)l’Ái=»È¢f–e‚í†û(FÜM&s´˜ìXZjÃÆ7vø£TšÚÒÖÖè#Ãh<Ã$“†V+;qôÁäóÓ v+.i–ú˜ÓÞwïXÙ„bGlmG”.Äs•Â³w®Ì¹å|¬\j–Ú5ÍÞ»â+›››T–h'ÒV¬íæÄ¢ÙFÐrT‰9Àäç™.íîWÃZß…¥Ój‹ß‹yRÝÚÜ­Ì’:»JÔ
+$ùƒÙCµ[)¸°¶½‚êk¸a“t–’ˆg#c”Wž¿+©ã××5Šþ8ÐÑm6£"^"=³Å¥]H³ÌJÆC™8Œã­Ìš³¬™ìo®´®’æÓì–í(|AF6`6ÆÛ£Î\ªaÁÝÃm‚óMÓ¼§ºy²i²¤WB"í±ž2ÙÇ¸€	ÇQÜÐùõKýGPþÏÑžY#µŠòY¯íd’Rêˆ"ÜŒ÷n[qpÒXí|:½ókšnŸsh–ÆâÊêy“˜Uâ’XpP‰Œ€HÛ§+RêMãjRÒo`´½’%‚cqngŽHÔ³/Êe.ø!±‡lƒò•¥uáíE/tëÍ3WD¸´·¸‚GÔ-ÚäÍæ¼nÍòÉÓº. ù@8    ’ëÄ_bñí„±ù‹­´–ÐÂ¹šy¥yÁEÉÁâ{™ˆPH×²û_ÙßùääºÁ‹’HPO-»v3µs´bÇáeºÔnuiío.®,¢´/³Aåˆå’@Èw³!ËÆxl†‰Xãi¦xžÃ+a=õÕÌÑÜ=©¼“Nš^E S.ÁýÃfAŸ…!h¢Å+:oi–ú˜ÓäÄû–6a˜‘ÛQå±åp¬Àëó.t{ÐI\²x«Q[[ÍVçJµD´¸¹ŠiÒõžuŽ^6“Êò€ l,@rvçŽésþ*¸ô1e8Vµ–àÝ8Ú…‘¢[‰”–(è	!‚€?Rñ‡¤N¶úžµ§YNÈc¹ºHØ®HÈAÆAçØÕGUÓ´{u¸Ôïíl¡f²\Ì±©l€XœÇ±®v}sHÑ~ jÚº¥¥Ùyj¸H·â[¬ãqÆGæ*‡öÅ§…|/l÷oce©ÜKyŽºáy™â¸ƒK„²ðT* ö­ v®¥¤^êW	#Cgo%Ä‹ËE,q’p=j¦º×qÚÞé7Ú\²ä@.ÌDL@Ë*˜ÝÆàv’	 VÅ+Ýfø_s¢ènocm­lŸÌSç$¬gw
+sÇ<})Ë£­êºmÅÆ—w¥Á¦Î×$ÞI4Ìb’ ª#‘À‘˜±#PÜJ€ZÓõøïµg%…í”’DÓÛý©~Ñ•À,˜ÞŸ,æd6â«›»]ZÎéíf–öÒßÎQ™Kˆãb‚¹ÚÇ¨5o^*mSS0éJ–²Cqö­B9–IG´Ûä¢b7ÝòÄX”,¤–øÏÁwºsYÏâC	b™d±Pî‹"‘¹YOÌƒ¨4Xi6kCy>‡¬-†£ª½å¬¶sÞ›»Ám …£VQUJ(9 ÚÙ,mÁÚ¶©¬&³.¦žSG~¼=2"8<ù€Iódœ1`8¸¦ø‘á+S9œêÞ šhš-ì(ò›ïFUT+u?.[q!TM?ân•áûFOxNÞÐ_J²º–TUÚŠ@E^cŸ™Ø÷§fg«øÀIý‚ŽO7•e3$´¯±.¢f!T8U'€zVv¡j<Yqq<VZØH¼°”=»[M+Îb;bY‚òGæ`.¸'·Ìîþ5xšl‹h¬-û1—?­aÝ|HñmîDšíÂg´*~”X,{Ÿ†UÅö Ö£S7•’uC8“ÏÌžn>ÑûÍ»|Ÿösœsº¤ñö=ÒÚ5ÏˆÓLšÊsqÐKõo-ã ‡Vm‘»zWÍ7zÖ£zßéZ•äþ¾dìJ YI'>½sFd}yâO[X\CwâYo®æxä{Å
+Óï‰ƒÄFÔ0(]¹É –mÙ¶ß|-¢Å?Ù“VÔç¸—ÎžâtDiŸj $(UTEáG“É$ø™Æ8Òì{þfCÙ®þ;0È±ÐsÐÏ6AXWŸ¼O1?gŽÂÔéò?:óbO­4œwÅ¥Ðë/>#øºô‘.»r¨†,'ò¬+^þì“su1ïæJÇúÕô9¦““H9‡4ƒvp	=Í!cŒ¥4œÖ“<`œÐ+ŽÉ=ÿ ZnMÊ“'9 J	=©™£>ô€õ…z {[í"FˆùÑóØðk¾Ú=kÂ¼'«Å6WLÄDíåIü-^äÒª’3ô¬Z³±´f¶•>É@=ë¡œñ\U½Ò¤ÊsÞºË[‘,
+Tþ•¤®Z?JCÁ¥4‡¯dg×Š(Qó¸ýiµ…«ê·cRº±±º±±ûª^ÝÞ_Äd#s P:Ï',Å€P¸•Ê“Æì³hÓ¬²é×V÷ÞMÊÌ°ˆæ†/1$_•¢RÌ[i¥JË"±'ðÍ´÷¥]&Ÿ;™.4Ô)öyØœ±`WpyeV
+Ç;”ï}Ù—ºþ¯&¬úeƒYA!Ö†ž’ÏnòØ>ÒIPë–Ý‘Ôv5¯¥_Þ6£w¤ê&/mbŠs=¼f8äŽBá~Ff*ÀÄàÌ0çæ* ž´—HÔ4÷’ôÙdîw9dfÜ®­Ž< CÉQtUÈôèbÖ.u0ÏçÜ[ÅnêHÚ6‘”Ž3œÊÙç°üs<J^[Oó§ŠÞúý¡¸ò&h‘mç èC/Í”Œã‚Aw…'–}„Ó<¦ÛËdi³yq\ÉÇ–!QFã’q’I$Ð4OÍ¡ÅgoˆuK‹+H„1ÚÎ–Û6*íPJÂ¯ÀÇñvç<Ö÷ ÀšR¸<Z Á¸ñ5µ¾¨ö†Öé¡Šâ+Yï'•òlÙÛÉ>d\ª•ÆHÃcv¸cýSÔ-f{t‚ûW³Ô…ëÜÄ±DýŸr8.yû;cj0ù×$|Ûu®þ!øFÏ>fµ„ ¿òX,Î¦¹ýb[ÛŸiÚ=®¡=„sÚÜÝ<öÉHLo
+…ýâºí>sòç*¸ drçã/†¡È·‚þç6Ã´Äšä5ïŠãRž­6ÂïO½^8î–hËynT²tuÁ(‡¦FÑ‚9|¬|¬õßj3jþÒ5;…EžòÊ‰0B†t@“ŒŸS\ynü'®øb+DjW×œ™,&H@šyŠÈf+åìÚá²’8›
+xþ-k–Vöe¦ŸckmÁ
+i
+¢Œ(Ëœ 95—yñ+Å×y­K=¡cþTì>_3×5k¡©êšØîŒ×ºå…ü-ÜÂ`‹ì›Ù¥bäKò³8rç«¹Ö4» MÞ§iwÌ£ú×Ëwzæ©{“u©^Mêv þµž_qÉäûóJÈZÍsâ6ßJÔü?yªèÿ Ù—×†K»k™fœC<Ò9’>Ù6çy üØlm/Ô¾*xy|Qc©[Gys½Í»(if‘àe#=±gê+Åw`àuíG?Äz{ÓÑâ{ßÇ!’,´qÁžèaÝ|iñ4Àýž>Ôtùc.Zó‚yëÔS	Àë“Jë°ù—Du—Ÿ|]yúÜèUDÊ°îu½NñÚµ+É‰ëæNÄVy4™ÇZ.ÅÌú
+Ì%A=‰æ¹<
+ni^(¸¹›ÌsëMÜsíHIüi1Ïµ!uri»SG'ƒÅ!ëŠâ“8t˜ætâŒš:RõÅ .i>´ÞƒÅ´‡­³šiéHHB}èö£9=(Ï4À=:w¤Ç¥/jhëÅa2)ÜSI¤Í Ç—‚9Ï¸¯fðþ¦u_YÝg/³Ë~z2Œñ…àšî¾ê Ý1Ï'÷ÑŒ÷î*ZÖãG †ç#®k©Ðî·Ã´öâ¹0yçjÔÑ®<«Bj¥©Ú#séRžGøUd|€}jÀÎSãPh¤1š–•xÚ“jZMä—²D°LnmÌñË–dùC¡¥ß60íß)Z#KÓ<=}a}>©ÛÛÝFßie<—Ç+ÈO Ñ±!F>~€t­÷Ö¼¿â¢Ã«ØÜA	ŽW±~‚Q»­4®4S’÷ÂúHºW‹­CÛjBöÙ%³k‘bÓì¢°UèÄçÇ,d´ø¡ é×7²›½OR¹DŽY µû<[±DDgb .ç$±%Ï8Ú«ãaË(# c4ÒO^Ÿ=ß*=S\ø·i«[WÃò¾9ñâ’6ÁWŒ†S‚AÁGBEc§ÅvÒÑ-4ë{88
+#I%™˜’ÌI$±É$’rMp$šNJ…ühºè…Íäu—¼WwúÜèhUcþB±.µN÷›­Jò|õß;Vj)s0çc˜‚wc'ÔäÐâ8¦äô›»Š.ÄäÞâ¶IëïÍ&yÎ{QÇ­'JÄÎ(àõ ýi2:ž´†˜§¥&}(¢šzÐüè9#4àb\šnxÎiÇ„Ò>˜ë@ó¤9üéØçëÒ¤‚Ök–"™ÊŒ£¥ ÊäbŒãœv©&…â›Ê‘_8Á­^¾ÓSOÖkÈþÒª9<ûô 43ëI~Ù­kw³¹»»”Ç×ïH}©/¬á‚ÊÚö‘b˜•òå2‘@_R‡AüóJ°K&JFÄuÈT²Ù\‹Váu‡ î#¶%¼‰ôË2ú™L"6‚%ÉÈêZ={™÷£#µX¾²’ÂãÊb¥]CÆëÑ”ô5Z‚ƒ4‡&–“h'Þ	GäRçÒI @X:éI×ð¥?{=i	ï@3íMïŠq9ö¦3 	#ñ ¸çš¨¨¶É!Ém©ÙW©£ÉD#–9ïšC°òG~´‡¯©©w§–±•z†DÛ! äu JÐÐïÛJ×l¯$Û ÿ dðk4{ÐÙ*ËžHãÚ†€÷’Ù ŽAäT°Jc™8Á®Âš‰Ô¼7i)lËòdãŠØFÀúþŸ?n­žÂ´QÇC\¾r|²yÑ¡ä½ÑBÇ¨ )iŸõ‡Ó5ã·VëeñCÄºScË¿‰.—Ü²àŠö&ûíõ¯ ø€›ñLÕ›"9[»vÃ)¡£È¥‰í¥’xÙLiÉëÍt5´ž)™‚á.H¾™ï\ð¡îKé@ê	íI×Úç€P:óHzóH:z{Ðã@®(>”‡§(ç®(Ï^ÇÞ˜6u¤<ÑžéHw¯4Þ3ëAê9¤' t4‡¹¤)=è·¦xz]JÉn„ñÇsÖ³õ;#¦jFÖVÜÖÞ½ÁëZ^¼ÔŠ½…”@Ì˜“µ3Ä~¡ŽöþT”ÈÞVW¾”‘&£™¦]­¿Ù&œ´k"¶þ¡½C%¥‡ˆí¡¹ËZ:«°=Fz)«3js§‡4û¨dÏF0ËCXFæV½[™É pä·rc~K9æ‹QŽö-kDëÆ?
+È·¹¹{ì«t>d“o.‡N:}+DÞiOªU¦¹Y	aUþ/céT,õci¬ÜjB¿›»ôš “^’2¶V‚A,öÈVYAê{|U«Bìµ´ßÙ‘´s Ü|½ÆP8Î{VeÍí¼°<PØÇþK‚KgÚ£ƒQ¼¶]\2/¦r(Î¡§Âšüö1È±Æõ,s´ã;jÄßh:=ØÕ]YQ?ÑWpÎïlV+³É#;ÌÄ–byÍ1·drÄŽ™í@íbF¸–DTy”`±"­[\Ù‹1owh[·™ÃcTà…æ”G4’7@£5-ÕÍ¢†ž&E'ºÎ€dš•òêÅµ0ÃŠ8ó’ ª'Þ´bÒä6‘]K<0G1"!#rÕÚ‹=@[ê‘ÌY9ÜB(Ø©žiÇJÚû.™.}w
+NUiùØÖ/N´ØÑAéH94 œç„qŠSI×ë@ œûSoP¹ïš“Ÿ^i¤`ûûP˜Ú˜[ŒiÝG½GÈ<Š vGR:Ôª…¢s´ñÐÔaK¤òjh·$I¼ísÔÒ¶}zÒ¯'ŸÂ˜¤éFpr:ÐÆv¿ïµýÖžç‰ÓÎAžŒ:Šïƒa«Æ4ëæ°Õm/‡X¤±Ü{H¢D9W‡ÐÔÚÀ"ãÊ»\ž+¸ŠMÊtÅy¬2lun˜"»½.àÍj¤sW^æÂ¶h¨ÐçµÚ6˜üÇë^sñrÇÌÐEò®^¼wåyÍz+ýãõ¬OYCÃwPžÃ9Çn†„5¹â7Åî‹£j¨2'ê+Šb{u5Û@£Pøq{i/úÝ:F@=6·ò¯>šþŽ@ÜgŠ4ZÎ(ÈÇ5”úÄC…‰=*&Õ¦+òEùÒ²ËœñIž+ß_Jn(ÉÅB³]\0Y'Ø;’zPFÒ*¯,ãP=äNé~5ˆð²pîÊp˜^¢[F=QÏøP#iµ[eI»'U¸ÝePÊA ã­cXÚùWI+Â’*õW<V„«{pªŠŠäHª½‡¥Øµ×Mã­!â€¸¤ö¥äRw¡¥áûŸ²kÖŽNÛËlû×[¯Ø‹ò$¼¾R}«€ÜP«/ÞV?
+ô¸.RöÚ	ñû¹âçñ Mêy–âp@ã< {ÐxÏ9 ãŠ½ä¦•¯ˆ§PñÁq±èTÓuË1g¬][ÇÂnß?ºyU‘ÒO-‘ƒö\sVfÒïa¥’Ý‚/ÞÆ2¸­Näìmr-»ü½Ç×ÿ ­F“¨EýÓÞË7ÚîÉŒ+ Ü02(ÌHÐÍ2EË¹£ÜšŸX°}*èÀÎ$7+¯Cž^Òa‡J×na¼‘VKhÙccÐ¾8?•I¨EmsáˆæûIžk7dÞ®ãži‡RÃØ¥´ÐÚÇ¦­Êˆ•æ™Î2Oe5Aa©³ÝÚÊa·$-÷±ž3ëWå¸Î“gºH.-B¬p²Ç>¢¡×f†U°%Ë%&˜toAøRbý±‡Ä·°C¶wk¾Õ» <œ{Õ8-­u—N´º¹`°–V~•VmH½¶˜cÊÞY‚¾hþ%ô©WYŽ)^æ;’ñh' ž¤
+ÄqIªe.¤+gb„¿9ÛþÈ÷&™«]Ë¨Þ-×ñBˆ±FtQÓ'×õÅ‚Ëä0v<ÍÃ;¨ºÔnï,ó3¨làÐ ëÿ Œ2‡ûfæ\òF+/9'§ç¶i¤þç‘MéN<sÑ}ûÓxÉíŠ(è}E4È÷ïAüèÀõ¤÷éIÓîõ ZV VÛƒƒÎ:SM#œP1û•N@çÇvr1€1IÏPx¤è9 B¥À94 |Ô?Z`&Ü©¡¯Mð…ù½ðü
+Ç÷–çÊo èkÌ»ñ]?‚/¾Ï«IfÇ	r™ï
+–3ÑU¿Jê|7wŸÝ5r*ÌNsZzEÑ†ñI<gš`ÕÑèÑ°õ¢ ‚U’58ëE^ä¦tN~vúÔRF&ŠH›£©SùT¯÷ÛëM÷©E%«Ûëž(Ñí7–Í<P0•y$za(‚EÏËÈ÷ôW‰t0<q¢€ßí+ñ¯ÕmMŽµ}iÙ&b¹ô'4ØÛêsãMù‰$dtö©ÁÜN3øÕüñ×šn3H›•RÊ!´ŸÇ­<ZD¼ì‡¶iX4$jJ*€Y‡Sô©¢…<ã&€!1(n AAQ»9©mç¿zŒ/á@$#vã‘ùW1Oœo-‡µXe$×Š†u2[:ƒó}ïÊ€-vôúÓsÎ)#q,HëÑ†E8r(FzRgc­&7~´8ç5ØxZñfÒÞÖIZÊî8ùMqÄ`Ò†aüDgŽZÆ×‹„-ª#ÂèÁãöœá…G%íž§onš†ø® ]‚x×;—°"±ÊrÊpN3IŒäcÚ€²4uKËylm´û5o³[’ûß«¹ïŠzëîo-­¼ÓÅ®¿0ÇLúÖa•QÙHWáXŽMycq`È·1÷ÊOzdEqp÷WO)f–F,ÌEFðW$)å†x5n{'†ÆÎô°h®I\¯U#±­{=*â©"k™M´~fÒ@Ýí@›ìaqßë@RÃå½€«ÖSY¾»,äp<¦lã=3øÖÄðk"iíÑ ·ˆ1UÆÕÊçŠç4ÙY‚’©÷ˆ
+o¿­kè[EõÎ›+·q´]r7uÇeòØÆãçC†â€ûÔ­ä}JîûH“‘Ù’¢'õ¦úv w[‘ÛAipÖïw$äï
+NbÁÆ8¦ÜXÅiâK[WÈ‘£l?`ÝM¥Ê¯¢ÝYEp¶÷F@á˜à:úgµ7Ue]içŽ{å—zÈ‡%W°&K~É¯Écs
+}¤ùe (;X÷Ö†ÃR¸³$·•&ÐOR+FKÝ>þx®¯„Ép€1ò$ÛÐš¡©ÞGU¸½#gšÀ…ô `P	}…ÔÓÅZ…É4sýhÈ¤É€¸€ž§¥&0Nyô¥bp}é§?ãHäœg˜Àüy¤´Ð1
+	Áâ“ïJ;æ	»<zÔÖ·&ÎòÞé}Fjc­)~T=†{s,±Ç,g)"†zž6*ã¾k™ðué¹Ð–"ß½¶cÿ wµt ÷©@z&‹r'µLõV†os4V‘ØÍèz{ýöúÔDÔ²}öúÔDãŒR48‰‰qƒ-õ£2L‘{×Œø¬y÷Vzšr·ÖÊÄÿ ´:×Ðþ#µ[Ýê" àgôÁ¯ŸîíÙüÑºm&ðÄÞ»IªaÐæOSMç8üjB=ºRw9â‘7ŒqÖœ©Óž¾´ÜR„s;{Ò •ƒmRI â¢Æ8§ì
+Ù-‘íGÊ8Ïã0rƒžÞôèÃE.â€žrÞ¥¶º’Îeš+®@8Ï_­1åwrÌÙfä“@­U’	ÿ –m´QRô Éô¢	’zÐHô¥‘š!=} Ít¶ðYèšZ…Ì=õÁýÌmÈÌ¸Üt÷Êúæc5¢ææÄüÑúŠÑbæMfv¸›ìXTÞöû@!k.æÞÛVÒ¦Ôì£ò. žÌ=E[ŸWÓ/n¯lækÔÊ)‚
+Dôí+TÔnÇ—‘4qFxÜOJ±PÔ<2g2iòù‹ë´ö«—zˆ—KÓ.®¢ûEœ‰äÎ;«Ž„ÆÒu¦ˆJ“DQÔÿ :…/f]!´Ì¯ÙÙ÷ã¶¦é°ó|/{ù°Äââî¹êfø~é-5¨^Ly©…Áé‚*ŒWSÛÇ$pÊÊ²2©àÔ[‰8ÀÈÔ%å¿Øï§X0†B”õç"¶ïÍ–§$7­¨4,ñ*KÒpÃ­sÛ¹Î}óHqÏ¯¨ —oku–I!FÜYÆ9r}^ÖYžài±dmÌX“Íc’ô¤&€°éœI+¸P»‰;GEúTyÅw b\w¤Ï4czB9Í ¥4ôÉ4§€)ãŠ@!8â“<f”þ´˜ ã<PœzBwuéÅ&xÁãœÐ {
+9#&‘Ž(ÏÀ\Rgu0¸é­2¯V†Jp1FàzÕv¹qÈ5^ð3@ÉÇNhÍPk¶ÏÊ1@žfè	úÓ±ðeð¶×>ÎÇ÷w)Äs^‚§&¼ƒFk„Ö,¥?/$v<W®ƒ‡?_Ê£¨#KK¸ò/ûçUHIóWw
+)Ü™n{¤‡æo­DX3qRI÷ÛëL$zsVQ‘‰cxÏFR1^=‚¯‰õ½!þU¾€8÷qÆ•{–H#Œ‘é^}â=.Ý<P×®È˜1±8áºÓè‡]ÛKc{-£Ÿž(}ýW<ÿ tþ:µX<B³¨Â\D	úŠæHÅ&&4ppi~¼Š:õ¦“Ú qÖÑšBh§‘Œp)ã4s×©0hI>”h9Å7š)âŽAÈœæ“¨çŽÔÆ)9úÔ–×—r‰må(Ã®;ÔG âšÇúkâ[Ž²Û[»cÊóY÷úÖ¢@¸|¢}Ô^UBx¦Ö€I!r	Îi9¢‚q¥`£Ÿþ½!íA8ú N¤~´PH¦±íž=h{óFsÒš_ñ¦4yÎ) üþ™ÏJ…®#–=j½ˆdt¦²j6n•Q¯×ÜŸZ…¯˜ã@ËçšBsŽqYÆâg8\þå‚ò_»„}(q¤ø‡çLiÐ¾3LF½“’Þjµ‡&a—™{s@ÍâýM1¯[øGçZÃA¶‹ýtìÞÀbž¶Zd\•Ž>f #u#zR©¹s…W9ôÔÙEc0o"(ò½p9ë¹E¨PŠ	n€
+S˜M>ö^‘>=ø«h7r¸¢çžM]mRVb¡G‹{û“wbcl7©bxsË?ìŠhöžFcþÑ´ïï[:Bw?lj_êZ•²]‚±ÂÄæ6	#¯À`Óa©>üÖ¤pDTŸ•E6FÏ‹‹òê¨¹ýjÒh÷FC7!aŒmãæ?€ &›n&ÔíÓ(;¿.k¯–ÍsÚF–Ö—¿h{·˜ª”×Qef÷S*"““ÍKcVHÖðþžo.·°ùPæŠë4m9tëM˜ùÏZ*ÔL›lí$ÎöúÔgžµ+ýöúÔmAhaäs\/ÄûG—@7ä:!ç?Ýæ»£Y~"µºÔD Ü?:hg‰x­F¡á=?SC–Œ®â=æ¸|sÖ½MƒíÞÕt‰ÏnîŠ×"¼õSæûÔ˜2î"““Ð
+D”:	8¨šö¶•ù8À©vïO$ýÓÎ})I·¶i¸ç4*àÒP‰À¤þÍ&h,zÒ“4Ü¨æ¸¨‡ÓXóŸJŒÊ õÝÆ.¼{Ðßx’E!Æ:ÕC
+ÿ ëQ>¥nhù4dcšÉ}Lÿ ¨Zúfé@Í¢àu5J€ã¥cæîcò£·ÐT«§^ÈFcÇ»6(ó]Ä£–j0öÉ¤]
+r~y~œæœ4ˆeç'è1@ˆR=j¿”ôÀ­i§D~`[w6+VÊÖÊX·Ãxéž¸4Ìy×2}ÜŸ÷E9m/fÆ#sŸZè®¥01H×î®îµPóÉž:Ð•SB¼q“±~­S¯‡ÊãÍœÿ tUÛ¶óƒM»Êe!˜ƒ€jkûˆäŒqÜ2G<P¥XÄy#6=N*T‹MŠDO)~c€HÍ_>¿ºsµb·wF]ø#Öž¾\1šìSÎÅ'4\,ÇùPÀ¹TEÀ' 
+Í—T•aWD$18ÅkÍ§Üì>eÚ$8Æ
+üÆ®øJÒ¢ûCÝæâC´Å¼aWžh#—Žò{ˆgl”t  ÚNóž”«©ÝB
+Ëlç ùq]ê’i<›hÄcî¼UMf('Ó º’@$‚nP¼‡<P;2›½RøC™HDNäÖ¬>¹-‹¹„GûH5§¡ùW½¼0(ŽBÄ«máp3Ö¶ú	ïdób–PX©òòr}E-DŒxü7’ÒðÉ?•— Ö}ÎœÏušð¶Ó¨¼c<Šë,¬µ'u’+	JªÌëÆ¹#±%˜Ÿ›·¦h½•Æ×c¨0i¶3o±³ŒnPØ‘7~´³È²í‘V4'  oÝø^êÿ P²“ÏŽV·Q<ž•~Óáí”²¤ÞM!$ Ú3B°wuqq¨ gzÖŒIug¢%Ã»4m.ÔVúušÌpÁâëkcþˆÓ<ç½ÂZl7>·këT”«³C¼ñŒõ¥}l9+ÜIƒ»¼Ÿîæ®¬sìÿ I…¡vçÆkÕSËIöG'Â `}kÖ¦þÒ×çhtOÝ©ä÷4Á.¥;+c$ÑÃŸ™‡ÕêZv—œ	„öŒšÂðÆä¦]/ÍØWZ8éÒœVg'v/QÒŠrÞÔV€‘Ð727ÔÓM=øvúÓ3Y”4…êG$bXÞ28u Ô‡Ÿ­'Ì #¨¦†x¤Iý›ã‹ëG\%ÊnQÅyÞ±mönöÐŒl”‘ô<×ªüC¶þÍñE–¤£
+%
+ÇÙ‡ø×ž|ITµ×!ºSÍÌ ãèÂ›Ôo¹Î1¯ZhlpHÅd5ûrXúTs#ŒŒÔ¦™¸~u]Æ>ó
+ÆÙ<‡ u>´y@ùššo¨Æœj»j}Âã<Õó6~•4ÂÎªÊy<@:““Q5äïÓ5±ý!&5ÈàU²&Òh#Ž(¦.åè¬jUÓ®ßžêj@·ØçÚ¶m
+(ÚvÃt9ï@¿Ù›ïg úšrÙZ*åå$út­eµmBûÊ·…ç.›/ÕŸøD/w ÁTž ž”ÌË;K˜¬q†aØœÕ¹àŽÝdh2Áp½h¯‡'ÓSÍ†TyËØ}i×º=ÂÄÆæâ%
+I½G§4Åês²\ÜG#¡`‘Dw7ÐòFá9¯DƒEÑ–ÎŽæXƒ3H	mýêÄv1Ç”† §®p1R=ŽBââÚ8óžqÓë:ßF½Õ-ÚHQ‚£aÙŽ ÏJêï¢³Ó÷,É	¹b_'’sVt)ä“NÔ.Aä©
+Anö¦3ÿ |í³MR>lNjÀÐ§³‰#±¸Rd$¸q€¸®ï-#
+ªLýåQÐÔz•Ü‘hÏšÐ‚@3:ž3Çz,5e¥G&©¾¹.¬àH©ÆWÒºx46ÒV	i98sÇoÒ¹*K‰¼Ab¬Ày“ Ù^1^ƒ'„uYï¤i/¡HYÉ\;RÐ:™O¦ÛIl`P\f@ØŠåï¯mà•Ò-U[Q;
+ôËo[`Éw4¾X-À8¯!š,—‹…i\ ô8§Òãèv³L–zV˜’\ó¸Bœ ê½2ƒrwÅi#çuI®çGÐínü?¦Ü\À¿hXTd¯JÚ¶¶*à
+	À
+:Ò¸–Ç‹øŒ^¥üpÉ	¶&0áHùˆõ­?	i×ºŽ‰©Å	äH 3ö_éPøÚy5/Þ¼@²Â«
+ãÔZî|¥Í¦èï<ÈV[‡-‚;tIô*Q±‹ƒgr±\_n¥PqU¼_áë@‚dyežiÕ>vþB½/ÉŠ0Ò8UÇ>cõ¯=ñlÿ ð•kv¶:qóíìÁê>VséFÛŽ(æ¼nÒø¶ÛËMêƒÓW«Å¦­¿0C/` ª¾ð`Ñ‘®\ÿ ¤¸ÆO§¥hI¨ÛfUÉ@wÜRI½IêQñØÒ¼'¨]—&C;e¥y>‡¢M¨_[@‘“a¸ï]’GÇšºÛÍû½6,GzŸZô='B³Ñb
+)ïM¦Õ7m
+·6)-ªE	ãMªOQY÷úÕ·‡tò·‰opDP¡Ë=3Sêw,ïsr\G`2¿ãX†¿·µgÕîPˆƒesÜ”íaÝ%©‘¡x2ëP+=Ö@v.ÄŽ¤ó]ô‹o¦„´¦Eˆ˜û£·JÛ\"A€ ãÒ¹Ëû¥…ï.	ýîÝ«ƒ×ùÐ¡mX¹œ™‰«jWÚŽ¨ºN— Ž& 9Aó{‚{WS£ønËL‰w"³ŽIª>Ñ?³l¾Ùr7^\|ÄúgšéÖ6cž‚šW“¸ŽGð€¥ ô0G$SÀ¥;Ø\£#J*AÍ®4‡áØûšB2)Î2íõ¦ŸNô†0ñÁæšsŸJyÅ4œqLGñ;Nûf€dT}äW‡øÖñ56Òrc¶9>ù¯¥¼Aj·zÊ6Ó·?
+ù»QðÞ 5bB¢$$#íØÕt+¡Çµ‹<jè	ùˆ ÔFÕÂ‘Žµßè~¶{çƒQ¸ãÊ.¡2GjØ“0hm‘ò;ñPJG˜ÚÂ7˜p:ƒV<¨Ì¨2žÝëÑ®´8d‰·ÆžJ.p8¬}A¬â€}™"Þ
+dþtŒ3àëÅ˜$y@uÞÜàô«?ð†ùÞp½× ’Mv÷—\©öö+yå&äê@ÇªÉ«Ú¨T¶ÞrÄP“`r#DÔ¦‰™ä†$#ž¦µ4mO—OpàMy˜%ÏË·ÓÝcY¹†ýâ†%‰JÃ“šÔðêÜ_x^æÞÞ×Í¼{± •F/¥-Ü|zE¢Æ
+¬a×®Õ¨/4ÛkxVêêŽ¾ ´mü7â‰‚leÞnEã?6‹á1sqvóÜKpˆªGÊ¾´Y!¥ÐÅÑ&ŽYCo,Q&7mãëbïP¶Žâeß’’ßë\ç„¬ä›Äúz¢‚|Î7×³Â5¦Y—1ÚE3“¹ÛËx…;‚îtiòJà
+©çÞ¸»ëû»±"1UÁ* #¾ƒe‡NÒî¦h£ŒExÅx-ž-ÙTUfy›>ùni·¡Iis¹:­­ZéRØá Kp¹æ«ðøúLÍWo÷Œk]žnlôKkE}¦8Â·L+HLÓÍˆÆY¤s…â’nÂGˆøóG‡Gñ0JÒ•¶îçœ“[ÿ ´Èµ+mFÈƒÛqóTZ…£ø¿Ä··–Ë¾Á#b:¨à^ xQt-cFÎ^@N3IêÇ-,úEœ‹6ñ©_›$W5ñ>Uÿ „R4Æë‹•àqÂòkª¹»ŽÞÚkÓ‡
+›ˆÕk±µÔ<yª­åÂ¬6vùX¢ >§¹§¶ ¬µg1àK¿[O*•ŠYŽ23Ú½~X^áŠ•2y#’*Þ™¤Zé0ùqF77VÇZ¡wu41]Ï÷a‰¸8¥Ê÷b¾ºÞ*Ö`Ó4k¨w/Ú§ŒÅ(~cž2qÒ¹/ø{Ç…çR"\Hë[ðÿ ö÷ˆ'Ö.ù*Ä ~üô¯HÂBž\Hz
+|·Ñ	ÊÚ#2t†ÀCœ)@¾€W/âÜé¾]ž››•âF9)Ÿjéu x’ÈÃ
+»@ôõ5ƒáêš´ºÕîZ$lD§j“°Ó²¸žð<pD.¯Û|Îw¾áÉ'œ×S|ÂßM)
+Ã>:sWd&Fà~Fõ„&0ì bsT¢–¤ÞRÜâ¼Y=Ì–#KÃ<÷L0sÑk¥ð¿†¡Ð´¸•£_´0ÜÇ*Þ-C]¹ÔæPÑÂÞ\Yäqé]cFfËŒÒZ„».$e‚Fþ ¸ë\v¹bÏkg¦Ú(\c{Ž¤w®ËSE†È±`8&²´½>WÔæÔ\àåÀ¤tÍ}KMKúNo£éÑÚÀà¿;É5<‘ºÆÎAàU˜ÀNFOÖ¥#ÎFBBîóŠi¤M¯«8‹ä“Rš=5c1¬¯—>ˆ§ú×SkÃo´*$þ´–¶ú|ÛÈ/!¸7¸òf›*\lõùAn;j+ÝEÒä)«iö®¡YîR3¸b9#œ:œz0=Å.·åóÁÁ°kšƒE’úM³Bc%Îÿ òÓ•ÐÚ^ZjV©ueqÅ¼™Ù,Sƒƒ‚8<‚+”³ŠgŸOð»Äæ.í¦“ ìû$5ª«uÈf„q¸ÛL	m§pØìu©NAt©ñÏOÆ¸í
+ÓKmFÖ.ËC®ÝyKqu¤MpÖÂüTáŒFË]oi§\Yj¶ªÞV©m}q
+ÞªfêÜ	™`Hø$f3# ‰<ÎUüÃ¸Ž¼¨ìy¤äv§ëH28#"ÃƒíE¼dQ@ïíõ¦s½¾´ÜPCŒRž( `Ó6A,mžÓ±®7þÅŒ—2Ms©Ü>æÈT@»G¦{×j}Jfß~(ÎõoiºFy¨!•Ú(Ûavç5æ£Pž;qæHCÈï^#gðíôžo™ÕPqÏjñ«ê{‚ÜG÷øsT”m¨_C?O„ê/qºá•&vÝÅs°ÆùŠ@ e`øõ¯T¹Ðmt_ÝG¾•0’8å‰ì+Cðœ÷wñ#¯îÁ›+95{“µÍ­WÃWÒ]Z4»–$Ä#‘€2{RøÁE?Úur’cîÃŸ”zí¤³ŽÑ@¢ªª{­aø“Ä–Ú”fo´Ï6DYP}MUÞÄ%sË|e»ñ¾£åªªÄV%Uè0+µø{§ÿ gi2K2bK†ù8ì*_ø"[Ù«©‘æ\1•¸îkÐM¥´6ÑÛ¬HcAòö#éJÍ±ÊKde&ùH {šá>$Ì/n4Í"²E)šUC¼`fºÍ[R’ÛE»o¸0cRœßZËð†
+ÛËªÞ wü¥ù$Qk2QÕ•<àÖ¶¸kéÓkýÞ}k­¸„Ç7—ùlÌž½+h• $d¨b¹ÝZT³wŒY˜.@ô#¥>[-INìå¼E¬\ëwÏá:@ÌyXä·¯Jè´[é!$˜‘Qà F³ëS gŸ‘“Íu.Ÿ½“BIê)JÚ5åùo.òØ,zb¸ùú­ýž“	&\æM¼œWw©ºÂŠ®@.>P:Ö_‡-£¹Õ/5yT¹Xò9âœ·Ð¥¢»54mN†ÙQ7ªüÍŽ¦­]ñH	à®	ö«Å|òIÏ5GTŒÅ¦Èï1 ŸJjÈ„®q¾ëÈ Ò­UÔ»ìbz•Ùi:L:6—¤Ci-þõei–M.¹%ÓÑÀ¢8ò1ócšécLœÉ–j•½Êo¢+²­Øä×)­JÓÚÇb€—»'à95ÛÈžll‡¦8µ€ÖéÄêš‹y) ÄcÎX€ %˜’ Q’I M9jBý…´VIi®9&¬}Ÿ¹lŸJ¥q­éÖ[ÊgiÒé|È>ÇÜ´‰€w…Œ1+ó/ÍŒ|ËÏ#7â¸Šæ®-æI¢‘CÇ"«)Áw£e ­Õœ¾µmq3Í;4²0EEzÜ²³v±[G•HÀw>µzG²´Ž[Ù¼˜¶)yf€ª d’O Zç´}wSÔ4Ë—›JjQyN¶lþQÙ*#©mÜ…RÎŒÀ˜\…ÏÈís¡\*íè}Hª—Úl·»<¦E8ä±éïQøzþ]cÃZV£p¨³]ÙÃ;ª3 bI8É­%Ê3@í4èì-£‚$UTýO­YF+‘·µÓn¬õ[X>V«o}q
+ÞªææÜ	™`Hø$f3# ‰<ÎUüÃº‡ˆôøãÄZ”¶VwðÙüÓ^wºp[tb¶û¢`XÞ©£|‡¡,w»UþWEdë´Œ×?'‹×É»ºmS]:ÒI’kÑäyh°»$·ÍÞTcÂäÀ5Ð©8éÒ¸sá)¿²æ¹)z÷ÚwXBO"ê¸‘Œf-þ_Íd)À-€üjo2jW¶ðèÚÄVR¬W0¬LŠLi!Âùžca]N	= &¶"ž;˜#žÝÒXePé"ÊêyÁw¬yµ]7Y×-
+æéook{<)>Ï9/½@hÛ8F8äÒµt}/û#BÓôÏ3Î6vÑÛù˜Û¿b…Î2qœtÉ¤3ˆ‡GÔo-ï­áƒ2øz&·Ó" 4‹p.!‰É<¨Šr$p[vv¿MMBóXÒnì.-ažúRð\\Û´Þtq„|¯(œª¨\qè8#Žôå8àŽhð¤S›;Û‹¶S©ÍvßoŽ4(‘Ìˆ‘áT’ÁJ"2–9`Á° 7D¤í8gUF(ÜÊ¤	ê@,Ø²}jÆN>•rNx>ôV-.ÂJ]J;U¿™vIr±(•×Žc$|«Áô”ù4»	uµ),-^þ%ÙËD¦T^xŒó7î}jn§·àjUÇµ GŒž{t£’A=j]«Û¥!‡&˜ÆsÅî‚Š@i?ßo­7÷;}i1@Ç4¼t£žÔ ÓLeïRu<Ò9È¦"ºa•nÅs:»ÉetZ«*d1uè=kªo—¦+‘Ö®Unn˜|Ï)°§¡ÉÅKR•–žÚÖ«æJí,HwNp=«­[{{DÛ
+lÂ©èv¿Ùš\j¤œJÓ14Ÿ3CS¥«&rmècjê¯fD„A¾k•]+ûÅ²[¸?d±eä÷ d×]«¢$+¦PœõôªúŒéòK*lšæF‘Ï|Àüª˜'dmÄ*±¦/ z
+­"•Ü·EÍ[G–úóIp<#w8À5W±68+¤}fþÖÌ)
+ò—`{â»¨v,	o`b¨éú$\Û±‰ÙV"÷Åi€€9©Z;”ÝÈþÎ}âz
+ãõ[y/¦ŽÕ	a4À>;¦¶î5«öÔ. Òôä½K&	v^ãÊ`ÅCìŒ!ßc)ùŠ/Ì£wÞÛZóYÓ4{Ý0¥ŒÌú‘YFZH¢åX}ÄYSŒ.óÕB°ÝÁi±³#HÔmYù6àþ½sWšÆ¿o¯Ç¦C£i’yÑM<2>§"æ8Ú5;€€áš§ ‘×ž™“NÖ5½Rg–'O[¼šØÊúƒ‰vÇ+FÍ°CŒü„»Ó‘EÁ"Þ©asvñ‹TM¤üåÝ«6dz}¤vÈ2±Œdw>µÈØÃ^Ðµ¸¡AâK¹í#º¹Uh™ÚEQ?rDÙŒñ /–6¾à/ü+OÚ¶áveÕ!ÿ ’Y¥1&Þ»œIQÕ·®3¸P;pHÉ¬]Vòk«—Ñìl¢¼¸$÷spÖè‘±`Ÿ8G%‰FÀŒ#d”6N¡áoOãÍ<\hZdŸh±½šmÖ‘Ÿ2A-¶²9o™¹<üÇÔÖÍõý¾¯&«¤Çmq4ðGm4s´+¶6vFWTsœÈà‚§9R
+í!‹Œ-5HN¡§éÐé³[‹iç"sµâhž$*G!²d?0$¹ƒK>»ogª_ÚÜ¯•¥´™rX¹•å@@ÉlÆ %‹€zÓºÓuè5M3Pµ6ZŒðZÜÁ?ÚfkPL¯‚c”yd yÆ2ÌrKÃWZžµ6±©ˆí.Mœ0Áö+·so*I1.¥‘T²(ÉSÁ‘H*ÌvÆIç¶Ž{‹³LÄ“	påxG±Œ@,NOŠaÔuK3N±e‰|ÿ ¶M4ð4°…„‚Šv²þa‰€Ü2#l’VØ³[Å´C|!7!ÌØØ<0•ÈÁÛ“Œã-Œ™Á“@™æw¦BÞêX4¨.ôá5¥Œ²++½¼EåK°±Î6‰ÁnŸÂöséÞÑìnâÙsoc2¦AÚêŠÈàòJÛ
+ÈëéA#® eêúoö¾“6žÒyPÏµ'ùwo‹pó¨ÆäÜ¹ÙŠ«§xgOÑõf¼Ò-­l`šÍ½´
+‹+78Æ
+ƒ às¿Ÿº+i±ž”Í¸<}(ž‹¥dhZv˜&ó~Çk¿›·nýŠ8ÉÆqœdÕâ¸ç?(úšFäòÔMô½>mJ-J[V¿…vEtÐ©•žc |ÍÇ¹õ¢ãFÒo/á¿»Ó,®/ Ûå\Kn¯${NFÖ##’1Þ­šQ@aLSNÇjyQéMÁÏl{Š@4sN<R€:Òí´À‰§ZPGSºžSQHAäÒA;ºŽ}zÓYrpzúÒŽ?^´¤’9…0"*üØ4áŽÝ=)`x¤é@HO±¥éÅ7ôýh Î8 ÑH};ÑHwÆãZg>´çûíõ¦Ð“IKJ(¤óAcëAÈ8Å!Që@*ÀAõâ¹É<?4ú´“ÌƒÉÊÛù`qŠMrÞÿ é:n¡
+M¥ÏorÏÊS\)ˆÆ¬B˜!Èùc(Çˆ˜uKãùt›´6­ÿ ,¡ŒØºlVé´\HÑœ+Æ†j#;f²ukëÄ¾´Òôö†;Ë˜¥œMq’8ãŒ o•YK12 *0Xçå
+ÔJÓµ¯êé¨ØZßÚÅgd…n!YQfV¹b9	*u@z0Îg„|/i„<=«h°Yiº¹Òár-,êñ¡q*©Rù 0;pYXÿ á ƒTÐRh›N¿¾[Øì`–ÖQ,2;ÌŠªÅ°¨ÆFŒ@F¶!eö³¬ÜxMÖ´é4ëHîZÖÞk;›W™ášY–'Rë*`¡r
+•ÎPƒŒñy¼i{,/«˜52½ÕÔ3[ƒ×%4)$*¤jÈç‚	%—qzøN84™4»+”¶±Œ7¶ðG¤±ÌÑŽy"9Ïðù˜
+1ïüC¥ëM¤ßx—ÃzsEgÁšòÕNÏ$ÊB+\¦yn[<d
+’ÊßLÖn5kÍzK+¿±˜¤¶»'ËHmÍ¼oçÂw™<â$VÏÉçËØ¼Ñuq¯Mªiš”{XmäŽêÅ¦ÿ VÒ0`VTÆ|Ó‘ƒÐUé4›KÃe6«eeyyi‡Žw·_ÝÉÁ-bÅ9Pz“Àäã4ÊÒ$Ýâëö2O6íO>dñùr7ï.¹uÚ»X÷FaÒ±šêâ=gÄ±¸š×IþÓŒÞßÄÀ4hlíøÈ¼ò `F>i"ê5MÃº•ÜêÚf™ss'îak¸#vl}ŠXdð°=	õ«Öš}­„f++x-ã;rÆ(QÀôUU@í@Ýç†¥‹í–z~Ÿ¤\iºƒFòÁ|§Ë¶d#R±…+"Ž2”ÁSó|ÃeQðòÎâÚêÒòêñm…„:]±¶¼’&6ÑÆ@2…Â»î’N ®6ñËg²†Òh#‚Þ8â†%	q¨UE  8 ÕïÛ³ý„Áöƒ€>J.N9l¹Æ2¹È ËƒNÔ%Õ´Jùí|è4é­î–ÛLÒ4v3³1?SžG¾0´ï	Mcª¼óxgÃ—.ÚŒ×CQyÚB¼í"¶çPÀ¿øG"º]Pº¾†ö;Ã²Z]5¸¹·Œ¤WU%•K66³4dnoš6é÷F±ã(„zf¥.¥…²j.É.–ºñÁ|d•x'°ôªÊ<=yâOù†M¯ÚEÿ LÚêÈÿ ¾Õpÿ OŸÞµ998®B=WEÔügi¥Xßièt¹çàŽdY$»d`US9`I™Î>ñ^IY  ë¼_iIÞ$i‘YB£r«H¨ªäwÚ=)î£øqNä¯Zf3ÁÉ—¬I¸’ÎóN²†%in.ociGM¡Œ’Å¸ÛÐç+gK»—QÒl¯n-^ÒyàŽW·|î…™A(r œt:Ui:†¯o½ýµµ¶òna¸´iÖáqÂ6ÙìÏ$ ü¥•¶-Öe·ŒNèóGD(¬Øä…$àg¶N=M )%zóMÈ=ªb8àS
+žÃ ÐOÿ ªœFåÿ LgŠph"¸äñKŒŒwìiø÷Òƒ®Nh \ãÏ½`ç“I“Ÿ§¥ &Ð;Òg©r1šLûcë@º”0=E79£8Pž´”œõéIŸN(NAÈü¨ÎzÑ“ëH} ÊŽ3ÓŸ†)2GoÆ€ç±¤ÉiA8<S{ò´À^§4Ó4§aHxéúR½F{ÑK€}¾”PöÕþèü¨Ø¿Ý•- ›û£ò¤Ø¿Ý•:Š M«ýÑùRlOî¯åN¢€+^é¶:•£Ú_Y[Ý[IðÏº6FTŒ@?…G=®—k£ËÄpéq[”’9V„. ü¡öéŠ»\¿Ä[{ï‡šø¹ÌXtû‰‘K»Ö'ÚHèØ?0ÎpÁXr €ë-6ÇN´KK+k[hó²"TEÉÉÂÉ'ñ© ´¶¶·ŽÞx¢‚%	q UE  8 Õ5 Ï*?î/åX¹ÔnîuØµclÓZêinŸ$Hm “`$eðdo˜ž¸Q…S²Óa±ºÔn"ißÜ‰C€Â(âÂñÓljyÏ$ý ¯-?¸¿•!Š3Õò§Ñ@¯ˆtëAâ¿	ßy*n´ä“µ>ÉtÄ(è¹8Î1»jç;WG–ŸÜ_ÊE 7ËOî/åTµ[;«­.â2êÉlW/n&ü[28Î2qœdÁ¿E dèLÚN–¶wRYÌQ‰V¶¶x’[|’39bÌ\¶XœžrN§–ŸÜ_ÊE 3Êû‹ùRùh:"þTê(¾Zq*<¸ÿ ¸¿•:Š o—÷ò£ËOî/åN¢€å§÷ò£ËOî/åN¢€åGýÅü©|¸ÿ ¸¿•:Š g•üóOÊ*?ùæ¿•>Š g•üó_Ê&/ùæŸ÷È§Ñ@òbÿ žIÿ |Š<˜ü³OûäSè y1Ï$ÿ ¾EL_óÉ?ï‘O¢€äÅÿ <ÓþùžD_óÉ?ï‘RQ@ùÏ$ÿ ¾ED_óÉ?ï‘RQ@òbÿ žiÿ |Š<˜¿ç’ß"ŸE 3É‹þy'ýò)<ˆü²OûäT”P~D?óÉ?ï‘G‘üòOûäT”P~D?óÉ?ï‘EIE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE QE ÿÙZimage/jpeg_=http://www.brokenthorn.com/Resources/images/Intel-P8253-5.jpgO>bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_=http://www.brokenthorn.com/Resources/images/Intel-P8253-5.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlIfZ ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpeg_timeout=2, max=99_Sat, 19 Apr 2008 23:26:05 GMTVApache_Mon, 12 Apr 2021 11:25:05 GMT_max-age=2592000_Sat, 13 Mar 2021 11:25:05 GMTU24856ZKeep-Alive_˜
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDlppbWFnZS9qcGVnoRBfEBF0aW1lb3V0PTIsIG1heD05OaESWlVzZXItQWdlbnShFFZBcGFjaGWhFl8QHU1vbiwgMTIgQXByIDIwMjEgMTE6MjU6MDUgR01UoRhfEA9tYXgtYWdlPTI1OTIwMDChGl8QHVNhdCwgMTMgTWFyIDIwMjEgMTE6MjU6MDUgR01UoRxVMjQ4NTahHlpLZWVwLUFsaXZloSBfEBQiNjExOC00NGI0MjMwYzUzZDQwIqEiVWJ5dGVzoSRfEB1TYXQsIDE5IEFwciAyMDA4IDIzOjI2OjA1IEdNVAAIACEALgA5AD4ARQBNAFsAYABvAHoAfwCNAJsAnQCoAKoAvgDAAMsAzQDUANYA9gD4AQoBDAEsAS4BNAE2AUEBQwFaAVwBYgFkAAAAAAAAAgEAAAAAAAAAJQAAAAAAAAAAAAAAAAAAAYQ=_"6118-44b4230c53d40"ZUser-AgentUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë+0;DJMV_acjr}‹‘“•—™›Ÿ¡£¥³µ·¹»½¿ÁÃÅÇÉËÍÏÜçõü&1:?DR]q‘˜¸Êêðû—®¹¿ÄÚÞëð             z              *Ô !"#O	®GIF89aÆ ³ ³  ÿÿÿ÷÷çæææ™f3                                    ,    Æ ³  þpÈI«½8ëÍ»ÿ`(ŽY`žhª®lë¾p,Ïtmßª„ï|ïÿÀ K',È$Œ¨l:ŸP3J­ZÓ«vË•ºà°Ø”›ÏÍ2zÍþ©¹„¸|N¯Ûïq~Ï§£ß[}‚‚zƒ†~g€ZŽ‘’’y3q“˜™_fŒš¡š•2—¢§œ‰žEs'ˆw›¨¨¤/¦´r³Žw¯)ªi¬BÁÁ&Æ ÊË ºÍ¹£Æ,¸¹ÍÖÏÉËÊÅÀOŠ;È(ÈÚÛ½ÏÐ™¶*ÔéºïØä áÇ¯¶rnÃAô±ÀòèèÜMZgO /FñÈñSÅ­_½ßp,ô§—Aux.š;÷®×¿nþÙ‰xƒž´Xÿ,jÄTgeÇss<*ùPÜH}@:—2•ËŸµ(¥úØ­æ/!$m¸:*ÎŽJ P#ÑñÙËŽH£X}$0ªWw'a4Ô¹c+”®_ÓÖ*yà³OÐª«®Ó¹tónrq)Î.xõ
+Ûn)|ö9­Xp5\»Ã²™qÃ1Æ2Í¦ÍÚFÇ={ÖEÔf1~ùŽ„Ë™™PÐ?Êì|”SHÔZÿúXmeE©°cW:ó¡íz“SY½¹'ÕàZ+}¹CÂ<0‹5Ýü÷gè»N/Þ[õ@´ßªÝ½ósð±}n½2û¬u÷Xz¬mKg‘Áþ÷XdÂT‡}Æ!˜Û]:†Ýê!ÑXƒ±Ùõ	…z=¨E„ªa˜×ƒ„ÁárÒ¥á#®À_,–ÉÂX‰µ@F/ý!¶âMªmÆŽs£Á¨Ž9=Ò7SåéWŽ¿°æÜ{>Žb‘d‡ÞeúñÀÛ=KÂÔdPÏAYYHF¦W%8
+“åK[²¤’—	uâ[cJTæ+gr”¦šL²¹˜ø-¸Ü}{òøÝyJE oÂ©ZoŒ. ¡”Ä4€°\™¨¢BêÒ¥Q¤HŒ¦›Z8Æ„ †Â)žîSjt|õEœUº*K¢Ó››Ž
+j YÕÔin)×
+‘XzçÌ¬vÚÙŽž{þ¢wªH&8Ž±!ëSµÄÑ–Õ³6¤Šàm<Q›¬µ=’FkÜÎà-±×…ë^G²ú(_¶Ì„iëºÉb‹<Æ„¬lôÖ×§½~‹Õ´ï2¹+p©#nb.Jbÿ)é¤ã˜\‹·RÉ µé¤«D¾ûr­aÄk².(ƒ¡òÊ"'A²•+WÓò+6Z±ÆÿÊˆ¯
+NyäŸm*.¹@ÎWšu÷â«Rs#hÍ¹t‘L¿íž»F)ÌÉŽ§m’EiMôÁt«ëÂaÏV¯ŽKLÔ¾%lñÅó¹-p÷ÈütšÕeÞ³Îö¡öÅüÉ9û‡±=8#ÐÒ…c¦þT‹¢¸Ù£f~Êæ"þ}–çšßé¦šê£¨n¥Î¿>^àª?×žÜ”G|6ŸfzWî®Aêí0Ù‚s>·‘½'ü²‡Ø¶mîØY[®»ÁhKíûì¥ÿüÛÄ7úÖ¨þÒòÚ.üDÞ_N}úÖ+¿6ÞŸ³4"ÒË½Üîzí|á„Ë.MËŽè,Á±Ê®ÐðÏ(
+V#“;Põrg?—AÅ—À`v¬¨€N}b K6¸	„È+ùàÐ:–PcÒa]Vñ±ÎÎ…Zz”WTè1ÌmŠ„:„à=è:pÜªrŽzÜc:˜Ã!'´ÝlT6Ü«ŒÛLþåÎ$C¢°‰LŒQÿ˜ež²U.n+È"Ù¶¨¶Œ-QKË"!ƒ¢=ÿí$gZÐ\ Æâå¯w£…¿þ£@
+2Š“Þ¯¨G,°‰£ˆÝÜ˜½1"®LRªbúÈ¾ºé’•ßùÂ”G=>«¸šþeIò4«”xÄT+ŽŒ\É°|ˆ”Ì+á‡ðÝhqlÂ-iWD+3{ÅŒëfh†™c™´¢¡±ç9NÏVþ‰]!ßG¨kˆF‰a×Æ™ƒ`n§hÉÓßï4…À„@/p~Œ$´Î†5£ÙšÝt£;¹·HyNC]æ\O÷Ò	ÈýÑî)zê'þTPð¥O•ëd'Bþ/™µNîÑ‘Õ	D¹y'Ãmè»JCwOUBiº"# ,ÚH>´UÙü>QºJÑqA»F}ÍT$“
+ÇÜÕO¹ÒSJutEÝ‹4Y˜Ô^u_Õ;˜ã8Ó|¾H—7å—öµ
+À,eôgI§ÊŽÖQ¥ú‚å?û´­®t¬¾ãh“š'Š¾ÒŒç,§%DŠ·tý;è×>ÚÒL+X„i+_Y$4.ÉlÛ_BÃÉ¾ú]ô«sk<á:ÉšJT”ÛÛ['cÙ ‚µ{›}(Yƒ
+š³Îï­m†àb#W¤rª¼ú"ü‚hÓ®’B­|£X°œ)‘¦út©!4®S‘þ›2å²Œ¹t®5+çžã¨-2Í.…kÈÚEv½E"Ÿô¥ÉMfv¥ŠlÏ'!#W
+ÍÈP®ëBûÓ­§)4µªk·DWJØwÛjéNóZÑô
+.KûM“7÷)ÚÅÚ†0§´/ ñëXµ%˜¿¯±#?œI4AÂÜ™o~'yá¹fx²š¬_„÷Z4‹V˜ÄUp+ß‰Z–®˜€ÂÝ£Î”èÝÏòœ5
+®³kÞwºK®tŸêÖ^ŒÉÂ´.’ócä¦NY€²˜6¹*^mÞð)_xk©Ù^þòAoˆÒððËÙõr½J¤X7Fª–kféˆÕÙ6'§¥yU“sTéÜþ§£àÎ²ÍóaCjÒŒùY-òaðð°Ch.ùÐVûBŠ×ö}ÒÑ¡T– ¹Æ;±^úˆ¦i	öâOÌÇCqmr†F4ëž%]«=]f¯éµ-~(_\šeËit»^^V¯1¼& yÐ[-/¦«œÔ+—å¥Z2t««ífb›DÝqK"e(“YœYåq.w{RfÝ;‡Æ"ß®´‰…{Çìv‰˜±4ˆP?Á¥Þ‚º½:8¿ÿb
+8/eM»‚à‡Yˆ„½¯žåñp‚‹âóÅŸdW)Y–ãVàq@ã@ÊëÄ%r¡k0oDÇÞ€}Ï£!=clîyÓ—ýðn~«]ßî,l5ñUÝmôØ]å<­¶¹“°sþN]BåÞ6Áõ®{½ëWoƒØÇ>î±›Ý
+e?»Ú½ñíµ»Bm»Ü©ö¹Û=ÉwÏ»ÖõÎw¸÷ýïa àOøÂþðˆß@  ;Yimage/gif_4http://www.brokenthorn.com/Resources/images/8253.gifObplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_4http://www.brokenthorn.com/Resources/images/8253.gifÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlIm ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/gifRh2_timeout=2, max=100_Sat, 19 Apr 2008 23:27:18 GMTVApache_Mon, 12 Apr 2021 11:25:05 GMT_max-age=2592000_Sat, 13 Mar 2021 11:25:05 GMTT2478_Upgrade, Keep-Alive_À
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvZ2lmoRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVWlVzZXItQWdlbnShF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTE6MjU6MDUgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTE6MjU6MDUgR01UoR9UMjQ3OKEhXxATVXBncmFkZSwgS2VlcC1BbGl2ZaEjXxATIjlhZS00NGI0MjM1MWYyMTgwIqElVWJ5dGVzoSdfEB1TYXQsIDE5IEFwciAyMDA4IDIzOjI3OjE4IEdNVAAIACMAMAA4AEMASABPAFcAZQBqAHkAhACJAJcApQCnALEAswC2ALgAzQDPANoA3ADjAOUBBQEHARkBGwE7AT0BQgFEAVoBXAFyAXQBegF8AAAAAAAAAgEAAAAAAAAAKAAAAAAAAAAAAAAAAAAAAZw=_"9ae-44b42351f2180"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$)4=CFOXZ\ckv…‡‰‹‘“•—™›Ÿ¡°²´¶¸º¼¾ÀÂÄÆÈÊÌÎÛãîü-8AFKYcf{›¢ÂÔôùÓéôúÿ&+?CW             ~              e            1   <   N   d   ‚   ‘   ¨  k  k™  kŸ  kÔ  kÕ  kÚ  kã  kù  v¬  vµ  vð  «  ´  ¼#  ¼-  ¼_  Å  Å &4 &? & .Á .Ê 8| 8† 8½             $             AB

@@ -1,0 +1,1330 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameO¾Å<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+		<title>Operating Systems Development Series</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+		<link href="Files/reference.css" type="text/css" rel="stylesheet">
+		<meta content="MSHTML 6.00.6000.16441" name="GENERATOR">
+		<style type="text/css">
+			body
+			{
+				background-image: url(OSDevVga_files/watermark.htm);
+				background-color: #FFFFFF;
+				A:link: color: #666699  /* link="#666699" 	*/
+				A:visited color: 000000 /* alink="#000000"	*/
+				A:active color: 666699 	/* vlink="#666699"  */
+				margin-right: 0px;
+				margin-left: 0px;
+				margin-top: 0px;
+				margin-bottom: 0px;
+				text: #000000			/* text="#000000"	*/
+			}
+			.special
+			{
+				font-weight: 4;
+			}
+			.center
+			{
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+ 
+        <div id="ad_main"> 
+ 
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+//-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+ 
+     </td> 
+  </tr> 
+</tbody></table> 
+
+		<table border="0" cellpadding="3" cellspacing="0" width="100%">
+			<tbody>
+				<tr>
+					<td class="tblhdr">Operating Systems Development Series</td>
+				</tr>
+				<tr>
+					<td colspan="2" align="center"></td>
+				</tr>
+			</tbody>
+		</table>
+		<table border="0" cellpadding="5" cellspacing="0" width="100%">
+			<tbody>
+				<tr>
+					<td>
+						<p class="center"><span class="title">Operating Systems Development - Graphics 1</span>
+						<br>
+						<span class="author">by Mike, 2010</span></p>
+
+						<p>This series is intended to demonstrate and teach operating system development from
+						the ground up.</p>
+						
+<script type="text/javascript" src="http://www.gmodules.com/ig/ifr?url=http://www.google.com/ig/modules/translatemypage.xml&amp;up_source_language=en&amp;synd=open&amp;w=160&amp;h=60&amp;title=&amp;lang=en&amp;country=ALL&amp;border=%23ffffff%7C3px%2C1px+solid+%23999999&amp;output=js"></script>
+
+						<h1>Introduction</h1>
+
+						<p>Welcome!</p>
+						<p>
+							Wait, what? Graphics already? Thats right, we will start developing an ultra-cool GUI
+							for the OS! :) Okay, not really, but its a start in that direction.
+						</p>
+						<p>
+							This chapter is the first of a miniseries of chapters covering graphics programming. I plan
+							to cover Vesa VBE, Video BIOS, and direct hardware programming for the VGA and, possibly,
+							some SVGA concepts. I also plan on covering graphics concepts and rendering, including 2d
+							vector rendering and images. Who knows; mabye a little 3d a little later.
+						</p>
+						<p>
+							Excited? A lot of cool material coming up in this mini series spinoff of the OS Development Series!
+							However, before we can dive into the wonderful world of computer graphics, we have to set up
+							a ground rule. There are a lot of ways that we can work with computer graphics, and a lot of
+							directions that we can take. Computer graphics are a complicated topic: It cannot be covered
+							in one chapter. Well, it can. It would just be one .. very, very long chapter.
+						</p>
+						<p>
+							Because of this, I decided to do this in stages. The first chapter covers working with graphics
+							in real or v86 modes. We use the system BIOS interrupts and cover basic graphics concepts.
+							The second chapter we will dive into Video BIOS Extensions (VBE) and Super VGA. The third chapter,
+							will be the first chapter of a smaller miniseries covering direct hardware programming of
+							the graphics pipeline: VGA and mabye some Super VGA topics.
+						</p>
+						<p>
+							So for this chapter, lets get started with working with real mode graphics using the real mode
+							Video BIOS...
+						</p>
+
+						<h1>Basic Concepts</h1>
+
+							<h2>Abstract</h2>
+							<p>
+								<b>Computer Graphics (CG)</b> does not need an introduction. It has revolutionized the computer,
+								animation, and video game industries. The field of computer graphics encompasses the development,
+								creation, and continuation of the ability of producing graphical effects on computer displays.
+								From 1D graphics, 2D, 3D, and even 4D graphics simulation software.
+							</p>
+
+							<h2>History</h2>
+
+							<p>
+								The computer graphics industry started to emerge from early projects like the <b>Whirlwind</b> in the 1960's.
+								The Whirlwind was the first computer that used video display output and helped introduce the
+								<b>Cathode Ray Tube (CRT)</b> technology. Whirlwind eventually led to the development of the SAGE
+								(Air Force Semi Automatic Ground Environment) computer system. The ealiest known version of the CRT was created by Ferdinand Braun in 1897 known as the <i>Braun tube</i>.
+							</p>
+							<p>
+								The <b>Special Interest Group on GRAPHics and Interactive Techniques (SIGGRAPH)</b>, is governed by
+								the <b>Association for Computing Machinery (ACM) SIGGRAPH</b> group. Originally started in 1969
+								by Andy van Dam, the group hosts the SIGGRAPH conferences around the world. These conferences
+								are attended by thousands of professionals from companies from the engineering, graphics, motion
+								picture, and video game industries.
+							</p>
+							<p>
+								As graphics hardware advanced the ability of creating more powerful graphics designs emerged.
+								As other display technologies emerges, such as <b>Liquid Crystal Display (LCD)</b>, The use of
+								the CRT technology started to decline.
+							</p>
+							<p>
+ 								<b>Video Display Terminals (VDT)</b>, also known as a <b>Video Display unit (VDU)</b> are early
+								display terminals.
+							</p>
+
+							<h2>Cathode ray tube (CRT)</h2>
+
+            <p class="center">
+
+              <img src="images/crt.png" alt="">
+            </p>
+
+								<h3>Abstract</h3>
+								<p>
+									A CRT is a vacuum tube which consists of electron guns and a phosphor target. The entire
+									front area of the tube is scanned repetitibely in a pattern called a <b>raster</b>.
+									The image is produced by changing the intensity of the three electron beams: one for
+									red, green, and blue color components at a given point on display. These electron beams
+									first travel through a <b>Shadow Mask</b> layer before hitting the phosphor coated screen.
+								</p>
+
+								<h3>Problems</h3>
+								<p>
+									CRT monitors can emit a small amount of X-Ray radiation. Also, do to the constant rescanning
+									of the display, at low <b>refresh rates</b> (below 60Hz) flicker may be seen. CRTs may also
+									contain some toxic phosphore. Because of this the United States Environmental Protection Agency  (EPA) created a rule that CRTs must be
+									bought to a proper recycling facility. Finally, do to
+									the CRT containing a vaccum of glass, if the outer glass is damaged, the CRT may implode.
+									This may cause the glass to shatter outward at dangerous speeds. Modern CRTs have certain
+									measures in place to prevent the shattering of the CRT.
+								</p>
+								<p>
+									<b>It is possible to control the frequency of the CRT using software.</b> At higher frequency rates,
+									it is possible to make the CRT operate faster then its intended use increasing the possibility
+									of imploding the CRT. Because of this, it is very important to be careful when working
+									with the <b>CRT Controller (CRTC)</b>. Modern CRTs have protections in place to prevent
+									this, however.
+								</p>
+
+						<h1>VGA</h1>
+
+							<h2>Abstract</h2>
+								<p>
+									<b>The Video Graphics Array (VGA)</b> is an anolog computer display standard marketed in 1987 by IBM. It is called an "Array" because it was originally developed as a single chip, replacing dozens of logic chips in a Industry Standard Architecture (ISA) board that the MDA, CGA, and EGA used. Because this was all on a single ISA board, it was very easy to connect it to the motherboard.
+								</p>
+								<p>
+									The VGA consists of the video buffer, video DAC, CRT Controller, Sequencer unit, Graphics Controller, and an Attribute Controller.
+									We will cover all of these components in more detail in later chapters.
+								</p>
+
+								<h3>Video Buffer</h3>
+									<p>
+										The <b>Video Buffer</b> is a segment of memory mapped as Video Memory. We can change what region of memory is mapped to video memory. At startup, the BIOS maps it to 0xA0000., which means that video memory is mapped to 0xA0000. (Remember the Real Mode Address Map from Tutorial 7?) We will cover memory
+										mapping a little later in this chapter in more detail.
+									</p>
+
+								<h3>Video DAC</h3>
+									<p>
+										The <b>Video Digital to Analog Converter (DAC)</b> contains the color palette that is used to convert the video data into an analog video signal that is sent to the display. This signal indicates the red, green, and blue intensities in analog form. We will go into more detail later, so don't worry if you do not understand this yet.
+									</p>
+
+								<h3>CRT Controller</h3>
+									<p>
+										This controller generates horizontal and vertical synchronization signal
+										timings, addressing for the video buffer, cursor and underline timings.
+										We will go into more detail later when we cover the VGA hardware.
+									</p>
+
+								<h3>Sequencer</h3>
+									<p>
+										The Sequencer generates basic memory timings for video memory and the character
+										clock for controlling regenerative buffer fetches.
+										It allows the system to access memory during active display intervals.
+										Once more, we will not cover this in detail yet.
+									</p>
+
+								<h3>Graphics Controller</h3>
+									<p>
+                     This is the interface between video memory and the <b>attribute controller</b>, and between video memory and the CPU. During active display times, memory data is sent from the video buffer (Video Memory) and sent to the Attribute Controller. In Graphics Modes, this data is converted from parallel to a serial bit plane data before being sent. In text modes, Just the parallel data is sent.
+	                </p>
+                  <p>
+                      Don't worry if you do not understand these yet. I do not plan on going into much detail here. We will cover everything in detail later when we talk about developing a video driver. For now, just remember that: The Graphics Controller refreshes the display from the parallel data from video memory. This is automatic based on the active display times. This simply means, that By writing to video memory (Default mapped to 0xA0000) we effectivly write to video display, depending on the current mode. This is important when printing characters.
+	                </p>
+                  <p>
+                      Remember that it is possible to change the address range used by the Graphics Cotroller. When initializing, the BIOS does just this to map video memory to 0xA0000. 
+	                </p>
+
+	            <h2>Video Modes</h2>
+	                <p>
+                      A "Video Mode" is a specification of display. That is, it describes how Video Memory is refrenced, and how this data is displayed by the video adapter.
+	                </p>
+                  <p>
+                    The VGA supports two types of modes: APA Graphics, and Text.
+                  </p>
+	              <h3>APA Graphics</h3>
+	                 <p>
+                     All Points Addressable (APA) is a display mode, that, on a video monitor, dot matrix, or any device that consists of a pixel array, where every cell can be refrenced individually. In the case of video display, where every cell represents a "pixel", where every pixel can be manipulated directly. Because of this, almost all graphic modes use this method. By modifying this pixel buffer, we effectivly modify individual pixels on screen.
+	                 </p>
+	                   <p><b>Pixel</b>
+                    </p>
+	                  <p>
+                      A "Pixel" is the smallest unit that can be represented on a display. On a display, it represents the smallest unit of color. That is, basically, a single dot. The size of each pixel depends heavily on the current resolution and video mode.
+      	            </p>
+	              <h3>Text Modes</h3>
+	                 <p>
+                     A Text Mode is a display mode where the content on the screen is internally represented in terms of characters rather then pixels, as with APA.
+	                </p>
+	                <p>
+                    A Video Controller implimenting text mode uses two buffers: A character map representing the pixels for each individual character to be displayed, and a buffer that represents what characters are in each cell. By changing the character map buffer, we effectivly change the characters themselves, allowing us to create a new character set. By changing the Screen Buffer, which represents what characters are in each cell, we effectivly change what characters are displayed on screen. Some text modes also allow attributes, which may provide a character color, or even blinking, underlined, inversed, brightened, etc. 
+	                </p>
+
+	            <h2>MDA, CGA, EGA</h2>
+                  <p>
+                    Remember that VGA is based off of MDA, CGA, and EGA. VGA also supports alot of the modes these adapters do. Understanding these modes will help in better understanding VGA.
+                   </p>
+            
+	               <h3>MDA</h3>
+	               <p>
+                   Back before I was born (Seriously :) ) in 1981, IBM developed a standard video display card for the PC. They were the Monochrome Display Adapter (MDA), and Monochrome Display and Printer Adapter (MDPA).
+	               </p>
+                <p>
+                  The MDA did not have any graphics mode of any kind. It only had a single text mode, (Mode 7) which could display 80 columns by 25 lines of high resolution text characters.
+	              </p>
+                <p>
+                  This display adapter was a common standard used in older PC's.
+                </p>
+	            <h3>CGA</h3>
+	              <p>
+                  In 1981, IBM also developed the Color Graphics Adapter (CGA), coinsidered the first color display standard for PC's.
+	              </p>
+                <p>
+                  The CGA only supported a Color Palette of 16 colors, because it was limited to 4 bytes per pixel.
+                </p>
+                 <p>
+                   CGA supported two text modes and two graphics modes, including:
+                 </p>
+	               <ul>
+	                  <li>40x25 characters (16 color) text mode</li>
+	                  <li>18x25 characters (16 color) text mode</li>
+	                  <li>320x200 pixels (4 colors) graphics modes</li>
+	                  <li>640x200 pixels (Monochrome) graphics mode</li>
+	               </ul>
+
+	                <p>
+                    It is possible to treak the display adapter in creating and discovering new, "undocumented" video modes. More on this later.
+	               </p>
+            
+            <h3>EGA</h3>
+	            <p>Introduced in 1984 by IBM, The Enhanced Graphics Adapter (EGA) produced a display of 16 colors at a resolution up to 640x350 pixels.
+
+	            </p><p>Remember that the VGA adapters are backward compatible, simular to the 80x86 microprocessor family. Because of this, and to insure backward compatibility, the BIOS starts up in Mode 7 (Originally from the MDA), which supports 80 columns, by 25 lines. This is important to us, because this is the mode we are in! 
+	            </p>
+
+	            <h2>Video Memory</h2>
+
+	            <h3>Memory Mapped I/O (MMIO)</h3>
+	            <p>
+	            If you know what Memory Mapped I/O is, you can skip this part.
+	            </p>
+	            <p>
+	                <b>The processor can work with reading from RAM and ROM devices.</b> In applications programming,
+	                this is something you never see. This is made possible with MMIO devices.
+	                <b>Memory Mapped I/O allows a hardware device to map its own RAM or ROM into
+	                your processors physical address space.</b> This allows the processor to be able to access hardware RAM or ROM in different
+	                ways by just using a pointer to that location in the address space. This is made possible because
+	                MMIO devices uses the same physical address and data bus that the processor and system memory uses.
+	            </p>
+	            <p>
+	                It is important to remember, however, that Memory Mapped I/O is a mapping to the physical address space
+	                of the processor, not actual computer memory. In some architectures, it is possible to <i>bank switch</i>,
+	                or provide a method to switch between either using the MMIO device mapping or the system memory "hidden"
+	                behind it, while on others it is not. What this means for us is that we cannot access the actual system
+	                memory addresses that are "hidden" by the MMIO device. For example, CMOS RAM memory is mapped into
+	                the physical address space at address 0x400. This is different then main system memory; accessing 0x400
+	                with a pointer will access the CMOS RAM memory always do to MMIO. It is not possible to access this
+	                location in system memory in the i86 architecture.
+	            </p>
+	            <p>
+	                MMIO devices allows us to have more control over the hardware - it allows high resolution video
+	                displays with limited system memory, it allows us to obtain information from a device that is
+	                kept current by a battery (CMOS RAM) that would have altherwise been lost if in system memory.
+	                Another example of an MMIO device is the system BIOS ROM itself. MMIO is what allows the processor
+	                to execute the BIOS from ROM as it is mapped to the systems physical address space. Cool, huh?
+	            </p>
+	            <p>
+	                You might be wondering what this has to do with graphics. Video memory is RAM that is
+	                mapped into the physical address space. Video memory is managed by the video display device
+	                which uses MMIO to do this. <b>How MMIO memory is managed and worked with is up to the device</b>;
+	                it is not always nice and linear. Different graphics modes require different ways that you
+	                have to work with this memory, so understanding that it is an MMIO device is important.
+	            </p>
+	            <p>
+	                <b>An interesting fact about MMIO address space regions is that, with paging they can
+	                be mapped to any virtual address and accessed from that address.</b> This means you
+	                can map, for example, video memory, to any virtual address you want and access video
+	                memory using that virtual address. This, of course, has to do with the way pages are mapped
+	                to frames in the physical address space.
+	            </p>
+	            <p>
+	                <b>Also remember that MMIO memory is not in system memory</b>. Computer system memory does
+	                not need to be greater then the size of the MMIO address that you are trying to access.
+	                For example, if your system only has 2GB of system memory, you can still access the MMIO
+	                device if it has RAM mapped to the physical address space at 0xFC000000 without error.
+	            </p>
+
+
+	            <p>
+	            See this text right here? Thats right, me; I am in your computer... residing in <b>Video RAM (VRAM).</b> VRAM
+	            is Video Memory, also known as the <b>video framebuffer</b>. It containes all of the pixels that you see before
+	            you, and more.
+	            </p>
+
+	            <h3>Standard VGA</h3>
+
+	            <p>
+	                Video memory is stored inside of the video device; usually a video card or onboard video adapter. Standard VGA
+	                cards have 256 KB of VRAM. It is not uncommon however to see SVGA+ cards to have much more video memory however.
+	                After all, they have to be able to store all of the pixels in the high resolution video modes somehow, right?
+	            </p>
+	            <p>
+	                Remember the memory map from <a href="OSDev7.html">chapter 7</a>? We can see the Standard VGA memory resides in
+	                <b>0x000A0000 - 0x000BFFFF</b>. 0xBFFFF - 0xA0000 = 0xA0000, which is 655360 bytes,
+	                or 640 KB.
+	            </p>
+	                <p>
+	                    It is important to remember that video memory is mapped in the PCs address space at this location. What this
+	                    means is by writing here, you are writing to video memory that is located in the video adapter. This is a form
+	                    of <b>Memory Mapped I/O</b>.
+	            </p>
+	            <p>
+	                When accessing video memory, you typically access it using a "window" into the real video RAM. This is typically:
+	                </p>
+	            <ul>
+		            <li>0xA0000 - EGA/VGA graphics modes (64 KB)</li>
+		            <li>0xB0000 - Monochrome text mode (32 KB)</li>
+		            <li>0xB8000 - Color text mode and CGA (32 KB)</li>
+	            </ul>
+	            <p>
+		                Because different modes uses different address mappings, it is possible to combine
+		                a monochome display adapter and color adapter on the same machine. This allows a
+		                computer with a dual monitor setup to be able to run without issues. Of course,
+		                this is just standard VGA.
+	            </p>
+	            <h3>Super VGA</h3>
+	            <p>
+		            Super VGA and other display adapters typically do things differently. It is not uncommon
+		            to see a Super VGA or higher resolution display adapter to have VRAM mapped to a high
+		            address range. While they will usually support the Standard VGA memory mapped range,
+		            they can use other memory ranges as well to help with high resolution video modes or
+		            to provide additional functionality. For example, my NVideo GeForce 7600 GT has 4 memory
+		            ranges that it can use: 0xA0000 - 0x000BFFFFF (Look familier?), 0xFC000000 - 0xFCFFFFFF,
+		            0xD0000000 - 0xDFFFFFFF, and 0xFD000000 - 0xFDFFFFFF. This can be different on your system.
+	            </p>
+
+	            <h3>Linear Frame Buffer (LFB)</h3>
+	            <p>
+	                If it is possible to map the entire video memory of the current display into the physical address space,
+	                it is possible to set it up to act like a linear frame buffer. A linear frame buffer is just a packed-pixel
+	                frame buffer that allows you to be able to read or write to it in linear fashion. For example, buffer[0]
+	                is the first element of the buffer, buffer[1] is the second - there is nothing special. Well, actually
+	                there is. Standard VGA does not support LFB modes. Remember Mode 0x13 above? That is the only Standard VGA
+	                video mode that creates the effect of a linear frame buffer.
+	             </p>
+	             <p>
+	                This might be a little confusing. After all, how "else" can you read or write to video memory if its not
+	                in linear fashion? This has to do with Standard VGA being a <b>planer</b> device. We will talk about that after
+	                the next section,
+	             </p>
+
+	            <h3>Bank Switching</h3>
+	            <p>
+		            Super VGA and higher resolution video modes can also provide a way of using a "window" into
+		            the full video memory that is on the adapter. For example, notice above that, for graphics modes,
+		            we are limited to a 64KB region between <b>0xA0000 - 0xB0000</b>. If this was a "window", and we
+		            can "move" this 64K window around, we can access a much larger video memory area. For example:
+	            </p>
+	            <p class="center">
+                <img src="images/bankSwitch.png" alt="">
+              </p>
+	            <p>
+	                  This is known as <b>Bank Switching</b>. A "Bank" is a window into the larger video memory. The size of
+	                  the window is typically 64K do to standard VGA only having a graphics region of 64K.
+	            </p>
+
+	            <h3>Planer Memory</h3>
+	            <p>
+	                Okay, it gets a little tricky here. Standard VGA modes operate in planer memory mode. This is the VGAs
+	                native memory model.
+	            </p>
+	            <p class="center">
+                <img src="images/planer.png" alt="">
+              </p>
+	            <p>
+	                The above is an example of Mode 12h's planer memory format. Mode 12h has 4 bits per pixel. To draw a pixel,
+	                you have to set or unset the bit in the plane. To better understand this, imagine you have a 64k block
+	                of video memory. Imagine it as a flat sheet of paper and put three more behind it. Each sheet of paper
+	                is a 64k "plane" that shares this same 64k area of memory. Each plane holds a little bit of information
+	                about the pixel that it is used for.
+	            </p>
+	            <p>
+	                Dont worry to much about understanding planer memory and how it works, we wont be needing it in
+	                this chapter. It will be important when we cover VGA and Mode 12h in more detail however. Because
+	                we are using Mode 0x13, which hides the details of working with planer memory, we wont need it now.
+	            </p>
+
+	            <h3>Odd / Even Memory Addressing</h3>
+	            <p>
+	                Odd / Even Memory Addressing uses the Planer Memory model and <b>is used in all text modes</b>. All even
+	                addresses work with planes 0 or 2 and odd addresses work with planes 1 or 3. For example:
+	            </p>
+
+            <div class="code"><blockquote><pre>Memory Address | Plane   | Offset in plane
+----------------------------------------
+ 0              | Plane 0 | Offset 0
+ 1              | Plane 1 | Offset 0
+ 2              | Plane 0 | Offset 2
+ 3              | Plane 1 | Offset 2</pre></blockquote></div>
+	            <p>
+	            Remember what it is like writing to video memory in text modes?</p>
+
+            <div class="code"><blockquote><pre>unsigned char* vmem = 0xb8000;
+	            vmem [0] = 'a'; // plane 0 [character plane] offset 0
+	            vmem [1] = 0x7; // plane 1 [attribute plane] offset 0
+	            vmem [2] = 'b'; // plane 0 [character plane] offset 2
+	            vmem [3] = 0x7; // plane 1 [attribute plane] offset 2</pre></blockquote></div>
+
+            <p>
+
+
+	            </p>
+	            <p>
+	                <b>In text modes, plane 0 is used to store character codes and plane 1 stores the attribute bytes. Plane 2
+	                stores the font data.</b> If you overwrite plane 2 when writing to video memory, you will overwrite the font
+	                installed at boot time by the BIOS. This means that, <b>if you write over plane 2 in graphics mode, and go back
+	                to text mode, the BIOS text output routines will not work as expected as the font data is corrupt.</b>
+	            </p>
+	            <p>
+	                If you would like to go back to text mode, you will either need to store your own font or backup the default font
+	                and write it back to plane 2 before using any text output routines again.
+	            </p>
+	            <p>
+	                Because we are not using the planer memory model in this chapter, we wont be using the Odd/Even addressing model
+	                in this chapter.
+	            </p>
+	            <h2>Color Palette</h2>
+	            <p>
+	                A <b>Palette</b> is like a look-up table. A <b>Color Palette</b> is a look-up table for colors. For example,
+	                we can store a list of the actual color information in a table. We can then use another table of <b>indices</b>
+	                into that table:
+	            </p>
+            <div class="code">
+              <blockquote>
+                <pre>                  Index Table | Color Palette
+            ---------------------------------------
+                 0      | red(0), green(0), blue(0)
+                 1      | red(0), green(0), blue(1)
+                 2      | red(0), green(1), blue(0)
+            ...
+          </pre>
+              </blockquote>
+            </div>
+
+	            <p>
+	                In the above example, we can reference whatever color we want by just using the index. That saves storage
+	                space greatly because after the look up table (The color palette) is created, any time that we want to
+	                refer to a color we just use the index.
+	            </p>
+	            <p>
+	                For example, in a video mode that uses a color palette, video memory acts as the index buffer. So, to
+	                draw a pixel using the palette that we created above, just write the <b>index</b> of the color that you
+	                would like to use:
+	            </p>
+
+            <div class="code"><blockquote><pre>unsigned char* p = 0xa0000;
+            p[0] = 0; // black pixel
+            p[1] = 1; // blue pixel
+            p[2] = 2; // green pixel</pre></blockquote></div>
+	            <p>
+	                In the VGA, the Color Palette is handled by the hardware. We can control and change the colors in
+	                the palette however way we want. However, because working with the palette requires VGA hardware programming,
+	                we will not cover it too much here. Dont worry, we will cover it when we get into VGA hardware.
+	            </p>
+	            <h3>Palette Animation</h3>
+	            <p>
+	                Okay, lets take a step back for a moment. Look at the above example again. Notice that the video display
+	                will determin what the color is of a pixel by an index. What if, lets say, that the index 1 in the color
+	                palette (Like in the above example) changes to a different color? Looking at the above example,
+	                index 1 in the color palette is a bright blue color. So, if we are in a palette video mode, any time
+	                we write a "1" to someplace in video memory, it will be that bright blue color. This means a simple
+	                <b>memset (vidmem, 1, VIDMEM_SIZE)</b> will effectively clear video display to this color. Cool, huh?
+	            </p>
+	            <p>
+	                Knowing that the video display determins what color to display for an index is inside of the Color Palette
+	                table, we can change what the color is for any palette entry. This allows us to change the colors on screen
+	                by just updating the colors in the palette in some way. This is known as <b>Palette Animation</b>.
+	            </p>
+	            <p>
+	                Palette Animation can create alot of really nice looking and cool effects, such as fire animation, icy effects,
+	                etc.
+	            </p>
+
+	            <h1>Mode 0x13</h1>
+
+	            <h2>Abstract</h2>
+	            <p>
+	                Video Mode 0x13 is a standard IBM VGA BIOS mode number for a 256 color 320x200 resolution. It uses a 256 <b>color palette</b>,
+	                did not have square <b>pixels</b>, and allowed access to the <b>Video Memory</b> as a <b>Packed-Pixel Framebuffer</b>. What this
+	                means is that it allowed access to video memory as if it was a linear buffer: Just get a pointer to video memory. pointer[0] = pixel 1,
+	                pointer[1] = pixel 2, and so on, assuming <i>pointer</i> is an <i>unsigned char*</i>. This is made possible by specific hardware register
+	                settings (The video mode "configuation") - Standard VGA does not, by itself, provide access to video memory like this.
+	            </p>
+	            <p>
+	                The important thing here is that video modes define the resolution, how video memory is accessed, and hardware configuation setup
+	                for the operation of that mode. Do not worry if you do not understand everything here; we will go into detail when we cover the
+	                VGA hardware in a later chapter.
+	            </p>
+	            <p>
+	                Because video Mode 0x13 is easy to work with (and fast) I decided to use it for the duration of this chapter.
+	                Some other modes require experience with the VGA hardware which I am wanting to avoid in this chapter do
+	                to its complexity. Dont worry though, I plan on covering some (Like Mode 12h, 640x480x4 color) later on.
+	            </p>
+
+	            <p>
+	                Video Mode 0x13 was used alot in the DOS era for video games do to its simplicity to program and speed.
+	                It is a video configuation for a 320 width, 200 height pixel resolution with a 256 color palette. It
+	                is a planer video memory mode but acts as a <b>Linear Frame Buffer (LFB)</b> which makes it easy to
+	                program.
+	            </p>
+
+	            <h2>Color Palette</h2>
+	            <p>
+	                Mode 0x13 has a color palette of 256 colors. Video memory in Mode 0x13 only stores the palette
+	                index; the video device will determin what color to render from the installed palette color
+	                table. By default, the color table is this:
+	            </p>
+	                <p class="center">
+                    <img src="images/mode13h.png" alt=""><br><i>Mode 13h Color Palette</i>
+                  </p>
+	            <p>
+	                Here is an example, lookint at the above we can see the first color (0) is black, color 1 is blue,
+	                color 2 is green, etc. We can write these colors to video display by using these indices in the
+	                above lookup table:
+	            </p>
+
+            <div class="code"><blockquote><pre>unsigned char* p = 0xa0000;
+
+            *p = 0; //black pixel
+            *(p++) = 1; // blue pixel
+            *(p++) = 4; // red pixel
+            *(p++) = 255; //white pixel</pre></blockquote></div>
+	            Compare the above code to the table above and notice how the indices match with the colors
+	            in the palette.
+
+	            <h3>Changing the palette</h3>
+
+	                It is possible to change the palette to whatever colors that you would like. However there is
+	                not any easy BIOS interrupt for it (Not without using VBE anyways.) Most of the interrupt calls
+	                are used to set or get individual or all palette registers which are inside of the VGA <b>Digital to Analog Converter (DAC)</b>.
+	                This requires some knowledge of the VGA hardware which I am wanting to avoid this chapter for simplicity (Dont worry,
+	                I am planning on covering that soon!) Because of this, I decided to wait on covering palette changing
+	                (And mabye palette animations) in a future chapter.
+
+	            <h1>The Video BIOS Interface</h1>
+
+	                The VGA Video BIOS Interface is a set of video interrupts (Software interrupt 0x10).
+	                Because these are BIOS interrupts, they can only be used in real or v86 modes.
+
+	            <h2>Setting the video mode</h2>
+
+	            <h3>INT 0x10 Function 0</h3>
+
+	            <p>You can set the video mode by calling BIOS interrupt 0x10 function 0:</p>
+
+	            <ul>
+                <li>
+                  Input
+                  <ul>
+                    <li>AH = 0</li>
+                    <li>AL = video mode</li>
+                  </ul>
+                </li>
+                <li>
+                  Output
+                  <ul>
+                    <li>AL = video mode flag (Phoenix, AMI BIOS)</li>
+                    <li>AL = CRT Controller (CRTC) mode byte (Phoenix 386 BIOS v1.10)</li>
+                  </ul>
+                </li>
+	            </ul>
+
+	            <p>
+	                You will see the CRTC alot more in the future as it is one of the controllers that you
+	                will need to program if you plan to directly program the video hardware.
+             </p>
+
+               <p>
+                This interrupt can set any text or video mode. For example, the following switches to
+                320x200x8 bit [mode 0x13]: (<b>
+                  Please remember that all code samples can be
+                  found in the demo.
+              </b>
+	            </p><div class="code"><blockquote><pre>            mode13h:
+	            mov ah, 0
+	            mov al, 0x13
+	            int 0x10
+	            ret</pre></blockquote></div><p>Easy, huh?</p>
+            <p>
+                  The above is all that is needed to get you in a graphics mode. Sure, it will only work in real
+                or v86 mode, but it is as easy as you can get. Dont worry if you do not understand video modes yet;
+                we will cover them a little later.
+             </p>
+
+	            <h2>Getting the video mode</h2>
+
+	            <h3>INT 0x10 Function 0xF</h3>
+
+	            <p>
+                You can get the video mode by calling BIOS interrupt 0x10 function 0xF:
+              </p>
+
+	            <ul>
+                <li>
+                  Input
+                  <ul>
+                    <li>AH = 0xF</li>
+                  </ul>
+                </li>
+                <li>
+                  Output
+                  <ul>
+                    <li>AH = number of character columns</li>
+                    <li>AL = display mode number</li>
+                    <li>BH = active page</li>
+                  </ul>
+                </li>
+	            </ul>
+
+            <p>
+                  This interrupt is an easy one and can be used to obtain the current video or text mode. Dont worry
+	                about the "active page" part yet. Dont worry if you do not understand video modes yet;
+                   we will cover them a little later.
+            </p>
+            <div class="code"><blockquote><pre>            getMode:
+	            mov ah, 0xf
+	            int 0x10
+	            ret</pre></blockquote></div>
+
+	            <h2>Other Video BIOS Interrupts</h2>
+
+	            <h3>INT 0x10 Function 0xB/BH=1</h3>
+
+	            <p>You can set the palette by calling Video BIOS INT 0x10 function 0xB:</p>
+
+	            <ul>
+                <li>
+                  Input
+                  <ul>
+                    <li>AH = 0xB</li>
+                    <li>BH = 1</li>
+                    <li>
+                      BL = Palette ID
+                      <ul>
+                        <li>00h background, green, red, and brown/yellow</li>
+                        <li>01h background, cyan, magenta, and white</li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+	            </ul>
+
+	            This interrupt may not be supported on all systems.
+
+	            <h3>INT 0x10 Function 0xC</h3>
+
+	            <p>
+                You can write a pixel to the display using this interrupt.
+              </p>
+
+	            <ul>
+                <li>
+                  Input
+                  <ul>
+                    <li>AH = 0xC</li>
+                    <li>BH = Page number</li>
+                    <li>
+                      AL = Pixel color
+                      <ul>
+                        <li>
+                          if bit 7 set, value is XOR'ed onto screen except in 256-color modes
+                        </li>
+                      </ul>
+                    </li>
+                    <li>CX = column</li>
+                    <li>DX = row</li>
+                  </ul>
+                </li>
+                <li>
+                  Output
+                  <ul>
+                    <li>AL = pixel color</li>
+                  </ul>
+                </li>
+	            </ul>
+
+	            This interrupt can only be used in graphics modes.
+
+	            <h3>INT 0x10 Function 0xD</h3>
+
+	            <p>You can read the pixel by calling Video BIOS INT 0x10 function 0xB:</p>
+
+	            <ul>
+                <li>
+                  Input
+                  <ul>
+                    <li>AH = 0xC</li>
+                    <li>BH = Page number</li>
+                    <li>CX = column</li>
+                    <li>DX = row</li>
+                  </ul>
+                </li>
+	            </ul>
+
+	            This interrupt will only work on graphics modes.
+
+	            <h1>Primitives</h1>
+
+	            <h2>Plotting your first pixel</h2>
+
+               <i>"The secret to making any video game is the ability to change the color of a pixel."</i> - Teej
+
+	            <p>
+	                We have covered alot in this chapter and have yet to draw a pixel on screen. Whats up with that?
+	                I decided to close this chapter with the basics of most basic graphics primitives - rendering a pixel
+	                to the screen.
+	            </p>
+	            <p>
+	                Because we are working in Mode 0x13, remember that it acts like a linear frame buffer. So vidmem[0] is the
+	                first byte of video memory, vidmem[1] is the second byte. Also, remember that Mode 0x13 uses a byte for
+	                each pixel as an index into the Color Palette. This means that, we can write a pixel easy like this:
+	             </p>
+            <div class="code"><blockquote><pre>unsigned char* p = 0xa0000;
+            p[0] = 1; // blue pixel</pre></blockquote></div>
+	            <p>
+	                Cool, huh? Thats all that is needed and you have a pixel!
+	            </p>
+	            <p>
+	                It is easier to think in terms of the <b>cartesian coordinate system</b>. In this system, we use
+	                coordinates, such as X and Y to represent its location on a 2d graph like this:
+	            </p>
+	                <p class="center">
+                    <img src="images/vmem.png" alt="">
+                  </p>
+	            <p>
+	                The top-left corner of video memory is at <b>v = [0,0]</b> where <b>v</b> is a 2d vector. This is the first
+	                pixel in video display. The last byte is at <b>v = [width, height]</b>. Assuming each coordinate is a pixel,
+	                we can come up with a formula that allows us to be able to draw a pixel at any location on screen.
+	            </p>
+	            <p>
+	                Lets say we start at <b>v = [0,0]</b> in the graph above. If we add <b>width</b> to our position, we
+	                always end up right below where we were. For example, in the above graph, <b>width = 16</b>. Assuming
+	                we started at the top-left corner, counting 16 to the right, you will find yourself right below (on
+	                the next line) from where you started. Because of this, we can calculate <b>y</b> by doing <b>y * width</b>.
+	                Afterwords we can just add <b>x</b> (The offset in that line) and we have our formula:
+	            </p>
+    	            <p class="center">
+                    <img src="images/pixel.png" alt="">
+                  </p>
+	            <p>
+	                To render a pixel at any <b>[x,y]</b> location, we use the formula <b>x + y * width</b>. With this,
+	                we can create a simple routine like this:
+	            </p>
+
+            <div class="code"><blockquote><pre>            ;-----------------------;
+            ;	renders pixel
+            ;	cl = color ax = y bx = x
+            ;	es:bp = buffer
+            ;-----------------------;
+            pixel:
+            ; [x + y * width] = col
+
+	            pusha
+	            mov di, VGA_MODE13_WIDTH
+	            mul di ; ax = y * width
+	            add ax, bx ; add x
+	            mov di, ax
+	            mov byte [es:bp + di], cl ; plot pixel
+	            popa
+	            ret</pre></blockquote></div>
+
+	            <p>
+	                es:bp points to the video display, or another buffer that we want to render to. cl is the color
+	                index that you want to use, ax is the Y location and bx is the X location.
+	            </p>
+
+            <h2>Clearing the screen</h2>
+
+	            <p>
+	                There are several ways of clearing the screen. This is important as alot of times when switching
+	                video modes, you may see alot of garbage on screen.
+	            </p>
+	            <p>
+	                One method that we can do is just call our pixel routine above <b>width * height</b> times. A better method
+	                would be to write multiple pixels at once. Knowing, for example, that the size of a pixel in Mode 13h is
+	                a byte, we can easily store 2 bytes (2 pixels) in a word size register and use that instead:
+	            </p>
+
+            <div class="code"><blockquote><pre>            ;---------------------------;
+            ;	clear screen
+            ;	cl = color
+            ;---------------------------;
+            clrscr:
+
+	            pusha
+		            mov dl, cl	; dx = 2 pixels
+		            mov dh, cl
+
+		            mov cx, 0
+		            xor di, di
+
+	            .l:
+		            mov word [es:bp + di], dx ; plot 2 pixels
+		            inc di ; go forward 2 bytes
+		            inc di
+		            inc cx
+		            cmp cx, (VGA_MODE13_WIDTH * VGA_MODE13_HEIGHT) / 2 ;end of display?
+		            jl .l
+
+	            popa
+	            ret</pre></blockquote></div>
+            <p>
+	            es:bp refers to either video memory or another buffer and cl is the color that you would like to use.
+            </p>
+
+
+	            <h1>Demo</h1>
+
+	            <p class="center">
+                <img src="images/mode13hDem.png" alt=""><br><i>Mode 13h Demo running in real mode</i><br><a href="Demos/DemoGfx1.zip">Demo Download</a></p>
+
+	            <p>
+	                This demo spices what we talked about a little by adding an additional routines: <b>line</b>, which renders
+	                a horizontal line, and is used to render the rectangles in the demo.
+	            </p>
+
+
+						<h1>Conclusion</h1>
+
+						<p>That's all for this chapter!</p>
+	
+						<p>
+							The next chapter will cover VESA VBE and how we can use it to work with high resolution
+							graphics modes. We will also cover the Super VGA, Bank Switching, and a few more 
+							graphics concepts including <b>Double and Triple Buffering, </b> and 
+							<b>Page Flipping</b>. Thats right, we are going high resolution with VBE :)
+						</p>
+						<p>
+							We will also be going back to C in the next chapter and cover some more graphics
+							primitives. I still plan on covering VGA hardware however that will be after VBE. VGA
+							hardware is quite overcomplicated; I want to hold off on the more complex topics in
+							graphics and VGA until a little later.
+						</p>
+	<p>
+	Until next time,
+	</p><p>
+	~Mike<br>
+	<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2/">Neptune Operating System</a></i>
+
+	<br><br>
+	<i>Questions or comments? Feel free to <a href="mailto:neon6000@aol.com">Contact me</a>.</i>
+
+	<br><br>
+	Would you like to contribute and help improve the articles? If so, please <a href="mailto:neon6000@aol.com">let me know!</a>
+
+						<br>
+						<br>
+						</p><table border="0" width="100%">
+							<tbody>	
+								<tr>
+									<td>
+										<p class="center">
+											<span class="special">
+												<a class="anchor" href="http://www.brokenthorn.com/Resources/OSDevIndex.html">
+													Home
+												</a>
+											</span>
+										</p>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<p>
+			<a href="http://validator.w3.org/check?uri=referer">
+				<img src="http://www.w3.org/Icons/valid-xhtml10-blue" alt="Valid XHTML 1.0 Strict" height="31" width="88">
+			</a>
+		</p>
+
+	
+</body></html>Ytext/htmlUUTF-8_2http://www.brokenthorn.com/Resources/OSDevVga.htmlPª"&*.26Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlL}ìÕ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlL}õÏ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔOO‰PNG
+
+   IHDR  H      ~ÌÅ   gAMA  ±üa  IDATx^íëv$'„7ož7wzÜŒ¹ ‰[ùìœ1HBÅ×íîÉ?___øÃ0‡eà›?Ì 3pXþ¶ž{–ó¯÷ãVý~Ö—„‘¹9ÍnÝûRqÀ,‚½¥ˆþFÏýwëÂ4à!Ø­*H'ØR™4µ“ƒÐ/ãAéNVø'èÜ¤#¨^œßÑ›©¦x¤.^¦"MuF°§¦Ày* ¤ÚWÇ¼WìwdnüHÌù;|*ÁÞXà˜«Hª0ûdÎ»z)ÙXNÑÐ	¶h:Í±É_ù½qPBÁî8j|l<W‹Žlræ‘ŠíŸ«1ø)N®‹lƒ»`ƒ‰ZkØ˜pæ²“k(¤Žk©²R4{%5Zb©ÞµFZqW<ƒ=ø<YH‘âY=)$¹`‚+KK¶®K°¯“œ¾!û•¹Æë2@°¯“œ¾!{u•/­:ã›—‚=/÷€ç‡ê`”û$þ`CnÉ Á^Wé$º{]ÁVŠŒ`¯¤†K® ìE[,,‚½˜ ßáÚìØå'4õ‰ü5{Ð{ò/ö6»C'JÅÙ±´x
+ÁI£¤‘òá¹öò\—TÄà¦ïv'¸–îP‘‰‚qvçÊŸH°EÒ(f¤zK¬ìøY.Ç¼k“Åygãã'¢õÙ¸dÀä*dÁoõW¹øƒ¥Å¡àoÍÃÈº\`[ŒÉqCUªý.=œ`äóx——;‚&_ÉkR!Ø’ì5Å\–¸Ï~‡Öxrã	ö82ª«`Ç´Œl=°«Ð¹ÎUÂÁAñE0Ù»gD/.Á–ÁrÐ
+HuìrÅC6M®EGæ¶ŽA’Ö¶ßÊúWBE»_äÂQ=;$QOVr<N‚ì.Ý18Õ6`'«e+´Èx$­ˆdLŽ±ŽG5lä¢€øÍuLH'E°«2éh¢š`»
+ŒÀÀS=#ÀävCk<[—«¹Ö[©»ÜrçÎêøiéÁäÇý§ßÍÆ„äZqdÉ1Ûñ’Ël—ãIvCÁ¦õæ.(¬Øàî’ÖAulùø~[ÌUm¿´ß—‚Ý—·ÑY}TìÑ¼_3Ÿ`Oº›j‚=A­=]lkÝF¨ž¶ušèo,{,³©&Øù¾w8Á¶Ó~œj‚m§Öæž¶‘€"Tl#µöwC°-4”¢š`[¨u„‚­.£ Õ[]­Sl]%e©&Øºjd`+Š)N5ÁVTë,Ó[KOª	¶–ZÇÙ%Ø*’*QM°UÔ:Ñ(Á–WUj‚-¯Ö¡µÀ–}HÖšª”ªTlUíN2®vî…ÒîÄí¶6Õ»{Ý6QìòWI$_[GÞ,w_ñ(Ô:ÞFTª	¶”x±ûMÙÈ÷È sí…±¡š`Û+»©G‚- œÕ[@­;LhwËH¥ÅÇ$»qñ³=²,©öÁ~þ_Hxsgä7çx[žÓÌìf›1ÕÁ~vÿîÜ¶\u-»–¡üï­©öy~ÿ›?Ì@&ò›£µb»{iø÷ÈVûpÿº’ô¦TÇHl%]O1+ö)™)­Ãˆêß<?5úíÀßRmÃrž¸F‚Ý¬ªQÒÿ3ýs¸¶£97œ°Jv›º8E-÷Ï]2ï~+v›fWŽîûÓÞú£µI`¤ÝáZ÷£µNÚ5Ê@3Ø¹ýÄ}Ö£XçïCtêß_É˜ðž„_3§lR-¶1Ú‘~];	¶˜'"Ø¶ª¦K°÷iªJû!l[ÁvõÖ vG¹.œÄÁ„[ ©Fš[]£ƒ(‚¼<>O€mä¸…ùJUyÎœ¥s‘³bÏ×t‡LÁ~©~¶ã1­fJ 4+öL5wó‚Ý×‡ÙhÅrK°³÷²s´½ÐÁŠ½bsâÕ»Ì$R´Ç-XgTiVlkAwöG°‡Õyn<KóŒ=,ÌÕv¯ü¹7®’Ï•Ôþˆ…ÁVÏÕÍ#GÁN?½*ìŸ®“S‚‘>ü§ŸÏ3†ø“àFÚ5~õÕ}2¶Ù÷OøDëº6Ëµìôs›m´?„Å`¤_½ËÔí6²FË}¼/ìÒ-ñäu.©ØIž{ÏÒ`ç¾ãù"
+÷]¹/Æp×š °Ö
+Üjôkð][Ã?
+væ=…Ðì¯?t!Õ°xið÷ÖçÑ4Ä Í˜Æ*·¬¹ÍWì0Un¼Ëj\]_ÕÈƒ®¤§3•ó"=åX±ê[èº0€´R@W¼Å]÷Ô[†ªÇ ‘36ÁV½Lìa°‡‘FÎŸ¹ŠwÝ…RV ;ÞdÈ…)›e;È©!È+6rE»øÎ°‹à÷3gH[\jæÃV|¡^ÉyzL’r+¶ô‚ÝqA!ØÈ&#ØÈUƒ¤»0FìÀ&ÁÔh£é‚¶Ü¯‹èí·!qû·¬~ô±à@^>Q»)ÕÖ½puÀ[ñäI>Ù‡»#}0¹H‰q†ìg©­/ O˜”_ð·p†BÁ*FP92!\T2{³A°7lR¸{Râ{ÝìÞÌÝ5Oìd÷~ÅûØÊû‡`+'øó{3!	öf‚M
+×ì·Œ?·7Ë·Í\*’Ãš,LÊª¢[‚­˜ÜƒL£`wÜ§ä~ÀŽ[ í2Œ`ï¢ÔÜ8uÁž»¶#½ì#e_ÁO©®A‚­›ßS¬7€Ý×Ÿ’¨UÖA°WQbí8öÚúDÑìÍ›nØ,Ú“dúqK°§K°E Í`—ïunbŸñ«é¢ìél@Ø[,L)Hð/ðJÞýŽiz$zk¤åñ|	~^£¹Wê:\"/÷u˜­N\‚ïk.Q¬ØUÝ9àS À÷ûG’5ìø•æ‘%s'²M°u<ØTØÈûñ.eåŽÀï’Srvª’äÀ.žü>€¤¯YlìªôÐS±[q]}ng§ðEˆ¯œŠ¹6±	¶SØ&ØäÉ@xÆÎáTÎ¸Ò`Hþ*W¥À3 ûs]Œ¾ÿIúÈ‚=’½{æ6·âHk]½:äÊxð9yµb+uÎ¯1Ûû8GVÚ	vì²¯b—íˆ€Ýq± [ñ)lì‘í~Ï\°0
+­ø`[öäû8GVž±ýósòxÓ]ñØZ|>O¶î…«XQƒSCp› lÑñäÚôäWäæ‘|òLR}¶	¶¤`çÚ"ØÂÚj³M°…;ÔÁ–V•m‚-/Ø‰	¶ŠªzllÁŽ3J°µ$Ub›`k	v–]‚­¨§Û[Q°ƒLl]1ÅÙ&Øº‚b`«+)Ë6ÁVìÛBFA¶	¶…`ûû ØFJ±M°ÛÜÁ¶P„m‚m'ØÎž¶©zãllSÁ¶uF°­¥d›`[¶§?‚=A·¶	öÁ6tI°çˆÖÍ6Áž#Øn^	ö4ÅúØ&ØÓÛÊ1Áž)WÛ{¦`ûø&Ø“µje›`Ol÷{¾PMlìù‚íÁ^B%œm‚½„`ËA°W‘d›`¯"ØÚqì…ôAØ&Ø	¶p({-qªlìµ[5‚½œ2e¶	ör‚-Á^Q–Û{EÁÖ‹‰`¯§ÉwD9¶	ö¢‚-Á^L/œ$Û{]ÁVŠŒ`¯¤FKÌ6Á^Z°e‚#ØËH‘	ä!9÷³zèŒo^ö¼ÜÓ33 –‚­–Zfæeà?Åq±ÕU÷    IEND®B`‚_3http://www.brokenthorn.com/Resources/images/crt.pngOªbplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_3http://www.brokenthorn.com/Resources/images/crt.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlL}ý? ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Sat, 30 Jan 2010 21:10:30 GMTVApache_Mon, 12 Apr 2021 11:25:12 GMT_max-age=2592000_Sat, 13 Mar 2021 11:25:12 GMTT2895_Upgrade, Keep-Alive_Ø
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTE6MjU6MTIgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTE6MjU6MTIgR01UoR9UMjg5NaEhXxATVXBncmFkZSwgS2VlcC1BbGl2ZaEjXxATImI0Zi00N2U2ODJlOTQxZDgwIqElVWJ5dGVzoSdfEB1TYXQsIDMwIEphbiAyMDEwIDIxOjEwOjMwIEdNVAAIACMAMAA4AEMASABPAFcAZQBqAHkAhACJAJcApQCnALEAswC2ALgAzQDPAOwA7gD1APcBFwEZASsBLQFNAU8BVAFWAWwBbgGEAYYBjAGOAAAAAAAAAgEAAAAAAAAAKAAAAAAAAAAAAAAAAAAAAa4=_"b4f-47e682e941d80"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí#(3<BENWY[bju„†ˆŠŒŽ’”–˜šœž ¯±³µ·¹»½¿ÁÃÅÇÉËÍÚâíû
+,7@EJXbezš¡ÁÓóøê #(>BOThl€             ~              ŽÔ !Oø‰PNG
+
+   IHDR     ¸   #{rÇ   sRGB ®Îé   gAMA  ±üa    cHRM  z&  €„  ú   €è  u0  ê`  :˜  pœºQ<  vIDATx^íivô8ŽE«wÞKëe»Žêè°8 B¢xýëË0Ã##íðÿüóÏ?ÿâ€  0‘ÀŸ´ð@ ˜Hà_ma
+€  ðï7Ã¢þ÷€¯(ÖC €@J  -hÊ…øB9!eH!@à{Ti¹‡Ô÷”} Ø+„ÿ;àëŠô„²$FlD@’–3»wß¨•T7Q—†®ž@À—–}'ìxþvŒý@]¹4u/x,@`IZfm¶£½Ö±º‚ºìØ\øüaŽ´ìxlŸ›­½ -s³5@ €/-}v¿ôÔ.—Ãu…‹Ë—šŽXv'€´øDZ6úA³]’å—+ °3¤ÅÏÞ.ÓŠ[ÿ3ß¯fV@à'3ÒÂ­Å¯V@ 	¤Å/¤iñ«„€ Òª¤i	‹! n-~ -H‹_%¬€ ¸µ„j iAZBÃb@€[‹_HÒâW	+  n-¡@Z–PÁ°ðo-»ÖE¹Üèƒ^ø½~¯eQ`QH‹CiÙèÊ‚´DûŸõXDÀ—–“ÛõºìroãÖ²Q²õ3f!ð’´œÙ±÷¤FZ6º¸ì’¬—ô?n@`UZ.u9¤o¯HïyºKÔÜZÎ<-˜…À€´ÜZ~MÞe‡t¤…[ËHñ,$––¦Ì,W7•–kÚvWÌg!E iñh;i9ç­Ë»Wï÷0wIÖQS†`$€´|MZNž­jê3‹· €´|JZNÖ•«ß °ÅÜÁÉÏ@Z>%-Ÿ¯W%@ÔE¡Ä,%€´ -KìãHËÐÙÿM iùˆ´0OÓÂ†ƒÏ@Z–g+pÉîHË¬…€L iAZäbÙg!Ò²O®ðô›¤åƒ•´|0©„´¤iÙª`5g‘« °Š Ò‚´¬ª­í"-Âgkü@Z–6ÒòÁ¤ÒV¤e«‚ÕœEZ4N¬‚À*HÒ²ª¶´‹´<Ÿ­!Àb¾®lô×¥˜§WKÃÑÇ	pkñÕe—Qµ‹Ÿ«‹«	c.¤åSÒÂT…€Ûó,€À -Ÿ’–Þ¾[QÜü½–T±	HË×¤åR—Óïü•ÉŽæç¬#€´|PZ®®i{È×ÅÓ4uÝhÀ2F -Ÿ•?°/®@ZFÆÏB`¤ÅŸ¯»L«??ý`¾¾b—dÍj`ì@àÖî2­–ÃŠá#¯Î$€´ ->Vìr8sÜõ9lî2­¸µpk9gréË	 -H‹O`£»œ^>pƒlî2­¸µpk<Y¤Å'°ÑŠ]Î³;x'¤Å›»L+n-ÜZÞ9eðê@HÒâØhÅ.ç€g!E iñÇæ.ÓŠ[·–£†Á¾™ Ò‚´ø6Z±Ë9àÍCß 0N iñÇæ.ÓŠ[·–ñ‰€L!€´ ->Vìr˜Ò½Àk	 -þØÜeZqkáÖòÚAƒc§@ZŸÀF+v9œ6hˆ÷4H‹?6w™VÜZ¸µœ6¿ˆ÷µ¤Å'°ÑŠ]Î¯8)lî2­¸µpk™20qHÒâØhÅ.ç€ñÖÅÞL iñÇæ.ÓŠ[·–7Ï|;Š Ò‚´ø6Z±Ë9à¨)C°@Zü±¹Ë´âÖÂ­åÀFÈï$àHËŸÓ‡¬]t…L]g„òõÎ‰€W˜B iqn-{*ÎSº#€À _ZN>ï¥+'gŠ+Ëà àqÌ% IË™3k;]¹*ãØ‹Ë¦ùšÛÏXƒÀK¨ÒrÍ¬CÆÖéK2ÔáÆ!iJßÊÜ:_)æ¼œ@@ZîCñ5y?üõòœ)îqP(±XD ,-‹üÀì
+–ÿ;´Ü°	@Zò8  äj€ &@Z&Å   -Ô   L&€´LŠ9@ @Z¨@ ˜L i™s€  €´P€  0™ Ò2(æ  @ i¡  @`2‡¥e÷‚œœÙÜdT,„  p„´Œâ‘g×åÓöê>§4Ò7¡Ô²3ëõßx'xXZ~ƒ~dÔŽ<û›èÊ]^îsêÞˆ«-;³^*}ìK‹Ý·ÕÏ£Í>÷¢fœ[ÝõÙçPŽ¨Ù#ÕÌUíT1B0ææý-ež*œ³(n)%^…[´2×.·ZÕNj*«Æèú´J£1²‡˜,-éÌ-ÿ­œ¯g9£Gãè¾åÛ;Y¼¶ÊºegûoÌÙÖ˜Î&¸o9ñ]=V$³5ú•|eö£R]´¸UÊ´ -ÿ!Ó‹Ñ‘WU”ì–ÖZãÊÕ½à=ÒÒÑZ²ê1ÅUGã2¤<Û@ åÒ’MÕŒ{Çˆ¬Î‹ò½EZ£\ñé¦×?ó­,2ETJ;6%{}zTOÝËœ/ý_}k©Ú¯
+|•sZW­’|tø…´ˆgmqDGQQª°¢·–Žcoö†Œ3[;$9ån¼¢´tT^ª¯e˜™c×ÒÒ‘ÀHË0*R]3˜¡ò*&ŠtÕÏ·IKv’è`}$º>»f“Ç!p°´¤ý¦÷jùFPë™¨ýl}yq)·n%¸:Ê•S³}Ã©§ÖíÄp5‹×½²SÿH Ù³¥ÿQÎ©2Ù”Z%z}bì˜‚À	z¤åg\ZoÚüÌ6‚ EH@ ƒ ÒÒGN!€®œ’iâœMàuÒ’½Q6;^ìA €Àr¯“–å³  ,&€´,Œy@ ç@ZÎË9C XL iYó€ Î#€´œ—s"†  °˜ Ò²0æ! œG i9/çD@`1¤e1`ÌC 8 Òr^Î‰€ÀbHËbÀ˜‡  p¤å¼œ1  Å–Å€1@à<HËy9'b@ ‹	 -‹c€Ày–órNÄ€ @ZÆ<  ó -çåœˆ! ,&0YZøƒ¯‹óõ°yòûpØ›ø©´,Léß<Î°W¿e¬Ÿ•µ¹[´¸•¯/"|c©ÚdÓŽLMñ³/³FvR>ÒçÕ”­1*ÉÒbSžÒÛ­¾²_ÿåN÷š²(-OÍ—)1•3Ëþ,;®†L‰éëžP!gºwáA„„¥¥57Å«Ãß²Ë¿t}ÖîU£ºÞ–Û`ºf]CÞ–Ë}«žôéqK,Å¸Z£ùæ±L½¾[nÑGýÌÖWoÃÊ¹¥C†?­XZ-&f<»zÅy7iæ¼Ò§Y~ÝMÝÄ±`SÓ¤%ŒÖ¯Ž­«Ž³q\ZKØŸUsZëÒÒ=ªû¾PZZüu=®Ž6[¢BÝ²oXÙiù­ó–´¯WC0ü	IKk±›¯¬ÜõF“†•
+‹ßCài©¶ñºú¶§R(÷Ê èÐËLËKiOÏ­®ýî‘-¢Ù›´G“PÚ£<ÝÅ¦ÚWQe= -bõ»ì¥ÒR¶J÷­%;•—w¥õÖÍ.+¡ñQzÒ7”jnñ´v§|†·Ê-³uºïÐo×ye\Ú·#^=¹Ko-i}¦‚ÑWi­>5ú7z]SŠ™5/$ðRi1ú°”
+»+¥¥#gw_vQ´ÛC®þFZÙvÝIÂn-™SòhHi÷ñE‘ç¨óÊún‡ÝRaÁ{„¥¥uê±Osåw££­µÞßvç¬«ow
+¤§Åè(´å*TŠôvÉ¶àNùÐ¥PôÖÝt…hñ>(ÓÖnQ¹ìkSË~Ôye½˜¯Žˆxä=z¤¥:Ý®rI¿²)s«*Beegõgü§ÛÕîlšž*‡T•Ý•µ‡…¾…=FÓ|¹qÝÕ:‚´ŠD¹ßTk 4§Üú´‹6Jô§¯>[É-­uH“eç«šŽbh@ÝZeÁv:¥åUq†Z+t¬^¦èmŸ´¬pøL›bšÎ„CÔp	 -.¢™X3i®´E¦VÒÅö÷	|GZôYÐºÈ?ÛD(ÐËI6ÉBDàÒrPº€À–²„€ ¶"ðRiáíˆ­ªh¹³ÔÃrÄ?Ù€<þó+6ù”´,-\ýG¶¦»ñàÖ¯(Òà'ß>OODJc©ñ—`ÏÜ9d!´¸ƒØjû.}é‘—JKâuµb÷ì÷þœŸë‰(-üxÂôQØªÃ¹ùí«öß?õã¨°Ý¶ø}š^²cXZÒù•%¦:ÚÒ5­§³¸5³}Ëóã½ ;´VŒlË4ü1¤¥tÒ­QWîMÅn™•Gc_‘-w»ÔCÆ!=m(!¸e0Ñ¾Ñ§ÕúìÈ£ØŒWÔŠ?7Oež(s)ÝZÏš(Ni¹
+¢”„2an)dvZ)wídÝ]_Ý·ŠÏÖúèO»HÏ“n¿5Âì fåÑà¯›jI©Í-iï¨·–Ÿƒõ ¤É­IÔ,ûŠÊš–«­g£}]Ö€˜ëLÕlZ»(Ë› ÒòïÚ³M”–h9*%µi»Z]‰´ÜÄAS…¬djÖÈneÜ£ÑãWÇqaDZ²îp9—{•½ì2Ñ[&Ú¼‡¯GZ–	·Ïê…iÊ-*zÚUÆwuÍà­%½’¦.…P…Ù)Û½¸d£Ð¶_ZëæÓ¡»åÔV^¹}î–V¼F)"-‹$iy¯´(áî²¸g#udô(o’¸kª#ÞI#>·8¸#^\°"‰îIÜ)¬ºcJZD‡»»‰KË¥¥ušK«_)¸‰-‘N“ô€éN½ê‚ÐìÐ¨âtPÞC°Ý¥Å>•Û­%¼¬“»C¯·Cå!N¨¨´Ìê%¶oz[õ¯Ä’bt}vˆIaYF _Z.Ce¦«©²_lËèž×Ù.éëÕjÓ«ÊX©Ç›Ng·ûFRwDãy4à+úÝñYroSÆ{¤Z›ºG+1eíWû¢ƒ§¡»÷™Ü[}¤”–Û¡¡>uÛ“.°´¸?¹@ìÿê¹µïbÑ'-Ÿ„ÿÂ ¢õðÂ¹´™½¼]”²Ef‘¬^…îJÝ’u/& ×Ã‹ƒ˜ïÚFX6ru~žÖ[DZÖ3fC€y}Lª@‘*€ &@Z&Å  L–®Ãß.)òûíü~5ºÝëvGÿ*-‹ U¢ñj’è;Îj-Ã¥Ž-ôŸ[Døöù‘ŸàœÔ;}™5ê°£ÊGú¼š²õF¦¤¾#ÒYyéó¿ï©Ž0«L–Û­E¡*“·\³È™[ÏRmÌ–`KG·V_Gr"Ã,/J\ÆšPÈbúº]
+9Ó½F	<ž—gKKênùoãT{xyŸÈžr¯Õõ­£\:sÓ5ë¸ß–³[žôéqK,Å¸Z£ùM“¥ä1“À¿G”ðÝ’pÛ>êg¶>³ïÖ¹[i†?­Xª:$³š¹ªñ¶?F1¸I¿	ˆÅ\)å‹eRÆëÊ8Òu8_®@Îxvç·£–Œ¾›&-­¦=ª®`Ò¢ëÆˆ×!v€ª”b#ÎDC8³r:…Så_uÕ©ÆðmåÔ½UTYú¢!·æ¾[{ÆÈ3bl¹'º]B¨Ní˜ÏV)¬”5¶Û:"{¥þÝh­vä½r«»çª’Ó¬ñõ©¨ÛÒRE¦W­ÂQ™VQ;Šj]lÚª´gç c¤¶œ+ú¦b*]]Ô}.MÙÏ¦;®VÖ:ìÛ#L¬œÖaHa¥¬±ã­rÅeœNªßš%-©çJ}"-•kMUû´ÕBÙJ‰¾•¹´+ìY`Láh‰Ü£6Ùºò ´(NýÆHUúÍ˜Ñ0"Jñub×§XF¼:É”göTÔI»OË¼wä+zˆ6tH.Úï³ò‚´üHZÊ~{JZÄÎ/õu\Zô~èvòêÞ´‡í9Uý®þ¢xRV–uŒ*×Ï–M]ZBê$Ìa­ƒ`´ØFÖëë+õ®r$ÒjV^–3ÜvG[·´´N¾}U«Ôœ[mWÈîW´{ûNyÙSHKY0§I‹"ÛÑâTlº!.ÉWt,¸Í.úlïìˆÜk÷x:ZÅÑ¤þ-ö¤®ªNúâíz«¤c,Ð§aH^âšÖ¾÷ë®hë¶òblT-){_7®´4õbiTK"4\—²#m™¯¬˜Ýxm½7ê³dbÃw¦R­CNÕxG1tTé`\­|uä±åÉ”¼´¤Åö¿Ê³:ooûe¿Tç€ˆÝXÖ)-ãO´.Ùì˜è†hJô¶OZDXæÓäÚaÎ$€´ü4ï¬ŸâØŒLÀãQüóiÑgAè]jäLz9É‡¨!`ø‚´c@ x¤åUéÀ@ _ €´|!‹Ä @àU–W¥g  | Òò…,  W@Z^•œ  ðiáÇ1÷J8ùÚ+_§yK}~;ãÓ¤eQ¡¿ƒ¢hG4…ßøÅ—PFB‹žKíÌ2þçÿS}uý<•¥Õ[å0Žëvß.}O¹ÎÌZðr÷f…©Ø	H‹mnSåóNŒOÅQ´Ö,ŠhÄ¥uÏÎ
+v©YÆgIË•ŽWJ=d9äLËù¨‘‡£Ï¾Ù·h1DcßkýIKš¶òßÆç>ˆ¥Í¦ß*Ò•Ù.n+f[G»Ý8xºŠå"jñ¼K°ê|Y@ŸtÙØÔåßççßS·«g7ÞÛN”ƒ}hÐÑûÚÓÙ-!·_”ÊzgP+ïs9g5Õa«˜ÓâK·Ü(:2nQF)ytûEœ'¡ùq+GY&IK+C­Pï×/¿ÓÿÌÆDf9[oœ2›ÕBTâo•cuëV\­Þvùˆ*v”)æ–fµµD'66öµ[ÎðGabx^âÊ2®Û·Égß­îkÔy5„hÃ¡ÜÅî›’‹êšržt³âÃHC3äÖ°²é?;ú1ÄíZ¼½´Ø 	f£d£©U<ì³©·n«%ZspÖ¨še§£U‘–{"d£ad$•±§»¸Õ5‘Ò2’Ç–´”¯_Ã'$Eâ±É­–Ð‚¤¥,}ãtcŸòZ#^Ÿ‰Y·Û	výOw¦E?Ÿ’–¨ŸŠDu„|'ÅæðÔHmIxÕ»žÅÖ5¤TÄ[E:³Ñ/î‰0ZóÕõ­ù0Èy:ÿ,kÑ"iYì×/Ñ‚Ñý-{@ZB§›¥Òb”ˆ]úYÉFÛ@9¡ŒœJZE3Òb	V—Ùœ«Å²#úæbïËcKZô¸¢>’GãÀ+J‹>\–VF1ôIŽ1o£…§‡“K‹}Jµ[H95¸hÊS†ûˆ{ü1pD¥%Ý+:†”@Z®F÷BZÜè–.EH©)wôwLŠn.á¬£Ü¢5ŸÙOUíš*½ìE÷ øÓÁßÍ©r,‹•bSÌ¯±¬òÃÇ­"¸^¯¦0{½•æ–t¹ëÄ»½a3Jƒº«-{1­ÂVÉVíØñ–0mi©®W’’ÅeOYvºŸ©e£NÄª-C3Z¢ÊAO}9wÊ¤»Åßz¤œkÑz.×·â­¶C”ÃDÎÕ~iõ—¸oˆs	D¯gÑŸ¯^Š­¡!ÎÉª^¦p;#öï´ßk÷‹.ë‹¼ï©¨oúúA×ýd¥{zÑÐP?H"Ò²òx[Xä§7€ÿ—ÒK6“Í=¤E¯ý6ºšïDOôðWu¦}øŸ™w¢!ðvi‰g! @àHË#ØÙ€À—	 -_Î.±A x„ Òòv6…  ðeHË—³Kl€ !ðÿ	ök(À$ØÖ    IEND®B`‚_:http://www.brokenthorn.com/Resources/images/bankSwitch.pngO²bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_:http://www.brokenthorn.com/Resources/images/bankSwitch.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlL~† ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Fri, 15 Jan 2010 02:35:52 GMTVApache_Mon, 12 Apr 2021 11:25:12 GMT_max-age=2592000_Sat, 13 Mar 2021 11:25:12 GMTT6136_Upgrade, Keep-Alive_Ø
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTE6MjU6MTIgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTE6MjU6MTIgR01UoR9UNjEzNqEhXxATVXBncmFkZSwgS2VlcC1BbGl2ZaEjXxAUIjE3ZjgtNDdkMmFkY2I4MzIwMCKhJVVieXRlc6EnXxAdRnJpLCAxNSBKYW4gMjAxMCAwMjozNTo1MiBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCxALMAtgC4AM0AzwDsAO4A9QD3ARcBGQErAS0BTQFPAVQBVgFsAW4BhQGHAY0BjwAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGv_"17f8-47d2adcb83200"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí*/:CILU^`biq|‹‘“•—™›Ÿ¡£¥§¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒÔáéô	$3>GLQ_il¡¨ÈÚúÿñ%+0FJW\ptˆ             ~              –Ô#$%OÇ‰PNG
+
+   IHDR  o  %   ¤ôI   gAMA  ±üa  ~IDATx^ík–í¨F“™gh™Yçôr/‡ËCH<‚}duÎ‘A|’¶vUýû¯¿þúÿP P _Mø‡(€ý
+ü«F@@¿w9¨€(€C€&ÿsÁ?ƒ˜¢ÀŸ
+@UF<ùïÿž•ªDÁ ‰5.áHˆJ€bMì97©çÀ…(y°PêÉ½‰>®E	@Ñ'	–¯œ›HÉ M(Ð+ MŠZ]ŽÚ}aù( M$š\ðD¸ò ŠÓH¡W šäµºí‘péÙ74Ñ×–Ð$“îqJK†&0B¯ 4‰µº%ïIÚ¡@}-a	MþÈkQR
+4z 	4ùG’Âšèk	Khòÿ¸¼1É¶'ÐFè€&ÐäøGÂÕŸ[Œ
+Môµ„%4ù;xüRš …f Éß(©Þ±3–Mšk‰o§É…(ž??:Ì¯&€m
+\M“kQ"¿`MÚj‰« Éa›Ãr²0¥7
+Í
+ÜK“Ëáu5z“ærºüÂ«iÂóàìëjÐär(4/ÿFšð<¸ô<˜SØæBâÂŸ×ÑäÂŽþy04
+=
+ÜE“QbzMzj‰k/¢Éµ(Ñ?†&¡Ghbx¤êÚTó<šôÔ×ÞB“Ëåó`hz€&®›óÕçÁÐ¤§–¸šØ
+Òµ54¡à§* M\óÁæ<4™ZKMléÚšPðS€&®ù`sšL­%‡&¶‚tmM(ø©
+@×|°9M¦ÖƒC[Aº¶†&üT ‰k>Øœ‡&Sk‰Á¡‰­ ][C
+~ªÐÄ5lÎC“©µÄàÐÄV®­¡	?Uhâš6ç¡ÉÔZbphb+H×ÖÐ„‚Ÿª 4qÍ›óÐdj-184±¤kkhBÁOU š¸æƒÍyh2µ–šØ
+Òµµ/š<¨„u¤ 4qÍ›ó»Ñ$úëhQÙdibEŒÕÞQénè*4±¤kë=iòT…²ì•fo¥Yí7,QG.A×|°9ï…&aÏÖRÔËhöA/MÀÊT‚&¶‚tmí…&B·b…4ù "ïÐÄ5lÎïI“·ã˜znbÅÐ—ExÌ\ÐÄV®­÷¤I©é?…G€&0š¸æƒÍù;i"?9ú Æî™šØ
+Òµõm4IOpï)ì%+…&®ù`sÞJÍC“ž¬-uò³›ÒÙv:=‘R^MléÚz7š(s3/
+@×|°9o¢É¤Æ„Áü„&¶‚tm­§IJäSÏþ'5ï‹³€©¡à§^M\óÁæ¼’&=(‰Þ‘W¼Ò,}–lºpj!1øOhb+H×ÖJštFé-Òé©|æš:Ã[$šw94qÍ›ókiRzK-jgL¹Nob’k¶14±¤kë*M:÷8!/ÞŽ#Êà!ç&áÑÉì
+a|½ÐÄ5lÎI“R'2Š&B§£Ï~,Ç* MléÚZ¦ÉÆ¤z
+ÛOÎMÆ"`àhÐÄ5lÎ4…h2°8ÝMléÚ:K“á™¥÷Mäg7¥'>ÙŠ2»«I¿C×|°9Ÿ¥‰ßÜÅóÝ€&¶‚tmMv+¿Ãü&®ù`s>¢É³’á¥Ã
+ìªå@[Aº¶n£IédàÛhœƒœhâš6çCšè“†'²¦†¥aü3jï¼U@[Aº¶~i¢G‰ðÄ·ÔPÈÏnÒ‚&Ç`š¸æƒÍù·ÎMé+W{ÿÛh¡3¦¦Æ´
+Œ?P šØ
+Òµµ©%y“ïƒsáæƒ`ŠQ
+@×|°9ßC“RÁêMèJF•ôÂqn¡É³ÿ·ßYÖm(ÎM†?ÓYXL=Dhr3Ê«Ù–&t%C*y‡A.¢ÉÍíI3JÞÞ$=Á•ŸÝè_!±>Ú¡lð!«À]4¹(=(¡lP@¯Àu4yo¶7ìpØDè+Ë~n¤Ix|˜¶Ù'}bÊÐc’ãT{ira6ðæÈ…AÿrÉÐäKµÏÕð{CÃÒöÆíbi˜~„Ðd„ŠNÆ(ÑdìOÜ@'é0ÞMh2^ÓmGüì'n:šmEÃ1½ÐD¯•{KÎMÜ‡pï@“½ã3Ô;z“¡r2X¬ 4¹(' ÉEÁ^±Th²BõEsB“EÂß2-4¹%Ò¿u–ÎMFýÄÍ+%§°eU°ThrgÜY5
+ŒW šŒ×”QàN ÉqgÕ(0^h2^SFD;€&wÆU£Àx ÉxMîT šÜwVã€&ã5eD¸ShrgÜY5
+ŒW šŒ×”QàN ÉqgÕ(0^h2^SFD;€&wÆU£Àx ÉxMîT šÜwVã€&ã5ÝjD~ÕÈVá¨:ã:^yšY’þïZW%va0D´ßJGóˆ6v´(ÙÁ§ÎøY&dÿŽGu½ýko¡íªábN¤ÉÙ<\ŽžGEtÔ8=kQ^[­.å8šé—&ÿ~Ìo–¶IÎTh¢ñ²ùï*Dƒã”Úyj} 5ã‡£eíœÉ^bÕ¡”ÍšEýlJëŠ¾JÅŒü|í­þa*¥Ñ?ô¿$EiêRÚ¿Ÿg5×KÚ-Fc¦ƒ(õ¬®7[núÑX£I©‘%–+!³d¯Yª&uªieƒÆÍ¼iIËÍY@hÆoÐ6+—FMáYmÂ²Ãd]WµzK9 q8rL€Ë2«žUû'C”Þš*šü!«•&š*ý†&D²¹¨§³2Õ¦I–æBo¢Tì:š´±ÜÔ›dñ/35¼$*} ³…9–eÕÏš¼‰ù/èoòG‘ê}L¾55Ð$G¸é,²Ñ½Wˆ¯äUæaˆ¤ó{“TýÒ}OV|T6k‚¤±Õ#ôô/4®'~©õÕ" ¥&¦Î¹­ÛÏÒD?¯þ®Ö6Ñ]4)Ýo­•°–&/«id¥ƒµÚ«D7(ëø2I¡‰õN£!µ&F
+ËÑÑ_éO²¨EÐ×‹°®ÊÛkšHD½Lv“½Dˆbh_?Z¤IìøÑN$T_ð§ÄÐ4²nÙqªº¥w‚ÔU¥ÎQ¶é7#Êñ«-éSŠK6ÇB5É¬´WVoõœŽ3$^r>Gw¯hÉÕ¸´ÓD3´>HšÑÚlëØÀ5N
+é&	{ö°Þ¬ß3óöôÊK2¡ž—Hmåç±4ÙJeÎ;þãärÐdùp P` ÉQÀ8A74ñ¾“÷îÿ	Éîy.ò'C“hÿ¬|R˜FjìúûG+=6Ÿõä›ìaöÛþE	O\êûÅöNy­œ?ÊAt•Ÿ¥©ò¤tI‘&ýê4xÙ?iu„’WýÞ6ŒÐpIu¯ÁÔÁªb¡?zÑª–SW1uðíhRÂsösë3‚’½<i–ÜÂmÄDÓÚüŸ'à¼0©UÏROšNaõ§Úv½F BÍûû¿²}3(ÓÔê©—×Ïj2ËëUò±$fš‚ž½I¸ ëkY
+LxmÛ¼züë-KŠ—¼•Û‡žy5úTm¢Ä*é\­öÈ -^%Zékþ÷©ÏðÿF[-¼ðòl5k²B½\Öy«9­4¬T®ú¹IVbM†il4«ÊÞ-Ã…¥j¨¤¡›5Ï”óf³g-MÞ«V4‘ï"š8*«t8Å4u'Ôoii¶Þ$jr„:—ÙÖ@¨ÒJuºZíd hÒ¢º^8JÎ›ü¬fƒÐƒ¤Š™\ª.6õ­aüjè£ü|@ù^%sŠÑj–6Ó$[GYdd™®ŸW“º¥<©æ¡7IM5³j˜§éL÷v=àå€Yo¶‘½ ~iÞj°«J4±ÓóºÚ©5Ð¤:fµ¶«kÌÒÄ:¯œ™rÈ€&ëS¢²†­Õ¨™Wf¢>“4Umõ_#‹f^Á5ZAM>´ÑD£ÿÉ4	›±¨Ýz¿Ê~žíÍ4U!·©?ÕN,Û³d×%Ü÷ÒÅÊ½•,N)ÓµŒš7½¾YM!ÄH/šÖxYuV®«$u%Q~>N(¯&¸©}8N´„¬qu^ù®Vº¿fó­T’Y?nô.¬†8Õc€(°Jh²JyæEÓ€&§E”õ À*6¢É*	˜P`ˆÐdˆŒ‚(`?…å¬”¬AÈ*`þõò[	ú‡dSã1yE§.ŠÁQ`sÌ4É®GFÌ÷¡ÉãöÀ¡¾×QàK¤¿Cœ}»)[]VšdoûÖ·›J¯Öo	(,½-&¬7úÊúªÏ—af.ø@ÊOý•v.‘g&š”¨ñ~ž¥XÚ)Té£”O~wPîMªk‰º:eP0ó¨À š”zùó~W	¨ÒT¯u{M<&.>o¨À šÕ[Ý&È•'Ý-ìM²›™tÙÍÝ†	K(Ð¬À2š¤›¶KòÂ´¡°ö&šþHCÉæ˜q!
+ì© 4)þF…t/¦?»ÑÓ¤tú»gºà
+
+4>ÓÉ>Î°¶ÊAÞ6D°/kš”ì¶%š4;µò´¸ä´#MQÀ»¼YÏ%ÞsÿwQ š@“]r?¼+ M ‰÷Æÿ]€&»D?PÀ»ÐÄ{ñvQ šì	ü@ï
+@ïÄØECh¢y¯dÉñU šÛÃ¬žk.:7õÓL¥qF}î\æYîB“Yòü9nz®ýfuËgÑÿ8‚ìjÏRi®].Ô¶,£‰ò'nCá„ŸÜÍÖjÕþgP¿:¯Ñì°ôþþoÁþ™¥ô#B)u¥ÐøI7$¿_WÃY#7¡°‘Œ¥‰P~žŽ<dù²)MÒ*’+'ýVs“é±)ÅÞ:fŠ-9õÃo5%]õç$ªdAÿÈ^Ö¡TðÙ«¬4y‘iûª”?]{Õš”‚MþiOªU—örIDß
+÷ØlUD÷ÉÈ&¬R™)ÕuM¢IÃVvU¸”h…¬*…Ò¾ai—\â†&á!­ŸQ½Iz/ÕP Ô_TûŽ¨ÑÐÏUbMšµÕÊÒDÐavo’?‹’RCqÒå§ã[í/ACÃ2=Ñ¤ÔÙf»†j	7"%†ô&?KmŽp»úh#ô&Y”4iÈÅjU‡w¼Õq²¡×S¦ai—\M2;Q4ÑBcÓ™‹i£–Ón4Ia÷BD©•Æ¬Ç&l“;CsØåËhí\”“vøQ»›Þ¾¢K4÷´p’ŸBÈÕ›vRÙŽ]Ówès1-ú$•E0È6ƒzgLÒ)ã%„,½7”Ôhø|Èªd%M>qle~æ6í¬ I•Fšìœ±ø¶© $˜ci’Ý>lš›¸…G(p,MŽˆ‹@O
+@OÑÂWØYh²stð<) M<E_Q`g ÉÎÑÁ7ð¤ 4ñ-|E€&;GßPÀ“ÐÄS´ðvV šì|CO
+@OÑÂWØYh²stð<) M<E_Q`g ÉÎÑÁ7ð¤ 4ñ-|E€&;GßPÀ“ÐÄS´ðvV šì|CO
+@“-¢µÛoÜÍŸ-‚„5N¦IöwÇ?‚¿V~I!õO*,6›òŒÙoœ´zUKW¾ßZói’Ê/üQ…4[­ìœ¾àõ–ïlÖKd*ŒÛ‚ËhRJµè·C‡'¥ÚPÈ&­ŠwÀP kÍ(Ó«ô[¯Kwo¡«=—Æ¥6L½Æ»„¬Î'±ñ¥À¦4yz„°Sé“Ú]†œåJšÔ«î,Ò)äOªkoh4¥2Jjûª¼Õ(p5M²Ä±ÖŒFåh"MÞK„†K9Îº5ìÙé(sã3g4I;í°Ñ¨í¶°ñn.ÈÙ½IèjºÓìäý¬7‰zÌc*‡…¤
+8£Iº€U4±&Ssõ
+½‰ FÕ½fª#G;h¢WÌ»å2šT;yáÜ$½W?£™zùæ?<®ÖêÕŸ•dÕ¨úoõ‡NURVÒ$› Õcù^­Ü«—v
+5£Ì¡hg”ÞÀÃý—ŒÅ¬óm;¯hÒñ¥m`úyIAg¥n˜9R`1M¦*¥Oú¶Û»Éù6gLS`Œk€&±þ“Ê~Ò°k³‡ÙQ Tà|šèËxj[®wc`‚¦ÛŸ%n\Cí¬ÀÉ4ÙYw|Có€&çÅ”¡À ÉÝ™ÎSÀM†ìù§Žhž•»ž—[¬è6®£Éà!`r¥4~ú~Ç7þÜ–Ö¬w‰+i¢y¡ëeÔÛYBõjÞ
+K»,8ä÷¾~ßFÁžM·%¹Å¤·)°Œ&òÝ;[ó¦’­›‹ÒµšÏ«fá·e!ë=Ch’‰£†­dêA“3*‡U¤
+,£É{ªKØÑÌîM²;/™,Âæ¨”mÐ„:<U•4‰ÎDªç‘SiÒÙ¤ç)ÐäÔša]% É?Ê@Š:XF“ÒÒ(ì\4MŠæ‘¼ÉJ{%Á^ÿŒFù¨3®\Žß+°Œ&³—ª!Î<¬³[íçyÎÈ(Ð¬ 4i–®r¡zËY¾2.
+ŒPÀ7MÒ@oeR¢#Òƒ1PÀ €ošŠ)
+ Àd Éd®Q šlêÝöe»ù³Ep¢¦ÀÉ4É¾¨ú"¼Ãº¤ú'›ÍyÆ±û—VËa¾ßEói’*]zQ-Í.ñ1ú¡/]½åëBó%¿ëÀÜ¥Ëh"¿{ªïÒÇ:ÕìžûD¹ÞP3šÈG~FN¦“
+È«ö\óüÑw@¥õj|ÃÆ©›ÒäÙŒ¼[’ð?JÿÙGfax†ÐD Xug!³#m‘dòf—VMÇ†­³mWUýÇ`C®¦I–8“²¿¹z#ÆB7ÎrZOÒsÃZÂ%g4I;í°ÑZ˜ôžö2iS äÇìÞ¤äŒ<¯¾t¨¤¼­]¢½+àŒ&©Ü«hb|sõ
+½‰ FÕ½fª#Gm²Î‚ý
+,£ÉÛG”ªE87)‚˜zùæ?<6ÖêÕŸ•´5VØéO‰ó\IÍ±Ešôò½Z.’7~éŽ)újx¤£JÖ%A²Î·í¼Þ«ªþ„ð5µ&ãá²3à—
+,¦ÉÔ¥¶åqÛUÕ…L¶:/(ð™Ð$–zRÙOö³Da"¨*p>Môe,lª:VônT‡Ò¤ÛŸ%nèÆÒµ'ÓÄu`pÜ) MÜ…‡Q`S É¦Á-p§€'šÙóO=	ÃŸz[šzÈºÜeŸ§Àu4yB8»€K()Í>ÛŸó—m¨ÀJšh^èz%õv–@Í[ai÷‘4Ù0×qi¶ËhRº—Þµ6Â8Õ¡4ï¤öø©ÐìØ3>
+ŒU šdôœJFÇÆ˜ÑPà–Ñäm¢êv4¦Ã…†Þ$»ó’É"lŽ²ñ–`ZÝ7ÉÁ,(`R`%M¢3‘êù¨©Þ¬4éìGÒó”4²ÿ¦Õ™bŒ1
+|£ 4ùGçÙ4©Â¢jðMB0
+4+°Œ&¥:¥PØ¹h
+OóÀHÞd¥½’` ôL'»3z—ÜE.DXF“Ù‹×gžÖÙ­öó<gdhV š4KW¹P½å,_F(à›&é ·2)ÑéÁ(`PÀ7MÅP`²Ðd²À×( M¶õnû²ÝüÙ"H8QSàdš”Çþ4Þa]RHý“
+‹Íæ@Ã«tV'­.Õr•ïwWà|š¤°¾&»{ÿô¯·|‡7]"‹ìHR\Õ+°Œ&¥lKÓDÙ,¿röû¶šýÑsŸð’·mÑ+¨´ŒÖ%/*rCXr4»¾àÛüÑ·ÐD™'™mJ“§œÂ¢’é“Ú\BzÕEZóò'ÕµW:¤AÓ£ª™q'•Ö…k¹š&Yâ4×Œœ=Û«l#Ð0Îº5wm“ô¼°V÷_²3š¤6ò!Ý\ôÐdvoòx[êYJ;}é6PI?xC¯´©àaUg4:öhgTÝé¤ö¥®Š¨1h®Þì¡IiF}Á7û£YìT%õ`ù±ËhòV{©Z„s“P£æÞD¾ùƒµzõg%Y5ªþ[ý±îtô\«ºŠVÒD³ÑH“^¾WËE’nvfµ¤)ÆÑÎ(ë‰’ ÂyJiTêé^ûª?!|5¤°îMbb¼§‹i2UMÒ—Êl¸cmÎwƒQ`žÐ$ÖvRÙOv^f02
+X8Ÿ&ú2Öo¬*[ÆÏ^’n7ôjŒòqîQàdšÜEVŠ;( Mvˆ> À	
+@“¢ÈP`<ÑdÈžêáHÑÔÛÒÔCÖµC2áÃå
+\G“'Þ³¸„’Òì³ý¹<ËYþ7
+¬¤‰æ…®WëÛP¥ÁšhÞ
+K», É7éË,[)°Œ&¥»±ð2«é.ŒSíM4ï¤öø©ÐV‰‚3(PU šd$šG“·ýIg5±²WPà{–Ñäm¢*v4¦zkèM²›#™,ÂæHˆ%½É÷‰ÎŒ(°’&Ñ™Hõ|t*M:û‘ô<%
+žL·êæëƒT`
+èT šü# 4éÌ$.Ge4ž¹d·aç¢iR4ŒäMVÚ+	öB'µ`ls¨ºSXF“Ù‚jˆ3ÏëìVûyž32
+4+ Mš¥«\¨„Þr–¯Œ‹#ðM“ôÐ[™”èˆô`0(à›&†…bŠ(0Yh2Y`†Gk€&[„z·}Ùnþl$œ¨)p2M¬OšûšŒ½ß÷W¯ÕyyÆ!±­.õŠÈõ«8Ÿ&©Âòk©ý…½0¦zçõ–ïrL—Tßý]¨SOR`MäwO³·µê‡Ù·Ëš¼†6¦šÑG%zü•h:©PÕžKãU›?úvšh¢p˜Í¦4ù©üKÇç£ÿ?ŒJ_E1‹Æ|Æ·Þ£jŒéoˆdÚ>ãË’3µ¡Akæló…‡ÛñË¹š&iJŽæê®ýi’íþLºaìHg4I;í°Ñ0õ&iËSºágÃ9»7‘»ÒŽCß4Ó­!¹õ^5Î%û(àŒ&ÂBÞ¥{™NšXCØ\½Bo"ï§Öît87±fÈöËhòö¥jÎMR4<£™z“þ£Sø­4Ñœ›@S0ž­ÀJšhŽ-Ò¢’ïÕÊ[bi§uiH¢Ñ;fiÇ$,$ë|ÛÎ+=×Çt+¡mÎüq1ÈbšLÕ¨-Û®ª.dÒ°Õy1@Ï€&±Ô“Ê~Ò°Ÿ%
+¡@Uói¢/cS_U62Ð»aY°O·-KÜ¸"†ÚY“i²³îø†ç) MÎ‹)+B5
+@“5º3+
+œ§ 49/¦¬Ö(ð?èo^EÖ
+´    IEND®B`‚_6http://www.brokenthorn.com/Resources/images/planer.pngO®bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_6http://www.brokenthorn.com/Resources/images/planer.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlL~³ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Fri, 15 Jan 2010 02:35:21 GMTVApache_Mon, 12 Apr 2021 11:25:12 GMT_max-age=2592000_Sat, 13 Mar 2021 11:25:12 GMTT7111_Upgrade, Keep-Alive_Ø
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTE6MjU6MTIgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTE6MjU6MTIgR01UoR9UNzExMaEhXxATVXBncmFkZSwgS2VlcC1BbGl2ZaEjXxAUIjFiYzctNDdkMmFkYWRmMmM0MCKhJVVieXRlc6EnXxAdRnJpLCAxNSBKYW4gMjAxMCAwMjozNToyMSBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCxALMAtgC4AM0AzwDsAO4A9QD3ARcBGQErAS0BTQFPAVQBVgFsAW4BhQGHAY0BjwAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGv_"1bc7-47d2adadf2c40"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí&+6?EHQZ\^emx‡‰‹‘“•—™›Ÿ¡£²´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÝåðþ /:CHM[eh}¤ÄÖöûí!',BFSXlp„             ~              ’Ô'()O˜‰PNG
+
+   IHDR        <ÒT   sRGB ®Îé   gAMA  ±üa    cHRM  z&  €„  ú   €è  u0  ê`  :˜  pœºQ<  IDATx^í!rI…û0h 04œüGØüÐ4ø``°Ð‡ðW¦Fr¹f•™oÂÒ¸¿ŽŒ˜çÞqU¿Ê|/³g§‰‹`ôø2MõP°í®íúòEˆ#n/ÜÝ¾Ð—þõ…«á7Êåø]=/À7ŽßÕ£á•ÛÛý…»ov†Wþ€ã…Kø÷¢N ¨E¸òˆú3ª„ã’Á˜p òø)O(y Ë	ä8-òœ@ˆK#j¡buT9þŸ0äH âj=P(Ý zàyK ŒrMŒ&þWVP=ë–âÆV)Þh¡p¡?ZCøBøB
+¡@«>mááõ-´bõ£¢ÚÛ9ôÈ*d8â .ØAOÚõˆÛãá=æò@>4/„/„/$Ìµé:|!|¡Ãêèˆb…ZèYo_è•øBGQüAVàX¿”«ýWÊÕðÊÕðkåjø+åjøkåjøåjø­r5ü”«áÿV®†ÿ¯r5ür5üÿ”«áÿQ.ó©”ëHF*øÄŒ€1#à@žÈqV ÄY<WEÔBqeD-”—EÔBÔB½^@äêM+d4q¬ÑÄ¹C„/»DøB%…@‚ZˆZˆZˆþ@Ä¼Q¼ÑQ! Ð=+èÐ&F¬ GF¬g¾¾ÐÈúÄô‰GVàâþ†÷‰ñFƒAÒÆ1elô_è,}¡R+pV+Ð~å½Ó<íêÑÖávÚÕ£áï§]=Lµ‰ñr8þ¾Ž¿­‡ãçz8^Ã×W¶ÇPXý[Ç×WÿÞñõÕ·ÿ€²úŽVßñÂê;þáÒvAÙûÔ	Ðp Þ8SäGy NäJB ŠN"j¡ø¢ÊKSj!j¡^®¡ryæçn^=a¨…¨…zÑŒ&Î"çŒàLPQÆ¾Pì“Ê®Þhx&áåEµµµ=²¨k†7Š7:*ô@ìKØú(¦Þ(ÞèØÈGÄ¾Þ(Þè8ÇÂ¬³#+èÄ#t¶>ÊÀz =€XèÜèS³Œ`–¹•Óÿ	CAú»ÒÛÛ]=Úò¾ÝÕÃ|˜Û]=þûí®^kíêáøïõpü}=ÿ¹Œ‡7qzc¢N€†„1à@Á©~}5Òy ðVßù7ià øÕº[ž9à @?«’©…¨…Fz ‰ÑÄ¬@„V)Þhì“â~go4lÐ(üÔ+ño>µß_¢Gö|×=€@Ð'N§§Ñèn˜‚>1}âq”MŒ&>`³á3s…Ÿßen”¹ÑÎ)úS|¡G”OV`¡+ têoíê…éõÏŽ¯O¯ß;¾>½þÝñõéõöZa›¯O¯;^˜^w¼0½îxÅ}À×_øìxa/l€ã…0¼²†W6ÀðÊì9‚M1%à@~$‘âS‰<§ò@ž–©…âsˆZ(.¨…òÒ”ZˆZhlhâX¡¡‰c‰Œ&Î-
+|¡Ø&ÂŠm"|¡Ü¦ÃÏ!¼ÑÜª¦¢êÞ(Þè˜™Ñè‘ôèô¬@£‰G·š=²‘øBøB=+èÓ'_6ÆÅYÁ¬³=+ŽììG&ø`»ww»z´Uúz·«GÃ»ÛÕ£áÜíêayànWÇÿ¨‡ã¿ÕÃñ_ëáxa__ý¯w†¯¯þ7Ç×Wÿ‡ãë«¿3¼°úŽVßñÂê;Þ.eì÷ï•-0¼²†W¶ÀðÊ<à…]€1%à@~$Á8'â‰<§eò@|QÅ¥µP^QQ‚=ëc4q,‘ÑÄ¹E&Žm"|¡Ø&ÂÊm:|¡øÂÍ­jj!j¡^!àâŽ™=€YA€þ@Ï
+41šxt«é‘Ñ#Y/„/Ô³‚>1}âqœootd³ÌJô¬8²?°™àƒXì
+Óë>o­¼>ðÕñÂô´ã…éiÇÓÓ†Ï§„~ŽW^`7¼2ÀîOÝV‰éí´­G»ûzÚÖ£á7Ó¶þí·õpü¦Ž_×Ãñoë±g=Xb>Àüuò@œÈqN äEµP\QÅuµPþZ%µµÐø²1š8–ÈhâX£‰sƒ_(óˆð…"›_(7IñFcŸo4ÿ™j!j¡^!àâŽoÔ Ð#+èÐèY&FoÔÐ#£G6²__¨g}búÄ‡ãtx£x£¿N•2+Á¬D?Uzd`?2Á+°Ø8L·Á¿1žÕ§×ßÚ¢
+ÓëkÇ×§×7Ž¯O¯·¿X›¯O¯;^˜^w¼0½îxñõ6 |›à˜`BJÀäLú!8 úL½ÄDà @
+ZˆZhlhâX"#É8„^ø¢¢¢âzácˆxá ÈC/|±/¼äò y€cè…!6à…7€<@ p½ð1Ä¼ðÈäŸßåb¼ëõ¶m®ÖÛz4üf½­GÃß¬·õ°Ùõ¶Ž¿©‡ã7õpüU=/l€áë«e/d«¿q|}õo__ý–pÚþÖWßñÂê;^X}ÇÛ¥lA+]á@´)p ¦È$ò@œÈqZ äi™Z(>‡¨…òÒ”Z(ÖÔBÔB£`CÇúMKd4qnQàÅ6¾Pláå6Þh|áæV5µµP¯ðFñFÇÌŒ@Œ¬ ?@ gšM<ŽQÐ#£G6²__¨g}búÄã<#Þ(ÞèÈ
+f%˜•èY±ïðÁ
+,}„éuŸ·V^¸r|ýõû
+(¯Ü8^`7|Þû9ánxe€ÝðÊ {Ã__oëÑð¯·õ0Ÿíz[†ÿt½­‡åÕëm=ÿ©Ž¿©‡ã?ÖcO~8°Ä|€ùMä8-âœ@Èßê£Šë"j¡¸.¢Êßl¥¢_6FÇMëc4qnáÅ¾Pìáå&)Þhì“âæ?³B-D-Ô+¼Q¼Ññ{ô z`dýú=+ÐÄhâñÍJzdôÈFVàáõ¬ OLŸx§ÃÅYÁ¬³=+ŽììG&ø`»Âôúõµñ¬>½þÑñõéõÇ×§×?9¾>½¾5¼0½îxazÝñÂôºã•×ðÂ8^Ø Çàxa¯l€á•0¼²{ÖÃ`Sà@L	8IäøT"Äi<§ej¡ø¢ŠK#j¡¼4¥¢›»‚$sÍ*H2Ç’Ìñ‚$3¼"É¯H2Ã+’ìAãÖ_©À@ Œ¦ˆm"çŒp¡‰ó#‰<€&îÏ!ãŒ’ˆÑÄù‘D-„&îÆ¥EçGz MŒ&FGò =€ùøBñèz ]Á­R¼Ñx|=oáâö¢MŒ&û—íì©À+°à˜§©Ó›i®G[ÕÕ4×£á/§¹?Os=YÇ¯êáø7õp¼†¯¯þ{¨…Õ_9¾¾ú—Ž¯¯~û«¶ý­¯¾ã…Õw¼°úŽ¸´]P¶Àþ#u4¤­‘²þí…]p¼°ŽvÁñÂ.È«Âý€9à@œl}”Cˆ<§eò@œÈqR¦Ê$j¡ø²õQŠQò@E ‰#y€ˆëQÓ{Š #F¿Â8¦˜äØ x´…ð…ž?›ð…âsMœIhb4q_QåòŒþ@¬É¨…âfýú£Z@ FVÐ#£GÖ³MœÛthb4ñauJ€þÀÏy
+|!|¡‘ôÈÎ´GöTñ¬À2W 2!ñ„ÁœûÝæÜj5×£-ÿ»Õ\óšWs=~½šëá¾Ó\Ç¯ëáøËz8þ]=mlM>åÝ ® !á@Ì8PxÆÆ×5´‚´@(¼ÍqþÆ€¿Ž·Û3]xôŸ0p ”èX 
+Ez ”ÈhâÂ$»/’äÐ&B£‰Ê$j!j¡Î<ÅÂ[èôÀ+ðFÃ–=²ÂÏmÑ'¦OÜ©d41šø …LŸ8`V¢`ááuEô‰Í2|!|!|!å'wmæŒy¡`Œt©šø±_Ì'+°Ð¦×W++=êÓëï_Ÿ^¿t|}z}íøúôzëX·ùøúôºã…éuÇÓëŽW^xÀàxa/l€ã…0¼²†W6ÀðÊì9‚M1%à@~$‘âS‰<§ò@ž–©…âsˆZ(.¨…òÒ”ZˆZhlvî
+’Ì5« É/H2Ç’ÌðŠ$3¼"É¯H²+¼I†&Ž%2š8·(à@l9Ç„CMŒ&O%ò@|g”DŒ&Î$j!4qQQZ__hdz =Ð³o4/Mñ…ðFñFñF#›___ˆ™¹¬_FŒy¡^“½Rot/ø`»s=L#^Ìõhø÷s=þÃÅ\Ë3s=ÿ¡Ž_Ç_ÖÃñÂx^6ÀðõÕaøúêp|}õgÃ«ïxaõ/¬¾ãíR¶`†1à@L	8Iä8-â´@ÈÓ2µP|Qå¥)µµP/Ð¹<CÇúMKd4qnQàÅç¾Pláå6Þh|QQ.Þ(ÞèÈ
+ô z gýúcuŠ&F¬ GF¬g¾¾Ð8JDŸ˜>ñÈ
+¼Q¼ÑžÌJ0+1Ž”Ò(õöm>XÅ®€0½îóÖÂôú|éxa€ÝñÂ »ã…vÃç±Ÿï^`7¼2À¾Ø§îuýÅá@À
+8ðºÖ}8 NôhÍmá 8›‡õD_À=Zgs[8 Îæa=Ñ…pàDÖÙÜÀ³yXOôEá 8Ñ£u6·…pàlÖ}Q8 NôhÍmá 8›‡õD_À=Zgs[8 Îæa=Ñ…pàDÖYÜöÿH‘B|”[¤„    IEND®B`‚_7http://www.brokenthorn.com/Resources/images/mode13h.pngO®bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_7http://www.brokenthorn.com/Resources/images/mode13h.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlL~ñ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Fri, 15 Jan 2010 02:37:26 GMTVApache_Mon, 12 Apr 2021 11:25:12 GMT_max-age=2592000_Sat, 13 Mar 2021 11:25:12 GMTT3992_Upgrade, Keep-Alive_Ø
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTE6MjU6MTIgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTE6MjU6MTIgR01UoR9UMzk5MqEhXxATVXBncmFkZSwgS2VlcC1BbGl2ZaEjXxATImY5OC00N2QyYWUyNTI4NTgwIqElVWJ5dGVzoSdfEB1GcmksIDE1IEphbiAyMDEwIDAyOjM3OjI2IEdNVAAIACMAMAA4AEMASABPAFcAZQBqAHkAhACJAJcApQCnALEAswC2ALgAzQDPAOwA7gD1APcBFwEZASsBLQFNAU8BVAFWAWwBbgGEAYYBjAGOAAAAAAAAAgEAAAAAAAAAKAAAAAAAAAAAAAAAAAAAAa4=_"f98-47d2ae2528580"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí',7@FIR[]_fnyˆŠŒŽ’”–˜šœž ¢¤³µ·¹»½¿ÁÃÅÇÉËÍÏÑÞæñÿ!0;DIN\fi~ž¥Å×÷üî!',BFSXlp„             ~              ’Ô+,-O¡‰PNG
+
+   IHDR      ~   DOX4   gAMA  ±üa  XIDATx^í›ÛvÝ*CÛ?ïŸ§ép‡CÌmac!;3O=Ù˜%„¦MÎï_üàÀuà ~pàÇ:ðkùŸäçŠµ~fýþŠ6žÅƒÿØÒ¹}–þ{Ô¯Z?³~?ª‡ö8ÐvàÀþž>p ¢ý:ßŸÍ¡JûOKÏtâÀ\NpØ8åÿôÎU°ýÜÁÓt¶@ÝƒAqeÈ·Rlˆš§ß Øv,LOÌû>ç°óÉCŸ÷ßÞqõxúˆª‡:Ð ¸4NÌ£mÿP—‘më@k4ºoiœ›G»šõ­”­ï3q uyÓçß™¶¿ ºÞÞÄ8d¼Ã/ Þ1FC À]4~› ð¶e<C À]4~›Q òÃkú­~p·Onzî/ýßä@€FÚ6Y‘»³‰pÓ3qht%v ô× íÀþŒ'çáÄÚ÷ z='†À#p @1miÊs ®3Ð½‚ÈÍÝ¹CÏ#æ‘'èÿ1] Šq¯=”x€;ôeÓìq|;t÷ÖéðjÆS<Œúr€í8^»o•Aû×;pu¸)p ðúä™pÂ þÆ-îÎ‹Fœ ¶þ\Ü’™Ì2¦;Ð q¢mÿÝ[íœš^4ÆSë|¢žénÒáã8ÐÍn÷Õ1kèXRë×ÄêŸÙ&@ã¥[{Íß—þÑC6éÿ™ÉŽ:
+@°»)Í›Ÿ)ýÓ	ì8Àôà€Ì YM!G
+ ¤;þýJ“¸HS€ö7<|º;ÐþJ÷‰Ÿ.Êá²² ðïï&@zY W  XÁ¥õ  –puq  €Õ\Z  `i W  XÁ¥õ  –puq  €Õ\ZŸ›àW^õvµ4r^ÅYX¼)V   ŽœW9   ¯DŠÕ   ˆ#çU  À+‘b5   âÈy•  ðJ¤X  €8r^å   ¼)VÃM07ÁâÈy•c`ðJ¤X  €8r^å   ¼)V   ŽœW9   ¯DŠÕ   ˆ#çU  À+‘b5   âÈy•  ðJ¤X7ÁÜ‹#çUŽ€À+‘b5   âÈy•  ðJ¤X  €8r^å   ¼)V   ŽœW9   ¯DŠÕ   ˆ#çU  À+‘b5Üs,ŽœW9V V ¯DŠÕ   ˆ#çU  À+‘b5   âÈy•  ðJ¤X  €8r^å   ¼)V   ŽœW9   ¯DŠÕpÌM°8r^åXX¼)V   ŽœW9   ¯DŠÕ   ˆ#çU  À+‘b5   âÈy•  ðJ¤X  €8r^å   ¼)VÃM07ÁâÈy•c`ðJ¤X  €8r^å   ¼)V   ŽœW9   ¯DŠÕ   ˆ#çU  À+‘b5   âÈy•  ðJ¤X7ÁÜ‹#çUŽ€À+‘b5   âÈy•  ðJ¤X  €8r^å   ¼)V   ŽœW9   ¯DŠÕ   ˆ#çU  À+‘b5Üs,ŽœW¹ ^Qƒw:  wºî{[†ÂÍ_ÛPï Ü¦¡¹l7>|ZlÜèaHÉi;""»Ç¥žoñ èNÊ™ñ‰ŒôÉÖB‘¢CmòêsÈÅœ à³“ü) šè¯Æ©•‘é¯…8=ƒ¤ŽçÛ§ù™½øûbW'‡šÔMk¥½ÕØÕæ‹†4·CWEsþÔ”ÀÉT4 hoQ>?Í_Em„FW€Ñ=RÄ‚Óã=öÊ‹£ölÄŸ}Œ‡Æ ™ýr›ÚË ‚¡]9à|Xoz2þ®Ý[²Ôv/Å=z$ô¬ 7Å»Ó-+@mc\rã[ÁÑ-[ Éœ˜€tØÖÚ¬4T|M¶ÛwczStjt¼‘77 L¥²»ÑÃ\šÑüÙâbÒÝ*ÄCVÜªí’" ¤óöñ7w­ŸÃ`ÓE"þGÎ‚o¡¦¸[Š:mè•?öt5•Ya `lâ­¯ÏV¼V»åÝéol±faJ‰¢ 0wŽÞÙ[í¸/mc8¥: L±‘Nžê  <uæÐ=Å¿ûfèŸ*{S    IEND®B`‚_4http://www.brokenthorn.com/Resources/images/vmem.pngO«bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_4http://www.brokenthorn.com/Resources/images/vmem.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlL~ü ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Fri, 15 Jan 2010 02:35:02 GMTVApache_Mon, 12 Apr 2021 11:25:12 GMT_max-age=2592000_Sat, 13 Mar 2021 11:25:12 GMTT1697_Upgrade, Keep-Alive_Ø
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTE6MjU6MTIgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTE6MjU6MTIgR01UoR9UMTY5N6EhXxATVXBncmFkZSwgS2VlcC1BbGl2ZaEjXxATIjZhMS00N2QyYWQ5YmQ0MTgwIqElVWJ5dGVzoSdfEB1GcmksIDE1IEphbiAyMDEwIDAyOjM1OjAyIEdNVAAIACMAMAA4AEMASABPAFcAZQBqAHkAhACJAJcApQCnALEAswC2ALgAzQDPAOwA7gD1APcBFwEZASsBLQFNAU8BVAFWAWwBbgGEAYYBjAGOAAAAAAAAAgEAAAAAAAAAKAAAAAAAAAAAAAAAAAAAAa4=_"6a1-47d2ad9bd4180"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$)4=CFOXZ\ckv…‡‰‹‘“•—™›Ÿ¡°²´¶¸º¼¾ÀÂÄÆÈÊÌÎÛãîü-8AFKYcf{›¢ÂÔôùë$)?CPUim             ~              Ô/01OM‰PNG
+
+   IHDR   «   s   hçe   gAMA  ±üa  IDATx^íëQÜJ…íˆˆˆø}111>uÛnç-iµH3ŸŠÚRk¦gúôôÊæç×××Ž™= pÌì3ÿùùY1ÿöö¶îœ¦À)|;/žŸŸK!|{{»¿¿¿¹¹ñêÊûû{ø«D§ˆq]É]lx}}­/¯#8N~||”4>üîÝÝŒ
+…% Á:ì‚€§§§Šs7j|Çò——ŸKË=Â´Â
+\G«=f9„­=¼Ž©;ˆE)_„×Qi§YPêÒÅ‚:ÑæÆ’N9@žTjÕ±º:KÔJÕE¨OçõTÌf”Úf£t0aIê¢Â¯”`wMRÞ€9§Ó';Åoû°5È~[f°Îu’æÃT‰(©³ÚÈ6HJ·v]4aÃŸK˜¨+¾RunAÍÎkS{­§óf X„j‡uâö¨\s„òòþ¢O,¢†-7¸”Z6À®Ï´Î°uÝKôpÝÛ×gv^Ý
+C.c2aLx`Ìï`J@ôCTú¯”Š&§,Î’s&Â£¸†:D	4^ê[æðº¯T¸€0‚øšË÷"suU‚²ÐØ´óèÉ6T¸z¢€…s)<FŠœ4‰
+õP2T5·sa²‰¨-Jx!¤©aFL:½t±6Â¼*¥{¶@°ÕæŽ¨ÄU“ZÚ·-¸Ìª†9lQèYÍåŒåã·ÔµÒà¶¢;ˆ{<s¨‡j —Yr“ažå:[=+`8kvšùÖ!Q€Q‰]ô"QçzÊŠ€´`tö	ËUÇœWÍŒq]¥"”Eäò…l³MšÎ;ëNH3k»,-»ft-Zu{Œ)l“&Íý<|Ê¯ûhzÊÔÐ-»ëñÖE»åÂÒ3TÃ½tºØ›ÂmXa˜Ü×U4l¥X¡ ô{`tNVm§ÞPuÚ{L±oC€mñÍ)J Wk÷3ß¨Õ·!À
+1Va|£&Ÿú;0¹ëb~ÿqŒî|kP¯\Ç]÷À)¼¾N§h]]Pg ’¬Ý$Aòü¹ò|=¬ÉMˆ ppP	þ³*.È©û±õ~#¯É°Àì, @@“gÔýrõ~#¯aƒ—9¨×ô@»$Ï”ç×ìA €é{`øÊ&_fÏÍRS{€Jžà_À|7˜ûn:`ö: ÌŽ€S—9(ßô •`R	ê°~èÄ„0¦G@@gq”LLfÌ»  À1Ð¬#Æ(…_×Çd½`Å×:B° øÔi›d€AWøÿÚ–J0[	f;ƒ >óÎˆ0^­‡E¡è	òí0ß“×Ê_îEöR	ò~ ïÌý¿^Èä r@fÜ]GðìÙß§‚`X H39´±=@Ož =Az‚<@%H%H%H%Èžþì{ú-„`X Ø’CxöìÀ9»#†uôé	Ò¤'HOÐ1À›¢q!0¹GfÛÝ°`/@GˆŽÐly{Ù²d7Èn°¾¤k6¶`X €è	Ò4Ð¢#DGˆŽ’³¿ç³%‚° , À[rÏžAø»ÃcwÿòÖÑ¤'HOž =Az‚ôc`ò÷"éÐ @?€=ýÙ÷ô["À° ,æûd3ÙÜè	VH‘[ãy S4´ÕÒCà¸<"|dá²C•Ñ å:À­A@}¦ýàL-\ÖÙÏSy”¢Xú‹eòcTH™gÓê*{½†ìàáPÍ(y  K­Íe
+4…£Óg›8sc*È ä8šJWàµº¶hN:¶À±PbhÑgëz,4m 4]´T ¸p_§k«~eKÐÔ4]´T`*YºY®—ªÅEÙ»¾Eƒ,õÑØò—ïŒí¯ñ¬ãÅt™E `™¿Æ“þÐp¤Ã1ÌÃb    IEND®B`‚_5http://www.brokenthorn.com/Resources/images/pixel.pngOYbplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_5http://www.brokenthorn.com/Resources/images/pixel.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlL~!K ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/png_timeout=2, max=99_Fri, 15 Jan 2010 02:35:19 GMTVApache_Mon, 12 Apr 2021 11:25:12 GMT_max-age=2592000_Sat, 13 Mar 2021 11:25:12 GMTT1613ZKeep-Alive_¬
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDllpbWFnZS9wbmehEF8QEXRpbWVvdXQ9MiwgbWF4PTk5oRJfEBpVc2VyLUFnZW50LEFjY2VwdC1FbmNvZGluZ6EUVkFwYWNoZaEWXxAdTW9uLCAxMiBBcHIgMjAyMSAxMToyNToxMiBHTVShGF8QD21heC1hZ2U9MjU5MjAwMKEaXxAdU2F0LCAxMyBNYXIgMjAyMSAxMToyNToxMiBHTVShHFQxNjEzoR5aS2VlcC1BbGl2ZaEgXxATIjY0ZC00N2QyYWRhYzBhN2MwIqEiVWJ5dGVzoSRfEB1GcmksIDE1IEphbiAyMDEwIDAyOjM1OjE5IEdNVAAIACEALgA5AD4ARQBNAFsAYABvAHoAfwCNAJsAnQCnAKkAvQC/ANwA3gDlAOcBBwEJARsBHQE9AT8BRAFGAVEBUwFpAWsBcQFzAAAAAAAAAgEAAAAAAAAAJQAAAAAAAAAAAAAAAAAAAZM=_"64d-47d2adac0a7c0"_User-Agent,Accept-EncodingUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë#(3<BENWY[bjuƒ…‡‰‹‘“•—™›«­¯±³µ·¹»½¿ÁÃÅÇÔßíôü
+)27<JThˆ¯Ááæñ¡·ÔÚßõù#7             z              EÔ345OB‰PNG
+
+   IHDR  Œ  Þ   žÿÍà   sRGB ®Îé   gAMA  ±üa    cHRM  z&  €„  ú   €è  u0  ê`  :˜  pœºQ<  AIDATx^íÝùsgžçqwÇÌîþ¶±;ÿÁîÄnlÌFìöÆlÄLÄ¸§·o_Ýí“C§ Ý÷}KÜHŒ¹€›KÜ—@B·ªJué º=n·»­ýf=R’”J² á7ñ9•••ùäëIÕçyêòOž±ü{uÁõÿôŸÿýOÿÃßZWþ»¿ù©üúÓ¿ùIà§õ–ÐËßÿeìmØ@ §Xàû¿<¯Ö3øË_­¿~÷Œ¯ßÿé»þ¾oÿ÷ÿù/™HH«ÏxþÃ¤Æ˜ÕÍ	Ÿt¦nwå*¯[jÕ^÷šjTiQö{G/µ…  €ÀS@…¦*3CeaxIÈªÀMÛÒ·ºM‚Xâ8~u»ªgTB¿>ëâì¬–¸²¶¤­Iè¬=¹[A•WJ ‘\þ¹OjÓa?… LQõ8F!ðÃäO`¤¨IlÈ¡‰5¹­.É­¢Zr:a}Ç’ÌÛÊBZB[ZæÐñ›Úeôi—Šj©ôÝnk`«Ø³Ôü›B @àG( fÆ#•$±µR79ÌJÜÔ™PÖ]Ü<?öêoÞ9w·ÏiÌ¤ß[|Er[B:vm«*™RK`K©ÀV™-T*ÈªmÝ)[\“%¼ÅI!€ SBÀHÌO»7wY»Áˆ[£J;ŒZ?XñëÚUÅ­k“'·¥bW¶Æ7[+:¯iIüõ÷æ^2BZþ#‰-«¢‹¥$ªU™Q-skczˆêhÓ`mv&nê¢˜D¹Ö)&K@7)&C ~C‡*óŠ2~-ë)®‘¾ëÚŒ°‘§C1SÜ\ÍFþJe7Ee6ªŠNi\}qä¥÷><m„´üb¬}8§ƒBÚ||0§Á¬òû¡ÇÐfÓY@`ÊŒëžB`RŒPê)(Þå<p¦ïØÅ»ƒu¡ÿ˜µÎ÷;ß'u´¾ïè9©Þ£g*ÚÚWj<y¬*óÓÎõÝåÕîÁªr—«ªto¨ìÞP!å’*Ûç*Ûã4j—³t—#cC{üÚ6cr˜ow8ýÈ-)(o‹N½½<±AJByiôµ‡BZžîÒêyïÁÉ´eÒlç‡ˆ§ü 0i1)… Œ"P´Ý±ûXoÔzÿ‚_xwfŽwz–çƒtÏžwSú}ŠQo'ºßJp¿ï~5ºûÅHÇ[Q-[«œ›;ÔžÓ7u¬ØáŠYëXºÒ±¸¤kQa×Â‚ÎùyFÍËTŽTÇœ¬ŽðÌŽÙéí³RÚg$¶ÎNj*(kM[Ó¢æÍE[»ÑRS²³:ûãÊ´ÒÊ¤5•	++b‹+âJ*¢¥öEì‹Êß™½wIöÞE™{"RwÍNøl~VMÅÍ¼Õ-fHKB/Zxzh&}Mn¹¶ùŒwÊêÛ+6ÞøxÇÕœU'¢ó&¬½Sv[³ñlûfËÚ:uJhó9wø<0!0‰æÛnXxÊ¾8×½Î—¹Ù—ý©/¹Ü½Ö»t•wq‰wQ‘gA¡'¢À‘ï™“ë	ÏöÌÊt”Öýnb÷›ÑÎ—µ¼±ðRõ!Ò(ÝãŒYÝ•´¾+y}WüšÎ˜•Q%ËŠ:—tDæw,‘ÊëXœ×±(§cavûüÌ¶¹©m³[gÄ4†Å\[±!ðÒòÊViIMñÎÚ²ûË?¯YSY]´£:okuö§U™›«Ò7U¦m¬L+¯L)«LZ_¿¦"fÅ¾¥{ægn™•¸vvzÕçžÁL£G
+éæ½•7o\ë¸sÛÑrÇÝÙÞÓÙÑßxËué|ó¡cŸì¼˜\xhIÞÉOq?ÒòÚ¸1ùzaœ~ À$>@³+xZ¾8Û»¨Ä›ó©/w‹/µÜ·Î»|µwé
+ïâbïÂBÏ‚Ïü|Ï¼\ÏœlOX†{Fªûý¤îwbœ¯.nùÕŒ³‡ÉöÆLºt·sYqWÊ:£VwÆ®ìˆ.éˆ*ê\VÐ±4¿#2¯#2·cIvÇâ¬Ž…™íÒÛæ¥¶…'¶ÎŒiü`Éå5åC!}¶·*û“ýå‡÷o<R³¶º¦dWuÁ¶êœÏª²>©ÌØ\•¶©*uSeryebYEÜÚŠè•û–íY˜ýYXrÉï¢¤%òj´zº{¤6Þ2VSÓp¯ßãìttvt;þßÝo¿ý³¼	üî½o®^íß¶Õýî‡·®©2C:0&¤`&qw@ Gž“ç•xNßèKXï]¾Ê»¤DâÙ‘ï›ãé™•î™žê–ú Éýn‚û·ñÝoE»^[ÒúÜ¬sGŽûÔáJw9—H<w%®îŒ[)ŸƒêX^Ô±´ 32¯sInç¢ìÎ…™Ò;æ§wD¤¶ÏKiŸ“Ü.3éY±MF^][Þ·¢MJZR•º¡vmMíºÚš{«ó%¡?­’xNÝX™TV™°>Í«ñ\¼/²`ïâ¼=ó³¶ÎN]ñnŒ´DBz0§£¯…œI!]YÙàóºÚš;n¶\»rçÊù¦;·Úkk¯ÇÅïŸ»7"¢êíßÒz±= €Àcøâl_XŽ7vÄ­OZ&Ðóñœå™™æý0Åó^¢çwñîßÆ¹ßŽu¿ã~3ÆýF”ëõÈ¶f×9î7CzQ~WÌJGìŠ®èâÎ•›»G¯ÙIía‰maqÍÓ—][»±c(¤û*“××”ì®)Ù#	Ýq¹I¦¸x^W»f_”<¿]´oIÞ¾E¹²¾íÔå½²vGdn“¾òýxiÉ!Ý¸!»IÞ.O©WV†ôí[m×¯¶\8{ëÒÙ[E…ŸÏßš–v° àØû3òÔZÕàÇ3éFçŸJ«ÝæÂdAÖHY×Llù|ãe?i;åîòS–eÚÕé÷¥&¶ÛÑïuüò½«­_ßFÖçÈ›Û‡>÷&Ë²fiÿ>£¢íN¹¯2¯9Õ÷¨Mý¼&ÜªGm†¹½´GNäÔû£üa«#µ¼C¶‘ŸêÂPÛËG¿ï„/Ž_¾+FÐÝ»”Üt¨¾¯h›ÃºAÍ©^Y¯N'è&µ™¬”›†ú®×¼oö'j½œWi¥{Ìõf3Ì…	Ÿ&wD`ª=Û73Ë·l•Ùjß’ß‚ß¼\™@{g¦{?JñÚóvœ‘ÍÓ¢¥<RoDuO[ÚþBøù#ufH»å9¢KQ%ŽåE]ãéŽÙ‰íañ-Ó—_[÷q§
+iiIeÂÚ™@l¯ÎÙb~ñ¶$´Ìž+–IBçï]˜c®ß‘±'"c›„ôñÒ’èŒ¦3iã]cM1yÆç·†‡ôåúÆëWZ6—MNª-)9µråéÂò­!=˜Öe*¤¥$*ÌÇÙÉ
+i‰ÙÕê=.Ù³ü´†Ðèá±§®ÇŒóGM‹‘/ëe·æÞdyb‘‘ö?á8Ü~Ä§†2n?êÐaôóšp«•]m¯z¼h›3~p‡êGµl-µÙªÝ.Y)?Õ…¡6
+éà»Œ¾Ãá‡¾Fu\Ðzsejù`¬ªVII<KeÒ%Ë‡êûå\†ïsÛa£ïd½l¦úN–eWÈïWw4Ït¤õÖÝªý¨ûR<ÝGÏô}”!Oqû#Wøù"ò|s²}³2¼ÓS½${ÞMô¼ïy3ÖÈæ×¢ŒzÝÈéî×¾ðÅ‰Á¿ÇÒ®¹ÏŽ¨bÇ²ÇxB:L&ÓFH__o†ô™¾Ê¸•ÕÙ[Œ×¡3?‘W äôò’Š¥…ûshõoß¼´}é{"Ò·ÍI[õA¼´$&ãŽ”ñ²´õénùÝ¸¡ Ù¬n“™´?ðt÷íÛÆLúR ¤·}z<6~oLríúÚÆœM_dl¾œ°þFÌÚ¦yÚü`x™1ÁU3	s¢9Y!­‚YBH¾å§ØcÀiÀ(!m~5™³%Ã7ø!mópØ¹ÜeRÎkÌ¶gƒ öt:ú\ÖªA’ÂTc8uéŽ³Ì]ŽT£^µO	Ý#˜aë­ûW÷-«zè™­q6€Í˜Z*¤úùÓh_x¶Ï˜F§zßOòþ.Áóv¼çXÏkÑžW¢</Gy^5rºûõeƒ!­NV…ôÒBÇ²BÇÒ@H/ÎíZ˜Ýµ ³3"½knZçœÔÎÙ)aÉ³’Œ'ÃågXRGXBËŒ¨ë¥›»âW/KKK$¤«2>¼ûãª”U‰¥R92ÿÁòÜ”}s’÷ÍMÝ‘¶}NÚjKH_fbiù=&³9¶Èøzyr£¢²¡×ïêîêjjj»~­Å˜I_j)Ýr¼håÅ«ÏÎ*=ýz~Ý[y‡®ùjfbíòÕ7­ßà£\jN÷¾y_}#ÚàÃM`YÖ›È¯²üšó™C–ågÐ²¹‡ÁoVìêø•{ò«ü4BÑ²ÿ _å@ÆããÐÑ­miY­:„jRPãÍfí0†A­•_e½Ú&ä®¶áWëåçê½ÝÖý«Ó‘õê¸jçÖ3:t¾_=Sjm[¦Ù<µ ‡	õ½tã¨ÑÏ+¨U£œŽ‰?¼ÇUÃT¿›çr3ópÊ!è× ÓÑäÂ°öšj³ñZÉÐõ`^Tcö…µïÇCÝ´OëŸ†:–µÔô}ÌÃý¸6÷8ijE­•'™ßMñÎÍóEø"ò}ss}³³¼33!âý]’÷íDï´xïk±ÞWb¼/E{_ŽöÈG¥_]Úñ|øE™¿†ô.WDŽ#²ÀÈé‡Cº+"£knz×œ´®Ù©]a)]³’'Ã%¤g%wÌJhuÃiùŸV­h—–TDV¥–«7rWoä–O[­5³Y-TÌO«˜—²o®„tòÞy)ÛÃSV¿gÌ¤3›eÎ*¤³[d`c]GEåícÇOÕtãFsÓ­¶k—š¯_j.ß}:¹êfäæ³óK¿\Q{}íñÆJ¾úÕ;	Ù'Íï€L*7‚V=ªÊ±
+Ts
+•OzÕcüZVí‘…=TÖ)?ƒ–åÖ ‡õà®öiðá¹+÷
+BëÃ™5ÿÌeµ+„a…´<zš-W¤fHß•Dšyv’¸ò«5¤å * CW¹RŽÒÊ<ÐxˆUF9/ÓyôÓ1ñUŸª_ÍÓW£´»ädåb0»>h3ë•cµ
+y"š\ÖëPNP]äÃOdÌ¾P§£únxð›ÖK7h3¹£ùW6æáØ §@àèÙþß&yÃr|sò|Õs$¤³½33½¥{ßOóþ>ÕûN²÷$ßk	¾Wâ¼/Åú^Šñ¾ãyyYçsFH÷*²]Ýs³‹óK
+Œ¨6fÒy]sºdwEduÍËêš›áÏp„¥9f¥B:¥kfr×ÌÄ¶éQ7K7;äS[’¡Ò’ŠeùUIë«R6T¥”W%o®”DÇ®4sºrqfåÂ´Êˆ”ÊyIRûæ%ïO^ý~¬´ÄéÌfõ²ôƒo“ÜŽÍo•!€$´4ôøñ®þ¾ûõg;ª«nÔÔÜ8xôæ‘;=çÛw]t¬8t»²¾=kïåµÇf¯=ûÿžO?’´Ù)%Qm†´,d|â”‡ãÚ3Æ«hR²F=:Ë‚ÚL~U+Í…á+ÕÆfí8j<èo¨ñÊOY6×›‡°6 ä­AXï(MU-}o²ÕŒ½'{/4ýQ~•Ÿ²lmÒð]É6æ¹[Ïh¤c¹>$f”jÞøkÌó2[5žÓ©ÇÕ}Kv¹Í†t.V„=«Û…a6X.~	Z9/Y½åÃ{Gõ‚Ùw#!Œ‰søÂ]ÙfmÅçñ_	l‰À”8v®ÿí$Ÿ¼w,<WÚžã›ã›™í›žéû Ã÷nºïTß›)¾×’ü/'ú^Œ÷½ç{1Æûâ²®_‡_>z²Oï†=î¹ÙÎEùòA,£ŒÎwÈ[Éæ:æç8"²s³s2³3œ³ÒŸ™ê˜™â˜™Ø>=úVé§Î¤õÆËRÒ’ŠÈÜÊ„5U)eFN'—I`W&Ï¤«¥W-H©ŒH¬œ—X17qÇìÄ5ïÅHKârÚb²[ÔËÒ–ÎlŽ/0¦ÑÆ”CgdÒÖ“uû¼ý=¾?\¾ÔµoÏ•¯:KÏµ^rÝ=ÕÞsêNÏâÍgW½ùóß'ýËk‘ó³N¦lîV•¼iðy`YZ±Ç˜(«2o2×¨•;ŽñV{Öx@±þ”õj'ÖR;¬»jÌ3dÙ¼É<DPÔÖ[ƒ~5oRû,ßïik3T›ó¶³C¹‹¹¬ÚrWAm³å#Ñè˜j·™[ºUìY‰¬í·vÊøÏË*3žÓIRÜ.4Í“‘åQÀÇÌ!óqD"_6>~ÅèDkü[÷´·áÙrcµOŽ2¼ªýÈÙånu©›FÓTC[ëYÝWn2‡†²l=tÐ˜LnUÃ_
+ƒÀ±ú»o$ú?Êô‡åøÃ%¤sý³sý³rüÓ³}fùÞËôý6Ã÷fšÿµTÿ+ÉþýÏ'øŸóþf™ã—áWŽ~5Òåû<srº¸º–º$†—Èrka¾sAžs~®s^ŽsN–sv–3,Óˆð™®™iŽIÅÜ.ýÌ•Tæœ––T,É®Œ_U•´®:¥´ZB:ùÁkÒU±Ej>ýçû¦zQJõ‚¤ªù	•óv†Å¯}/ZZ"Y¬rZ&Ó…t\‘¼m$´1!Þìœ‘P=?zã–­‡[›=^×Ý½wü_ê¾á¼{Éuÿó_XéWiÕ—þáŸ¦M›»jùšë)[äO¨ÍFnI™±½å°1-Pk®¶>æMj!ë3ãáÕx@iûÚÜF~•õA[ª_Í€±Þj=hP†7)äÆ#íaøÞd‡*†eA…üTG‘õA‡ýÜGÚx<ëCb*Õ¼}_õ…eåèçemÕHGâ²nfv±j€º0¬nö¯Z9zÇ?.ŒW‹4uÿ9cºñ€ÌÞw‡/ïWX¹×+÷•Ÿ²,{“å‘Ö«C¬«6ÞY©¶¤¬Ã‡þ¬y:ŽŸ¿÷z‚ÿýÿŒlXnOÐÀê×73ü¯§õ¼’ê!¥çù$ÿsq¾_/sþBBúT¿B(¯ð†çv/(ì^\Ø½¤Èøô’"#­9íšŸïš—ëš“ãÏv…e>3Ë5#Ý9#¥ó£ØÛeÛÜFH—9¤%‹3*ãJª×T'¯—œ6S°²:®¸:úÁ{Çj&V/ˆ¯œ·+,fÝ{Ë¥%	ÅR’ÓêeéÁïî–ß%¤em¸6;åÿœº­[jAÁ—3"Ëró¶Õvõm¹áÜzÙõéyÇÎÝ¯E$½± óÙ7–†g6þWÓÛÜR*§§ÌØÞÒ}ø’ñ(#7í¬3^“–Ÿ[¾è‘â}§ûÔ]ö×aêWùi<¸Ôß}ü–]ÉJµ7ùiÝÀzÐáŒŠ¡ý\¸c$kþn÷ºZãLµMµAVJÛÔJY–õA÷U­»é¡Öª–!}íþH»2Ï]‚yî#µ|Ìõ#aª“:Ýð‡‘ GY?úyY;w<§cúlüÜ¯TÕYËQL1#‡ƒ6~-…ìótt¸0†_{ªyYÛÝÒx¹ðdA] !¯ð}·²ÒfuÁ««Tíd¤õÖ¿)!ÀeÀ]˜ŠÇ/Ü{%Îÿûôž²zfæ„é·²z^Ïì}9½÷…ÔÞç’z~çÿåRçÏÃ¯;3˜8åUòl¹{~¡{Q±{I±Ûécaq‘{Q‘[Â;¢ {n~wxž{v®qëÌ¬î™ÝÓS»>Šo*ßéN.wIIK*¦VÆV%¬ªNzð,wuâêšÄ•ÕñÅ5±µÑÙfr×Ì«ž³kVôº÷–IKTHË|Zžñ~(¤åic0”ÐiÛ»ÓvxÒwy¥–­»t ûþ®Û¾;WÙ¶éŠûþéµ_¿ÿaüÎè7eƒÔžÁÚ68-V±mÖ™[PË;Oö]Ì§å«`ŸG­\õ«_å§1o¨öíÁüõ³ÀSÍòÓºzpTk¬ËjÍÆ¡Ù¼ù«jÃ‘Àe˜wÜÞx¬8Ó¯Ö0Ú ?eã‘§Z«Z>æ®äÜÕøÀzî#µ|<ëCbªS³ÖH’Ã×›é¼¬­ótÔþ¦‚ê¹*Ìk`øfÃ»2¨ƒÚ¯Õ…1ÜVÎÔ¼ÞäÄÕÕT#õœ¸yåXï8ÒzÙ­Ú>k×àŸØø¯¶D`Š
+¿xÿÅ¸ž·S{ÞËìùh„~3§÷õìÞ—3{ŸOëýuRï/âü?_êz6üêñ3wª}³ó=Ež…%îÅ%F^3sÜÓ%¤Ó%Ü)ßéQÏÙHK*$WFåUÅW'®ê¸pSò¸&iuuÒªêÄ5ñE5qùµ1ÙµQ²¾óôùÚù±Õs¢vÏ\¶îÝ¥Ò’Ä•FHKÉÛÇ
+i¹A¦Ñr ™@&ônwÆoÖ>£–­­%,çŸ^Wõâô´99‡â?iJÝéTA®J¢Z¢B @àI
+Ô]¾ÿBlÏ´äÞßfô¼—ÕóANïÙ½ïçô¾—ÓûnNïoszßÊé›–Ý÷jVßK}¿IíûURï¿Æö<«Búì=ÕÔMûýÒóŠ¼óWx®ð,ZéYXZPâ™_â‰(ñÎ-öÎ)öÎ.ôÎÊ÷ÎÌõLÏrOOw~”x§|·/Mž9ûÄ--©˜ŸX¹,«2&?Ó+ŒJ(©N(®6º &6·6:³vyZíÒäÚEñµócªç,ß=séº÷–JK’Ö8¥ŒÎn	Ò'º¥­ÏfBçTøÒ¶w,_w~Qq*Éì”ííj³¬iÍ2 € OL îÊž‹ö½’è{3ÕÿNºÿwþßgø%°¥ÞÎìy+³gZfÏ«=/¥÷>Ÿ˜FÇ÷<ãÿ—%ŽgÃ¯¯¿¯Úùñž°Ïœ"÷<‰d	f³ŒxöD{æ{æ{Â‹¼aFHÏÎö|”áœž|gãÞÁ§Ç¤%{#â÷-I­Xž]“_[XWX[`TL^UtNuTVõòôšÈ”šÅ‰5âªçEW†/Û1cé	éúû*¤eÚ,/CËÿëÁkÒƒ3é-.™Fgìx0‡–„©Ô$[Šœ~b"B .pèÂ½7“/Ät½ßõz¢ó$‡Ô´DÇ´$Çk‰ŽW/'º^Lt=ŸÐý\œë—±ÝÿÝýìRÇ³[^¼|üü`HoØßQâš]èœSäœWì’ŠŸERÎ¹²²Ð^(·ºÂ
+\³ò\3ó\3r]Ó³Ó3:çdÞÙX1Ò‡ÎßÝ¾<gûüÄí‹RwDfìXšµciöŽÈ¬‘™;—dì\œ¶{qêîEI»$îŽˆÛ=7fwøò³–}2}éÚ¹éÒyøƒ¶¾qÌi5“N·<×=fH›9mÂ=Ég98 €À\`Mç±ž7ž[|ùù¥×ž¼úBä•ç#¯¼yMê7K®ÿzÉõ_-¹ñËÅ7±ðúÏ\vÁÍgç]{uÙ•ŸË÷kù”^þnïª
+oDq[X^óìü–ÙyRÍ³s¥Zfç´„e·ÌÊn™)•Õ:#«eFFËôŒÖéé-s²ï¬ÜîÎÙ2ø.“5U¾Ï¿hÞ°4gõì¸usÖÎI\37iÍœÄuZžP:;®4,¦lVtéÌ¨ÒéËË¦/[÷áÒµéûÈ~¼fHËÿM#ÄÓÝêcRÆËÒÛ»£zñì·9oÎ
+üò‰nužÞGÆ2?\`Ø¬¦è[h6<>”­Ý««|òTsp]þCÔ%©ûƒuñ~ÝP}~º•|¾ñ3y3Và3J[»swy>>ØûñÁ£Õþž¥j{6Õúªñoª~Peû|¹[Ü)Ÿ¸äé@u¯®xô–œê_¹Í“´Ú˜F«™tpHË»»o2	|5š¼ƒÌø´ô§]É[3[}"+d=ôf}i_à+M(@ žzà/Š	|TZ}«Éƒ
+äî`ú®éJ\Ó%_ *1l-õŽnk=Òò¡iùZÐèâf)õ«4þOÆ÷xe„wi FúŸ4X¾³Þø¿¡É)@ ~’˜ê&m|»öPÉ·ŒTò¿³2¾å3P¾Ö2þŸÑòµ Ù-Q™–o#¤U €  01ÇÒ¯½yô™÷æ^ZžÚUØUØÒãm¤@ @ÀF(™Iç´.\~‰fP‚  €€^„´^ýaãxC#€ è&@HÒ € h*ð”„ôÞeºÌöhÛ6m¦mWÒ0@à	<rHË#û(îÖ›&7ÔqÍ
+bRÇ²þ|TÇ r¬Ñ÷<¼“ë0žó
+:âHxòOãÙ@ÀxŒ!=¹Ê£'Êßù„w8ú®&×d¤½ÒOÆ™£ € [àÑBÚ|ôÊ0szméZ7¶Î¿'6IÒÃ§¿j>=út?ä,|ô•ãŸtŽÒAîrÍž6)¤‡7ÀÊ5þs|Ü%ûG P?4¤G™´©›†OI'6IO€?âxºy¤ø·Þwüfm§µ=ãqÏ6ã<£‘š¡î>zÃÆs¶A xS)¤G™ìŽ”:ãœôÙÎñpÈáËF!GNã=Œm@ ž€À#„tÐ£|Èð˜pyª£<<ÊÔpÌÝÍõÍíGy†`ô}ŽÔÎ	ËLbHsô04¶A xÒÖ=5!2§'öœü(»špH4Œåâi&4éõˆ'pÙq@ ñüÐV¢JÏ\Zcýu¤	ëèÁcÊ[5ÒÇsþÖ–XOdø±Æ¹·Qfü!¡†ÓY×˜§9Î£‡Ü~ôŽ˜ð™>R“Ø@`ÒØ;wÿ|w¤óðÔŸ\ÕÇ½ÿÉm-{C ~T„´m_7ú«ìx²ab.!=17î… <BÚ¶~½Ë!@ ¦´ !MH#€   © !­iÇLé¡G ˜BšF @@SCz€ €  `«Àˆ!mýø,Ë €  ð„dx0ZHG.£@ @àÉÜëï;¤Ÿyf7…  € OX€fü  €€¦„´¦ó„k@@CBšF @@SBZÓŽÑp@G“@ ž° !MH#€   © !­iÇ<áÁ‡C ÐP€&¤@ ÐT€Ö´c4ÐÑ$@ ',@HÒ € h*0!m×©ñ=h € <Õ„´]CŽ‹  €À„4— € š
+ÒšvÌ~o‡C ÐP€&¤@ ÐT€Ö´c4ÐÑ$@ ',@HÒ € h*@HkÚ1Ox°Æá@ 4 ¤	i@ 4 ¤5ít4	@à	Ò„4 € š
+ÒšvÌ¬q8@ iB@ MiM;FÃMB xÂ„4!  €€¦„´¦ó„k@@CBšF @@SBZÓŽÑp@G“@ ž° !MH#€   © !­iÇ<áÁ‡C ÐP`2Búr@ &_€ž|SÇb4	@`*
+Ò„4 € š
+ÒšvÌTñÑf@ É ¤	i@ 4 ¤5í˜É‹±7@ ©(@HÒ € h*@HkÚ1SqÄG›@ &W€&¤@ ÐT€Ö´c&w,ÆÞ@ ¦¢€Þ!½{÷3¶ß¡†  €€„t¨q€3G|´@`riBš'ü@ 4 ¤	iM/ÍÉ²7@`*
+Ò„4!   © !MHkziNÅ1/mF &W€&¤	i@ MiBZÓKsrG£ì˜Š„4!MH#€ h*@HÒš^šSqÌK›@ É ¤	iB@@SBšÖôÒœÜÑ({C ¦¢ !MHÒ € š
+Ò„´¦—æTóÒf@`riBšF ÐT€&¤5½4'w4ÊÞ@ ©(@HÒ„4 €€¦„4!­é¥9Ç¼´˜\Bš&¤@ 4 ¤	iM/ÍÉ²7@`*
+èÒÏ € üxéoßOÅA%mF ~T„4!  €€¦„´¦ó£*r² € !iB@ MiM;†A% € „4!  €€¦„´¦Ãø@ BšF @@SBZÓŽaüˆ  € !MH#€   © !­iÇ0~D @€&¤@ ÐT€Ö´c?"€  @HÒ € h*@HkÚ1Œ@  ¤	i@ 4 ¤5íÆ € Ò„4 € š
+ÒšvãG@ iB@ MiM;†ñ# € „4!  €€¦„´¦Ãø@ BšF @@SBZÓŽaüˆ  € !MH#€   © !­iÇ0~D @€&¤@ ÐT€Ö´c?"€  @HÒ € h*@HkÚ1Œ@  ¤	i@ 4 ¤5íÆ € Ò„4 € š
+ÒšvãG@ iB@ MiM;†ñ# € „4!  €€¦„´¦Ãø@ BšF @@SBZÓŽaüˆ  € !MH#€   © !­iÇ0~D @€&¤@ ÐT€Ö´c?"€  @HÒ € h*@HkÚ1Œ@  ¤	i@ 4 ¤5íÆ € Ò„4 € š
+ÒšvãG@ iB@ MiM;†ñ# € „4!  €€¦„´¦Ãø@ BšF @@SBZÓŽaüˆ  € !MH#€   © !­iÇ0~D @€&¤@ ÐT€Ö´c?"€  @HÒ € h*@HkÚ1Œ@  ¤	i@ 4 ¤5íÆ € Ò„4 € š
+ÒšvãG@ iB@ MiM;†ñ# € „4!  €€¦„´¦Ãø@ BšF @@SBZÓŽaüˆ  € !MH#€   © !­iÇ0~D @€&¤@ ÐT€Ö´c?"€  @HÒ € h*@HkÚ1Œ@  ¤	i@ 4 ¤5íÆ € Ò„4 € š
+ÒšvãG@ iB@ MiM;†ñ# € „4!  €€¦„´¦Ãø@ BšF @@SBZÓŽaüˆ  € !MH#€   © !­iÇ0~D @€&¤@ ÐT€Ö´c?"€  @HÒ € h*@HkÚ1Œ@  ¤	i@ 4 ¤5íÆ € Ò„4 € š
+ÒšvãG@ iB@ MiM;†ñ# € „4!  €€¦„´¦Ãø@ BšF @@SBZÓŽaüˆ  € !MH#€   © !­iÇ0~D @€&¤@ ÐT€Ö´c?"€  @HÒ € h*@HkÚ1Œ@  ¤	i@ 4 ¤5íÆ € Ò„4 € š
+ÒšvãG@ iB@ MiM;†ñ# € „4!  €€¦„´¦Ãø@ BšF @@SBZÓŽaüˆ  € !MH#€   © !­iÇ0~D @€&¤@ ÐT€Ö´c?"€  @HÒ € h*@HkÚ1Œ@  ¤	i@ 4 ¤5íÆ € Ò„4 € š
+ÒšvãG@ iB@ MiM;†ñ# € „4!  €€¦„´¦Ãø@ BšF @@SBZÓŽaüˆ  € !MH#€   © !­iÇ0~D @€&¤m°ëÀüÙ#€ SE€¶+)8în»¦Ê'íD i»’‚ãÒ\ €À„4—ˆmv˜±9 0Ui»’‚ã2“æ@ ˜I?ÃE ©€]Íš*#hÚ‰ 0“¶+)8.3i®@€™43i]ìúëdlŽ LfÒv%Çe&Í5€ 0“Öu9UÆq¯výu>¾3bÏ €Àä
+0“¶+)8.3i®@€™43i]ìúëœÜq.{C Ÿ 3i»’‚ã2“æ@ ˜Ië:||#¯©²g»þ:§ŠíD ˜IÛ•—™4×  ÀLš™´®výu26G ¦Š 3i»’‚ã2“æ@ ˜Ië:œ*ã¸Ç×N»þ:ß±g@`r˜IÛ•—™4×  ÀLš™´®výuNî8—½!€ O€™´]IÁq™Is € Ì¤uG>¾‘×TÙ³]SÅ‡v"€ Ì¤íJ
+ŽËLšk `&ÍLZW»þ:›#€ SE€™´]IÁq™Is € Ì¤uGN•qÜãk§]ïŒØ3 0¹Ì¤íJ
+ŽËLšk `&ÍLZW»þ:'wœËÞ@ Ç'ÀLÚ®¤à¸Ì¤¹@ fÒºÎ#ßÈkªìÙ®¿Î©âC;@ fÒv%Çe&Í5€ 0“f&­«€]ŒÍ@ ©"ÀLÚ®¤à¸Ì¤¹@ fÒºÎ#§Ê8îñµÓ®¿ÎÇwFì˜\fÒv%Çe&Í5€ 0“f&­«€]“;Îeo €Àã`&mWRp\fÒ\ € 3i]ç‘oä5Uöl×_çTñ¡ € 3i»’‚ã2“æ@ ˜I3“ÖUÀ®¿NÆæ €ÀT`&mWRp\@ ˜Ië:œ*ã8Ú‰  `— 3iÆq € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>„4!  €€¦„´¦£Ï8Ž– € Ø%@HÒ € h*@HkÚ1vÚ8. €€>ã
+éí[×~\^´a}¾ªõks×­Î^»:‹B @ I`•xÝPš¯jó¦	ßq…ô†ë.ÖŸ9{JÕ©S'¿üªîä—Ç¥Nœª£'NUwÂ¨'ŽXêð‰‡OÔ:Qwp´:¾ÿD êuüxmÝñšÐu¬ªŽB @`Š	TÖ{PÇV¨ª;Vq²®òÔ—ÕªêÏ¸zùè¸BÚálok¿ÓÜÒ¤ªéÎíÆ¦[ºÙØxóvãÆ@®«+º-uéáºØx{°nß:«áBcÃy£nªáœÔí†³ÁuóÌí›§)@ ¦¢À­§nßüÊZ²æK©Æ†¯šnŸRÕÒtº£åÜ¸BÚßãñùÝ¯k°<Nw¨dÙãªNÇ¬Ç¬vGªÕR-O‹Ç¨îf£ÜwÌrw7Iyºo‡.Wƒg°nz\ € SCÀí¼ñp]w;«Ûq=PWºWU¹×<®ëã
+éþ»þ‡ªß×ßïéñ6N úûRÃïxýúË—¯œ9SáÂåË—¯†ÜsŸ¿¥Ïg•»ôù›¤ìº¯:zP]8{``` äM¬D x*z|w¤z}M×­^ßƒêñÝ4ÊÛ 5¾î÷H*«êë3jÂ!Ý×Û!eËƒ\»võßþíOß}7ðÇ?Ü¿?ÐÛûýÕ«-²>(SÕ)©•QÙ‡_y¥¬°°N^!þOÖË­£D²ëb™ëB©óüzGýº‰%·ºWÙÐ¿	ìäü™ƒÒ¸#wA x*nõxÍ2"Y•ßsSªÇ{CÊæ–$îêê’¬’üz ¿_zÀçðûš›ïåtPH‡‡_”0þs¨²^n)§%¡ÕÕ¿Ž³k&ÜÙ’Ñí÷þþïÿ~{8Æ˜IOàŽÜ@à©x‚!}.ð¯¡¡A~^ºtéFàßpÄ ™ôÍ›7Ì°üæ›¾ž¯wÀåp8Üî7ÜµµûÍŒÒuuu'NœøòË/eJ}úôiIíQBz(¡/˜5ÐvjeËW+šOß9QÔTWxûxÁ8»ÿ‡„tý™ý„ô8ÙxžHH9r$66vþüù‡ºÿþ_þò—žžžöööo¾ùæüùóŸòÏÄµ†´L”oßöÝ½ûí÷ß˜JüµgàÛ¾¯{ £cÀéèéùþóÏ•——«»OÊLZžåøîÜÀ·g*ëÌz`àÖ±üq^?$¤Ïž®%¤ÇéÌf €ÀÓ(ð˜CúðáÃ2]nkk;{ölgg§sPHû|}/¶åç—äæ)_kH×Õ«¯÷Ý¸ÑßÙõÍŸäÕhÏ½ÓÇÎÝ¹ÑþÍº»)µ¼D]_mÌ>yòäW2––Œ>“–×¡¾þrà~]×¹µAÕ~fuë©•Í_–4æÓRc^?,¤ké1…Ù xzB‡ô¡ýŸÚÿé$¼&½yóæ78p@…tww÷Õ«ò9éÆk×®Id–•mˆ‰IüÅ/~šº:**3111(¤Ož¼xûöýÆÆ¯[[ÿôÍýç®”¬\±s×îû÷¾kmýccãýöö¯/_nÝ²å³IœIË;ÅúJ<?<y~ø·ûuòûµÏ3Ç¼2é1‰Ø @`‘CúÀ§YÜ{ãØ¶mÛ***JKKÓÓÓ·nÝ*k‰çââbõìwZZÚŒ3~ö³Ÿ•–~ÒõõïÝ3žÓöúþüõ@sCç®»/Ö_üúÞŸ/_vŸ:Õyê”ëàÁsö#…´zïØð’õ#½qÌˆgïÁÀ+ÓÖ—¥Zþ®«Rn½r0côëúŽÿÖTóó[ÿ·aÏÿº^ñ›G½
+Ï~UÍLúQÑØxŠF|º[MÇÒò™«ÞžÁêëñôõtK)¦ÜÀ¿úúúÏ>û,%%EÒ:!!ñ•W^Y²d‰L.\¶üõ×ß™6mZ||¼q‡QûÖ×_èëû«¼‘Û%On{¾ñ|ãüþ»¾¿|÷Ý_»»ïßºÕ¿wïáÍ›?VÛû½MRjY>‚¥’x”²¾»Ûï¹%%w”÷r¸jŒW¦%¤åÅéPõMën¹õòôÁãÝ×üÀ•Zh<øJ¿ÿŽ8~ÝwóøŠ¿ºÕz_uô :}R†!ob% €ÀAÀëüÀ•ß}Ó(Ï£Ü×¥|îkRãúVokxYÇ2©©©Ë—//,,”¹õâÅËÿùŸÿå—¿|~Ú´ß¿ôÒ«o¿ývdd¤¹±ß×*¥~•7Ž]½Ú*!-ïå–wŠuË;Å<÷ûï"3þ}ýõ¿ÉÝ|M:dHKŸ;×²~ýùêêóµµµW®ÜúÙÏÊþñ7Í¤Í–ž%¤Ow_4^œU÷›¶Ë­—ö§iùÀ•Y·÷þ×¾[Ë\)÷|žó­7™Êå";y|!ýcø#ä@ C	m³zZ…´Z~„îéqU¯¿kø«V­
+ÏÌ,~ùåi/¼ðÂûï¿/“ì Í¬!-7ÕÕ}ÕÜ|OÞ&&ïåöxŒGËG¥å[MäŸ¼å[>[µfÍƒ1›AkIKH<xeÚ´ÏåIïï¾ûîîÝ»ÒRÃBZ}6¼Q>m%!Ý~z•ÒýGCVïMy1àâÅÚÔ¡¼¯D¯õ_Ó¾¿óŸüŸm‡ÿ‡ïÄ¯LþÛ [­÷UŸLª£Gd( 3é7±@àÇ$æÀëÐ2‡6—Ç;“öûº”¿ÃoyÊzxTK0çååçÁÐò5û}ÍÖ{É|º¡ÁÓÓc|×˜Ô·ß	-ï—nYZî"ƒ© §»%¤7n¬ŒŠúrÿþ;’ÐN§3dHûºoHÉ}åóÐÒòn#¤½C–÷ÊF#¤kRÔ±Ìûì®èŸ|ù“mË~º3ê§[ÿd8…y_µ‡ R_ò&V"€ ü¸\WÕSÈÆÚ\v]×ÓÝ^o‹”ÏÛ&5¸ìy(hCæSÈ•^·dmð—~WW×9ròÒ¥†övÏ­[Íò­$ò,÷ÚµkƒöàvÝ2W¾ðBº$ôsÏ•É³ÜÖ*¤å&ëkÒòMåRê¾æ7–Èç¡¾È½q$çú¡,y/·¼SL^‡–g¹e-	-OÝ«í­÷ÿ™Zï«öTêkACÞÄJ@ §UÀcüO5®yÿµ¨+ÊqÙ3Tã
+i—ã–QÎÛCÕàrÎh5´]×¥†ßëÓO·¨’·_É‹ÐæëÐÖ-W¤õˆj{Gç%)»î«ŽTêkACÞÄJ@ §RÀÙyIÊÑqAJ½öìl¿ ¥–ëë—Ûëíõã
+éŽ¶ËRí­WÚÚKýjÖàúÖKmcU{Ëù±«¹¾]ªå\p5Ÿm·TkóÙ)]êkA§ô)Ðx@ Ghk>­Ê|í¹µùTèå;_+¤››ÎQõÍ¡êNã™QëôÆ¡º}êNPÝúòŽ”Z©–-ÕtëË¦['(@ ¦À['Í’f«×¡Uû,7-7WHfÌW;Ú®u´]*Y.Ù¦s¨:Z¯W`:¢·¼ØÑ:rµ\èx¸ÆžŽgÊÎ6 € Ø/0ôÌ±z"¹ù¼ÌÎÛšÎ´6;¤e
+@ lvTvKTNëÂå—^{óè3ïÍ½´<µ%ª°5ª°eèkEø/ € Ø#*¤óÚTN·Q €  `—@Në²ô¦‡gÒÒ9­ € Ø.ðPHK\S €   •€¼&ýÿ
+7'_4    IEND®B`‚_:http://www.brokenthorn.com/Resources/images/mode13hDem.pngOdbplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_:http://www.brokenthorn.com/Resources/images/mode13hDem.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlL~(5 ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/png_timeout=2, max=98_Fri, 15 Jan 2010 02:37:45 GMTVApache_Mon, 12 Apr 2021 11:25:12 GMT_max-age=2592000_Sat, 13 Mar 2021 11:25:12 GMTU16927ZKeep-Alive_°
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDllpbWFnZS9wbmehEF8QEXRpbWVvdXQ9MiwgbWF4PTk4oRJfEBpVc2VyLUFnZW50LEFjY2VwdC1FbmNvZGluZ6EUVkFwYWNoZaEWXxAdTW9uLCAxMiBBcHIgMjAyMSAxMToyNToxMiBHTVShGF8QD21heC1hZ2U9MjU5MjAwMKEaXxAdU2F0LCAxMyBNYXIgMjAyMSAxMToyNToxMiBHTVShHFUxNjkyN6EeWktlZXAtQWxpdmWhIF8QFCI0MjFmLTQ3ZDJhZTM3NDcwNDAioSJVYnl0ZXOhJF8QHUZyaSwgMTUgSmFuIDIwMTAgMDI6Mzc6NDUgR01UAAgAIQAuADkAPgBFAE0AWwBgAG8AegB/AI0AmwCdAKcAqQC9AL8A3ADeAOUA5wEHAQkBGwEdAT0BPwFFAUcBUgFUAWsBbQFzAXUAAAAAAAACAQAAAAAAAAAlAAAAAAAAAAAAAAAAAAABlQ==_"421f-47d2ae3747040"_User-Agent,Accept-EncodingUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë(-8AGJS\^`gozˆŠŒŽ’”–˜šœž ¢°²´¶¸º¼¾ÀÂÄÆÈÊÌÙäòù#.7<AOYm”´Ææì÷«Âßåê *.B             z              PÔ789Oê‰PNG
+
+   IHDR   X      TúÒ   PLTE 	
+! #### %)#)-(((&,0)/4*15-49333;;;6>D8AG;DKKKLAKROOPFPXJU]TUU[[[D]oLX`P\eY^bUbkYfp[ireeelll`nxcr}vwz{{{ Zœ_Ÿ[‡	`Ÿb¡e¢h¤k¦m¨2m™!o©%rª)u¬1y¯9t¡5|°8~²gw‚iy…m~‰y}<³D†¶Gˆ·JŠ¹U‘½Z”¿kƒ—q‚Žs…‘xŠ–zš}v‘§]–ÀcšÂižÄm¡Æu¥É|ªÌƒƒƒ‰Ž–———˜˜˜€“¡…™§†š¨— ‹ ¯¢±™¡ª‘§¶”ªº£¥¦««­´´´¿¿¿‚®Î†°Ï…°Ð‰³Ñ›³Ã·Ô•ºÕ˜¼×›¾Ø¢ºË¥¾ÐŸÁÚ§ÀÒ£ÃÛ©ÂÔªÆÙ­ÉÝ°ÊÝ²Íà¶ÐãÂÂÂÌÌÌÔÔÔØØØÀÖçÆÚèÍßìÓãîÝéòçççìììâìóéñöîôøóóóò÷úõøûþþþÌÌÌ                                                                                                                                                                                                                                                                                                                                                               wŠº   ‹tRNSÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ …Ãï   bKGDÿ¥òÅ   	pHYs   H   H FÉk>  ìIDATHÇ­–‹WU‡ïbZ@cli `Rmûp¢IND-µRi‘Önú '{*ËÉã>D ­å•ë_íÌÝl²I¬œôô—³³³É¹ßÎÎ™Ûyëzô‰íèÓuÀ•RB	¡¤‘òÿÐÃµË}€'®òqè‰·6äæbõ?!÷	¦4˜0‰h~¤¢è¥äæ6âÀ\8v]‰¢]¯]%œ"/Ú¤"·íº”Û–ÂvÞ(âÛ,.m+,æÙ5¡ÂÌf¤a‡á÷2Ê,á²p¸š-àêòT™ GÉd–”Óúø×+;úIÁøØ£ìÎ{VQúàß7â,¾a»Œl#Ýâ.‹ô€_B‰{0Gà*xZÕ:†«vGvŒÜcW%‚ÇæçÏ2Wˆkt—·¾½t&L÷‚õ4<G›†C´Ë;<Ø‚Ì‰~ÄÞ¿~!4ðÊó8³j6r•B°B\4>40±ðÕ.À&Ú¨¢ÍÀK­§È¸€Yøìsí‹,DéÄTðz8q´È,7bRÁ{À{0‹«0¯û0é¦k¢ŸÇX„­b”-X‰H âQŸTJÅÐââ¢ 0@«*R˜…-€´Ö«PÐ‡)ØÇ­¶ô$bÜwÎÔ(buÁ~Ä£fØ’®IÑ6‚¿ "{à>zf@a>öt’+Gºvžë`‹¸N½æT¸r.TÍ©)Á—À®#…CâêáWfï›à*ä©,‡ÂEË Ì6ô½6˜6ÏtµwxƒH˜6o7³×ß4«ÊBZAþ$9½?Òõ~¸þ³Œ<„)Õ1>|ø&×ï¼9ÌƒÔ7À«­W ì<)[ BW^;ÛZ\\ø²Õ pd®9Lu‚0cë^
+œóÌŠw ùÜ³n®~p“Z~ÐMpö•çSUHgrÌ_bß³ WÌBªÜÅm¡,üaZ°¬Ÿ-›T,<õÈWžRUàªO=°PÃg¹Í>ézþä¦”ö£Žé–‡Ó‚/Ð+UÓPm\ü›¸Ö_Þæù`UcçD…}Ðæ®x¼ÂMsJÞºØ–3d÷¾Öú$I ÖÛL$Þewu'XªÐ°pØ‡ÁC[É¥®yÜØ4'œiúÅJ&“?Ag718òØ¯
+nÀW?rÌr~b?s¼Ðæ–ûô4ƒP!aJ>°,6T	V…Xnqû~ƒÔï¬¯/mÈ¿!Ç¹½¸ÝU¿Ë>·ßwž|mK4õrS¥þ_¦R–«ÉTIñþ_¦ü40/•8§þÿ	5÷)È
+ú4£x'øÉ©z|Ÿt—ÌÚý¶Öî‘ñ¾iÙï¯ûàX"›˜˜h‰X÷ÙhñXSQßXO‰Øˆÿ*[E\    IEND®B`‚_*http://www.w3.org/Icons/valid-xhtml10-blueOîbplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯"'-.4567STUVWXYZ[\]^_`abcdefghimnU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€ €€	€€!€€ €Ó()$+,WNS.base[NS.relative€ €€_*http://www.w3.org/Icons/valid-xhtml10-blueÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlL~/ ÈÓ89:FRWNS.keysZNS.objects«;<=>?@ABCDE€	€
+€€€€€€€€€«GHIJKLMNOPQ€€€€€€€€€€€€TEtag\Content-TypeTVary]Last-Modified]Cache-ControlX__hhaa__TDate]Accept-Ranges^Content-LengthWExpires_Access-Control-Allow-Origin_!"7ea-41880ced83900;5b8ff22e2f97a"_image/png; qs=0.7_negotiate,accept_Fri, 14 Jul 2006 01:43:32 GMT_max-age=2592000_t
+
+YnBsaXN0MDDaAQIDBAUGBwgJCgsNDxETFRcZGx1fEBtBY2Nlc3MtQ29udHJvbC1BbGxvdy1PcmlnaW5cQ29udGVudC1UeXBlVEV0YWddTGFzdC1Nb2RpZmllZFRWYXJ5VERhdGVdQWNjZXB0LVJhbmdlc15Db250ZW50LUxlbmd0aFdFeHBpcmVzXUNhY2hlLUNvbnRyb2yhDFEqoQ5fEBFpbWFnZS9wbmc7IHFzPTAuN6EQXxAhIjdlYS00MTg4MGNlZDgzOTAwOzViOGZmMjJlMmY5N2EioRJfEB1GcmksIDE0IEp1bCAyMDA2IDAxOjQzOjMyIEdNVKEUXxAQbmVnb3RpYXRlLGFjY2VwdKEWXxAdRnJpLCAxMiBNYXIgMjAyMSAxMjoyOTowOCBHTVShGFVieXRlc6EaVDIwMjahHF8QHVN1biwgMTEgQXByIDIwMjEgMTI6Mjk6MDggR01UoR5fEA9tYXgtYWdlPTI1OTIwMDAACAAdADsASABNAFsAYABlAHMAggCKAJgAmgCcAJ4AsgC0ANgA2gD6APwBDwERATEBMwE5ATsBQAFCAWIBZAAAAAAAAAIBAAAAAAAAAB8AAAAAAAAAAAAAAAAAAAF2_Fri, 12 Mar 2021 12:29:08 GMTUbytesT2026_Sun, 11 Apr 2021 12:29:08 GMTQ*Ò/0jk_NSMutableDictionary£jl3\NSDictionaryYimage/pngÒ/0op_NSHTTPURLResponse£qr3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d ‰  ª Ì î ñ8?adg‰«®°²´¶¸º¼¾¿ÁÃÅÇÎÖâäæè%.47@IKMT\gsuwy{}ƒ…‡‰•—™›Ÿ¡£¥§©«­²¿ÄÒàéîü1Ui|œ®&FLQqsxŽ’Ÿ©®ÂÆÚ             s              è            1   <   N   d   ‚   ‘   ¨  ¿q  ¿{  ¿  ¿¶  ¿·  ¿Â  ¿Ë  ¿á  Ê”  Ê  ÊØ  Ó“  Óœ   G ÷   $S $‰ -7 -@ E< Ey N/ N8 j j< rî r÷ ‚“ ‚Í ‹ ‹ˆ ’- ’d › › ¡m ¡¥ ª ª ì. ìk ôÓ ôÜ üÊ ü÷             :             é

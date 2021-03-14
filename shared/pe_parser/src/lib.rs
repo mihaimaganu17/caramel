@@ -6,7 +6,9 @@ use core::convert::TryInto;
 const IMAGE_FILE_MACHINE_I386: u16 = 0x014c;
 const IMAGE_FILE_MACHINE_AMD64: u16 = 0x8664;
 
-struct PeParser<'a> {
+/// A validated PE file that has had some basic information parsed out of it.
+/// You can use functions on this structure to extract things like sections.
+pub struct PeParser<'a> {
     /// Raw PE file
     bytes: &'a [u8],
 
@@ -18,10 +20,15 @@ struct PeParser<'a> {
 
     /// Base of the image
     image_base: u64,
+
+    /// Virtual address of the entry point(includes image base)
+    pub entry_point: u64,
 }
 
 impl<'a> PeParser<'a> {
-    fn parse(bytes: &'a [u8]) -> Option<Self> {
+    /// Validate a PE file is sane, and return out a "parsed" version which
+    /// can be used to access different information from the PE
+    pub fn parse(bytes: &'a [u8]) -> Option<Self> {
         let bytes: &[u8] = bytes.as_ref();
 
         // Check for an MZ header
@@ -41,7 +48,7 @@ impl<'a> PeParser<'a> {
             return None;
         }
 
-        // Determine the machine type
+        // Determine the machine type and make sure it's for x86 and x64
         let machine: u16 = u16::from_le_bytes(
             bytes[pe_offset + 4..pe_offset +6].try_into().ok()?);
         if machine != IMAGE_FILE_MACHINE_I386 &&
@@ -73,6 +80,12 @@ impl<'a> PeParser<'a> {
             unreachable!();
         };
 
+        // Get the entry point for the image
+        let entry_point: u64 = u32::from_le_bytes(
+                bytes.get(pe_offset + 0x28..pe_offset + 0x2c)?
+                .try_into().ok()?) as u64;
+        let entry_point = image_base.checked_add(entry_point)?;
+
         // Computer the size of all headers, including sections
         // and make sure everything is in bounds
         let header_size = pe_offset.checked_add(0x18)?
@@ -87,12 +100,16 @@ impl<'a> PeParser<'a> {
             bytes,
             image_base,
             nsections,
+            entry_point,
             section_off: pe_offset + 0x18 + opt_header_size,
         })
     }
 
-    /// Call a closure with the section
-    fn sections<F: FnMut(u64, u32, &[u8])>(&self, mut func: F) -> Option<()> {
+    /// Invoke a closure with the format
+    /// (virtual add, virtual size, raw initialize bytes) for each section
+    /// in the PE file
+    pub fn sections<F>(&self, mut func: F) -> Option<()>
+            where F: FnMut(u64, u32, &[u8]) -> Option<()> {
         let bytes = self.bytes;
 
         for section in 0..self.nsections {
@@ -118,7 +135,7 @@ impl<'a> PeParser<'a> {
             func(
                 self.image_base.checked_add(virt_addr as u64)?,
                 virt_size,
-                bytes.get(raw_off..raw_off.checked_add(raw_size)?)?);
+                bytes.get(raw_off..raw_off.checked_add(raw_size)?)?)?;
         }
 
         Some(())
@@ -133,10 +150,6 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let pe = std::fs::read("bootloader.exe").unwrap();
-        let pe = PeParser::parse(&pe).unwrap();
-        pe.sections(|base, size, raw|{
-            std::print!("{:#x} {:#x} {:02x?}\n", base, size, raw);
-        });
+        flatten_pe();
     }
 }

@@ -1,0 +1,1247 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameO!<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"><!-- saved from url=(0056)http://www.gamedev.net/reference/articles/article290.asp --><html><head><title>Operating Systems Development Series</title> 
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><link href="Files/reference.css" type="text/css" rel="stylesheet"> 
+<meta content="MSHTML 6.00.6000.16441" name="GENERATOR"></head> 
+<body text="#000000" vlink="#666699" alink="#000000" link="#666699" bgcolor="#ffffff" leftmargin="0" background="Files/watermark.gif" topmargin="0" marginheight="0" marginwidth="0"> 
+
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+ 
+
+        <div id="ad_main"> 
+ 
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+//-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+ 
+     </td> 
+  </tr> 
+</tbody></table> 
+
+
+<table cellspacing="0" cellpadding="3" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td class="tblhdr">Operating Systems Development Series</td> 
+</tr> 
+  <tr> 
+    <td align="middle" colspan="2"></td></tr></tbody></table> 
+<table cellspacing="0" cellpadding="5" width="100%" border="0"> 
+  <tbody> 
+  <tr> 
+    <td> 
+ 
+ 
+<!-- Title --> 
+ 
+      <center><span class="title">Operating Systems Development - User land</span> 
+ 
+<br><span class="author">by Mike, 2010</span></center> 
+ 
+ 
+      <p>This series is intended to demonstrate and teach operating system development from
+	the ground up.</p> 
+ 
+      <h1>Introduction</h1> 
+ 
+	Welcome!
+	<p>
+	In the last chapter we have looked at VFS's and loaded and displayed a text file. We can use this
+	VFS to also load program files that can be executed. This includes drivers, program software,
+	shared, runtime libraries, and more.
+	</p>
+	<p>
+	In this chapter we will take the jump into supporting user land software. We will also be taking
+	a look at System API's and how they work.
+	</p>
+	<p>
+	<i>Lets get started!</i>
+	</p>
+
+	<h1>Protection Levels</h1>
+
+	<h2>The Rings of Assembly Language</h2>
+
+	<h3>Kernel Land</h3>
+	<p>
+	In <a href="http://www.brokenthorn.com/Resources/OSDev5.html">Chapter 5</a> we have took a quick
+	look at the concept of the rings used in assembly language. These rings represent different
+	protection levels. These protection levels are a hardware detail; they are implemented by the hardware.
+	</p>
+	<p>
+	Software running in ring 0 have the most control. They can execute priveldge instructions which allow
+	the software to be able to perform more actions: hardware PIO, MMIO, Processor hardware controls and tables
+	(like CPU cache controls and MMRs, et al.)
+	</p>
+	<p>
+	The list of privileged instructions have been shown in <a href="http://www.brokenthorn.com/Resources/OSDev7.html">Chapter 7</a>
+	however will also be listed here for completness.
+	</p>
+	If any software running in a protection level greater then 0 attempts to execute the above instructions,
+	the processor generates a <b>Protection fault (#PF)</b> exception.
+
+	<p>
+	</p><center> 
+	<table border="1" bgcolor="CCCCCC"> 
+ 
+	<tbody><tr><th colspan="5" bgcolor="FFFFFF">Privileged Level Instructions</th>
+	</tr><tr bgcolor="AAAAAA"> 
+	<td>Instruction</td><td>Description</td> 
+	</tr> 
+	<tr><td bgcolor="ffffff">LGDT</td><td>Loads an address of a GDT into GDTR</td></tr> 
+	<tr><td bgcolor="ffffff">LLDT</td><td>Loads an address of a LDT into LDTR</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">LTR</td><td>Loads a Task Register into TR</td></tr> 
+	<tr><td bgcolor="ffffff">MOV <i>Control Register</i></td><td>Copy data and store in Control Registers</td></tr> 
+	<tr><td bgcolor="ffffff">LMSW</td><td>Load a new Machine Status WORD</td></tr> 
+	<tr><td bgcolor="ffffff">CLTS</td><td>Clear Task Switch Flag in Control Register CR0</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">MOV <i>Debug Register</i></td><td>Copy data and store in debug registers</td></tr> 
+	<tr><td bgcolor="ffffff">INVD</td><td>Invalidate Cache without writeback</td></tr> 
+	<tr><td bgcolor="ffffff">INVLPG</td><td>Invalidate TLB Entry</td></tr> 
+	<tr><td bgcolor="ffffff">WBINVD</td><td>Invalidate Cache with writeback</td></tr> 
+ 
+	<tr><td bgcolor="ffffff">HLT</td><td>Halt Processor</td></tr> 
+	<tr><td bgcolor="ffffff">RDMSR</td><td>Read Model Specific Registers (MSR)</td></tr> 
+	<tr><td bgcolor="ffffff">WRMSR</td><td>Write Model Specific Registers (MSR)</td></tr> 
+	<tr><td bgcolor="ffffff">RDPMC</td><td>Read Performance Monitoring Counter</td></tr> 
+	<tr><td bgcolor="ffffff">RDTSC</td><td>Read time Stamp Counter</td></tr> 
+ 
+	</tbody></table> 
+	</center> 
+	<p></p>
+
+	<p>
+	The kernel or executive of an operating system typically resides in ring 0. Because of this,
+	<b>kernel land</b> or <b>kernel mode</b> is any software running in <b>ring 0</b>. Ring 0
+	is also known as <b>Supervisor Mode</b>.
+	</p>
+	<p>
+	All of the software that we have written in this series so far has been kernel mode software:
+	kernel and minidrivers. Microkernels and hybrids typically employ a more advanced driver interfacing
+	scheme then what we use in the series that allow proper driver installation and drivers running in
+	user mode, completely separate from the kernel. It is even possible to have a part of the kernel in
+	user mode; it all depends on your design.
+	</p>
+	<p>
+	When the system is first started, the system is running in supervisor mode to allow the BIOS and operating system
+	to start up.
+	</p>
+
+	<h3>User Land</h3>
+	<p>
+	Software running in ring 1 through ring 3 have less control of the machine then software running in ring 0.
+	This is for protection of the machine; if there is an error caused by the software running in rings 1 through 3,
+	the processor notifies the system executive or kernel of the problem using a <b>general protection (#GP)</b> exception.
+	</p>
+	<p>
+	Most operating systems employ a 2 mode system, kernel mode and user mode. While the x86 family supports
+	4 protection modes, these operating systems only use 2 for easier portability across architectures.
+	</p>
+	<p>
+	The design of these operating systems is for kernel mode software to run in ring 0 while user land
+	software run in ring 3. Rings 1 and 2 are not used. Driver software can either operate in ring 0
+	to access hardware devices, or ring 3 using the provided driver API or System API to communicate with
+	the hardware devices.
+	</p>
+	<p>
+	Because user mode software can not access hardware devices directly, they must notify the operating
+	system in order to complete system tasks. This includes displaying text, obtaining input from user,
+	printing a document, etc. These functions are provided to the user mode software in the form of
+	libraries and APIs. These libraries and APIs communicate with the System API.
+	</p>
+	<i>System API</i> ... you have seen this term before. We will look closer on System APIs in a little bit.
+	For now, lets take a closer look at user mode!
+
+	<h3>Ring -1</h3>
+	<p>
+	Some recent processors have a special protection level that allows a <b>hypervisor</b> ring 0 access.
+	This is sometimes known as "Ring -1".
+	</p>
+
+	<h1>Welcome to User Land</h1>
+
+	<p>
+	There are a few steps required to enter user mode. (Come on, you didnt think it would be easy :) )
+	Its not that bad though.
+	</p>
+	<h2>Step 1: Global Descriptor Table</h2>
+
+	<p> 
+	We will be needing to go back to the <b>Global Descriptor Table (GDT)</b> first. The GDT was that
+	big ugly structure that we needed when setting up protected mode for the first time. Recall that
+	the GDT contains a list of 8 byte entries that contains information for the processor. Lets take
+	another look at the GDT entry bit format again: (I have <b>bolded</b> the important parts)
+
+	</p><ul> 
+		<li><b>Bits 56-63:</b> Bits 24-32 of the base address</li> 
+		<li><b>Bit  55:</b> Granularity</li> 
+		<ul> 
+			<li><b>0:</b> None</li> 
+			<li><b>1:</b> Limit gets multiplied by 4K</li> 
+		</ul> 
+		<li><b>Bit  54:</b> Segment type</li> 
+		<ul> 
+			<li><b>0:</b> 16 bit</li> 
+			<li><b>1:</b> 32 bit</li> 
+		</ul> 
+		<li><b>Bit  53:</b> Reserved-Should be zero</li> 
+		<li><b>Bits 52:</b> Reserved for OS use</li> 
+		<li><b>Bits 48-51:</b> Bits 16-19 of the segment limit</li> 
+		<li><b>Bit  47:</b> Segment is in memory (Used with Virtual Memory)</li>
+		<li><b>Bits 45-46: Descriptor Privilege Level</b></li>
+		<ul> 
+			<li><b>0: (Ring 0) Highest</b></li> 
+			<li><b>1: (Ring 1)</b></li>
+			<li><b>2: (Ring 2)</b></li>
+			<li><b>3: (Ring 3) Lowest</b></li> 
+		</ul> 
+		<li><b>Bit  44:</b> Descriptor Bit</li> 
+ 
+		<ul> 
+			<li><b>0:</b> System Descriptor</li> 
+			<li><b>1:</b> Code or Data Descriptor</li> 
+		</ul> 
+		<li><b>Bits 41-43:</b> Descriptor Type</li> 
+ 
+		<ul> 
+			<li><b>Bit 43:</b> Executable segment</li> 
+				<ul> 
+				<li><b>0:</b> Data Segment</li> 
+				<li><b>1:</b> Code Segment</li> 
+ 
+				</ul> 
+			<li><b>Bit 42:</b> Expansion direction (Data segments), conforming (Code Segments)</li> 
+			<li><b>Bit 41:</b> Readable and Writable</li> 
+			<ul> 
+				<li><b>0:</b> Read only (Data Segments); Execute only (Code Segments)</li> 
+ 
+				<li><b>1:</b> Read and write (Data Segments); Read and Execute (Code Segments)</li> 
+			</ul> 
+		</ul> 
+		<li><b>Bit  40:</b> Access bit (Used with Virtual Memory)</li> 
+		<li><b>Bits 16-39:</b> Bits 0-23 of the Base Address</li> 
+ 
+		<li><b>Bits 0-15:</b> Bits 0-15 of the Segment Limit</li> 
+	</ul> 
+
+	<p>
+	Yikes, okay ... The <b>Descriptor Privilege Level (DPL)</b> bits above represents the priveldge
+	level used for that descriptor. So, by setting those bits to 3, we effectivley make the descriptor
+	a user mode descriptor.
+	</p>
+	<p>
+	So the first step is to create two new descriptors in the GDT - one for user mode data and the other
+	for user mode code. This is done by modifying <b>i86_gdt_initialize</b> to add two new GDT
+	entries for user mode code and data. Lets do that now:
+	</p>
+
+      <blockquote><pre><div class="code">//! initialize gdt
+int i86_gdt_initialize () {
+
+	//! etc...
+
+	//! set default user mode code descriptor
+	gdt_set_descriptor (3,0,0xffffffff,
+		I86_GDT_DESC_READWRITE|I86_GDT_DESC_EXEC_CODE|I86_GDT_DESC_CODEDATA|
+		I86_GDT_DESC_MEMORY|I86_GDT_DESC_DPL,
+			I86_GDT_GRAND_4K | I86_GDT_GRAND_32BIT | I86_GDT_GRAND_LIMITHI_MASK);
+
+	//! set default user mode data descriptor
+	gdt_set_descriptor (4,0,0xffffffff,
+		I86_GDT_DESC_READWRITE|I86_GDT_DESC_CODEDATA|I86_GDT_DESC_MEMORY|
+		I86_GDT_DESC_DPL,
+			I86_GDT_GRAND_4K | I86_GDT_GRAND_32BIT | I86_GDT_GRAND_LIMITHI_MASK);
+
+	// etc...
+
+	return 0;
+}</div></pre></blockquote>
+	<p>
+	The above code is the same as what we did when creating the other GDT entries, with one change. Notice the I86_GDT_DESC_DPL flag.
+	This will set both DPL bits to 2 which makes them for user mode (ring 3). Please note that none of this is new;
+	all of the above flags were written from an ealier chapter when we covered protected mode.
+	</p>
+	<p>
+	Thats all that is needed! Note that the user mode code descriptor is installed at index 3 in the GDT,
+	while the user mode data descriptor is at index 4. Remember that segment registers contain the offset
+	of the selector it uses. Because each GDT entry is 8 bytes in size, it would be: <b>code selector 0x18</b> (8*3)
+	and <b>data selector 0x20</b> (8*4).
+	</p>
+	<p>
+	So in order to use one of these selectors, just copy one of the above segment selectors into the segment register
+	that will be used.
+	</p>
+ 
+	<h3>DPL</h3>
+
+	The <b>Descriptor Protection Level (DPL)</b> is the protection level of a segment descriptor.
+	For example, our kernels code and data segments DPL are 0 for ring 0 access.
+
+	<h3>RPL</h3>
+
+	<p>
+	The <b>Requested Protection Level (RPL)</b> allows software to override the CPL to select a new
+	protection level. This is what allows software to request changes to other protection levels, such
+	as ring 0 to ring 3. The RPL is stored in bits 0 and 1 of a descriptor selector.
+	</p>
+	<p>
+	Wait, <i>what</i>? Remember that a segment selector is just an offset into the GDT. So, for example,
+	0x8 bytes was the offset for our ring 0 code descriptor. 0x10 was the offset of our data selector.
+	0x8 and 0x10 are <b>segment selectors</b>. GDT entries are all 8 bytes, so the value of a segment
+	selector will always be a multiple of 8: 8, 16, 24, 32 etc. 8, in binary, is 1000. This means, with
+	any value of a segment selector, the low three bits are zero.
+	</p>
+	<p>
+	The RPL is stored in the low two bits of the segment selector. So, if our segment selector is 0x8,
+	the RPL is 0. If its 0xb (0x8 but with first two bits set, binary 1011 instead of 1000) the RPL is 3.
+	This is required; this is how our software can switch to user mode.
+	</p>
+
+	<h3>CPL</h3>
+
+	The <b>Current Protection Level (CPL)</b> is the protection level of the currently executing program.
+	The CPL is stored in bits 0 and 1 of SS and CS.
+
+	<p>
+	Remember that GDT entries are 8 bytes in size. Because segment registers,
+	in protected mode, contain a segment selector (GDT entry offset), the low three bits are guaranteed to be zero.
+	The low two bits of CS and SS are used to store the CPL of the software.
+	</p>
+
+
+	<h3>Protection Levels</h3>
+
+	<p>
+	If a software attempts to load a new segment into a segment register, the processor performs
+	checks against the CPL of the software and RPL of the segment that it is trying to load. If the RPL
+	is higher then the CPL, the software can load the segment. If it is not, the processor will raise
+	a <b>General Protection Fault (#GP)</b>.
+	</p>
+	<p>
+	It is important to understand how RPL works, it is required information used when switching to user mode.
+	</p>
+
+	<h2>Step 2: The switch</h2>
+
+	<p>
+	Now we can make the switch to user mode!
+	</p>
+	<p>
+	There are two ways of performing the jump: Using <b>SYSEXIT</b> instruction or with an <b>IRET</b>.
+	Both of these methods have their advantages and disadvantages so lets take a closer look. We will
+	be using IRET in the series for portability purposes.
+	</p>
+
+	<h3>SYSEXIT Instruction</h3>
+
+	This section is planned to be expanded on.
+
+	<h3>IRET / IRETD Instruction</h3>
+
+	<p>
+	A lot of operating systems may employ this method as it is more portable then using SYSEXIT. Larger
+	operating systems might even support this as a back up method in the case SYSEXIT is not avialable.
+	</p>
+	<p>
+	Okay, so how can IRET help us perform the switch? Recall from <a href="http://www.brokenthorn.com/Resources/OSDev5.html">Chapter 3</a>
+	the different methods used when switching modes. IRET is a trap return instruction. When executing an IRET, we can adjust
+	the stack frame so it returns to user mode code.
+	</p>
+	<p>
+	When IRETD is executed, it expects the stack to have the following:
+	</p>
+ 	<ul>
+		<li>SS</li>
+		<li>ESP</li>
+		<li>EFLAGS</li>
+		<li>CS</li>
+		<li>EIP</li>
+	</ul>
+	<p>
+	IRETD causes the processor to jump to CS:EIP, which it obtains from the stack. It also sets the
+	EFLAGS register with the value above from the stack. SS:ESP will be set to point to the SS and ESP
+	values that was obtained from the stack.
+	</p>
+	<p>
+	These are automatically pushed on the stack when an <b>INT</b> instruction is executed. Because of this,
+	in the normal case these values would remain untouched. However, we can modify these values to cause
+	IRET to perform a mode switch.
+	</p>
+	<p>
+	Okay, so first is setting the segment selectors. Recall that the low two bits represent the RPL that
+	we want. In our case, we want 3 for user mode. So lets do that now:
+	</p>
+
+      <blockquote><pre><div class="code">void enter_usermode () {
+
+	_asm {
+
+		cli
+		mov ax, 0x23	; user mode data selector is 0x20 (GDT entry 3). Also sets RPL to 3
+		mov ds, ax
+		mov es, ax
+		mov fs, ax
+		mov gs, ax</div></pre></blockquote> 
+ 
+	Now we can perform the switch to user mode. This is done by building the stack frame for IRET and issuing
+	the IRET:
+
+      <blockquote><pre><div class="code">		push 0x23		; SS, notice it uses same selector as above
+		push esp		; ESP
+		pushfd			; EFLAGS
+		push 0x1b		; CS, user mode code selector is 0x18. With RPL 3 this is 0x1b
+		lea eax, [a]		; EIP first
+		push eax
+
+		iretd
+	a:
+		add esp, 4 // fix stack
+	}
+}</div></pre></blockquote>
+	<p>
+	Notice that the stack frame matches that of what was in the list above. The IRETD instruction
+	will cause 0x1B:a to be called in the above code inside of ring 3.
+	</p>
+	<p>
+	There is a slight problem however. If you try to use the above routine, or switch to user mode
+	in a different way in the kernel, it will cause a <b>Page Fault (PF)</b> exception. This is do
+	to the pages for the kernel being mapped for kernel mode-access only. To fix this, we will
+	either need to enter user mode a different way or map the kernel so user mode software can access it.
+	</p>
+	<p>
+	For now, we are just going to map the kernel so user mode software can access it. This involves
+	updating the <b>vmmngr_initialize()</b> routine and setting the USER bit in the PTEs and PDEs.
+	</p>
+	<p>
+	In a more complex operating system, this approach would not be used. This approach only works
+	if we map kernel pages so they can be accessed by user mode software, which is bad. A more
+	recommended approach is to keep kernel pages mapped for kernel-only access, and have the loader
+	component of your kernel to map user mode pages when loading a user program. A stack and heap
+	allocator would then map a region for program stack and heap to user mode. This current method
+	<b>shares</b> the kernel stack with user land; larger systems should not do this.
+	</p>
+
+	<h3>Entering v8086 Mode</h3>
+	<p>
+	These are the same steps involved when setting up v8086 mode. v8086 mode requires a user mode task
+	in order to enter v86 mode. Thus, by doing the above, you can enter v86 mode as well. However, there
+	is one slight modification needed. 
+	</p>
+	<p>
+	Recall the format of the EFLAGS register. Bit 17 (VM) is the <b>v8086 Mode Control Flag</b>. Because we
+	push a value for EFLAGS on the stack when performing an IRET, in order to enter v86 mode, just set bit 17
+	of EFLAGS before pushing it on the stack. This will cause IRET to set the VM bit in the EFLAGS register
+	on return.
+	</p>
+	<p>
+	Thats all that is needed to enter v8086 mode.
+	</p>
+
+	<h3>Notes on design</h3>
+	<p>
+	The above method presents an easy way to get into user mode, but at a cost: in order for the above
+	method to work, the kernel region must be mapped to allow ring 3 software access to kernel memory.
+	Because of this, while running in ring 3, the software-while will have some limitations do to protected
+	mode, will be able to call kernel routines directly or even trash kernel space.
+	</p>
+	<p>
+	A possible way to resolve the above issues is to keep kernel memory reserved for ring 0 software. The loader
+	component of the kernel can then map the necessary ring 3 regions of memory for the process <i>while</i> loading
+	the program.
+	</p>
+	<p>
+	This will be looked at further in the next chapter when we develop a loader for the OS.
+	</p>
+
+	<h1>Switching back to kernel land</h1>
+
+	<h2>Step 1: Setting up the TSS</h2>
+
+	<p>
+	The x86 architecture supports hardware assisted task switching. This means the architecture includes
+	hardware defined structures that allow the processor to select between different tasks.
+	</p>
+	<p>
+	Most modern operating systems do not utilize the hardware task switching support for portability purposes.
+	These operating systems typically employ software task switching methods.
+	</p>
+
+	<h3>Task State Segment (TSS)</h3>
+
+	<p>The TSS structure is quite large:</p>
+ 
+<blockquote><pre><div class="code">#ifdef _MSC_VER
+#pragma pack (push, 1)
+#endif
+
+struct tss_entry {
+	uint32_t prevTss;
+	uint32_t esp0;
+	uint32_t ss0;
+	uint32_t esp1;
+	uint32_t ss1;
+	uint32_t esp2;
+	uint32_t ss2;
+	uint32_t cr3;
+	uint32_t eip;
+	uint32_t eflags;
+	uint32_t eax;
+	uint32_t ecx;
+	uint32_t edx;
+	uint32_t ebx;
+	uint32_t esp;
+	uint32_t ebp;
+	uint32_t esi;
+	uint32_t edi;
+	uint32_t es;
+	uint32_t cs;
+	uint32_t ss;
+	uint32_t ds;
+	uint32_t fs;
+	uint32_t gs;
+	uint32_t ldt;
+	uint16_t trap;
+	uint16_t iomap;
+};
+
+#ifdef _MSC_VER
+#pragma pack (pop, 1)
+#endif
+</div></pre></blockquote> 
+<p>
+	The TSS is used to store information about the state of the machine prior to a hardware task
+	switch. It has a lot of members, so lets take a look!
+</p>
+	<ul>
+		<li><b>General Fields:</b></li>
+		<ul>
+			<li>State of LDT,EIP,EFLAGS,CS,DS,ES,FS,GS,SS,EAX,EBX,ECX,EDX,ESP,EBP,ESI,EDI <b>prior</b> to task switch</li>
+		</ul>
+		<li><b>prevTSS</b> - Segment Selector of previous TSS in task list</li>
+		<li><b>cr3</b> - PDBR, address of page directory for current task</li>
+		<li><b>trap</b></li>
+		<ul>
+			<li><b>Bit 0:</b> 0: Disabled; 1: Raise Debug exception when task switch to task occurs</li>
+		</ul>
+		<li><b>iomap</b> - 16 bit offset from TSS base to I/O permissions and interrupt redirection bit maps</li>
+		<li><b>esp0,esp1,esp2</b> - ESP stack pointers for ring 0, 1, and 2</li>
+		<li><b>ss0,ss1,ss2</b> - SS stack segments for ring 0, 1, and 2</li>
+	</ul>
+	<p>
+	Most of these fields are pretty simple. While we are not using hardware assisted task switching,
+	we need to let the processor know how to go back to ring 0. Because of this, we need to set some
+	of the fields in this structure - in particular the ring 0 stack and selector fields.
+	</p>
+
+	<h2>Step 2: Installing the TSS</h2>
+
+	<h3>Descriptor Segment</h3>
+	<p>
+	A TSS as implied by its name is a <b>segment</b>. Simular to all segments, the TSS requires
+	an entry in the GDT. This allows us to control the TSS: setting if the task is busy or inactive;
+	what software can access it (DPL) and other flags that can be set with descriptors. <b>The Base
+	Address fields</b> must be the base address of the TSS structure that we set up.
+	</p>
+
+	<h3>LTR Instruction</h3>
+	<p>
+	The <b>LTR</b> (Load Task Register) instruction is used to load the TSS into <b>TSR</b> register.
+	For example:
+	</p>
+
+    <blockquote><pre><div class="code">void flush_tss (uint16_t sel) {
+
+	_asm ltr [sel]
+}</div></pre></blockquote>
+
+	<p>
+	<b>ax</b> is the segment selector for the TSS. Because the architecture supports hardware
+	task switching, TSR stores the address of the TSS that defines the current task.
+	</p>
+	<p>
+	The <b>Task State Register (TSR)</b> is a register that stores the <b>TSS Selector</b>,
+	<b>TSS Base Address</b> and <b>TSS Limit</b>. Only the TSS Selector can be modified by software however.
+	</p>
+
+	<h3>Installing the TSS</h3>
+
+	<p>
+	In order to install the TSS structure, first install the GDT entry for the TSS. Then select
+	the TSS as the current task by calling <b>flush_tss</b> above.
+	</p>
+
+ <blockquote><pre><div class="code">void install_tss (uint32_t idx, uint16_t kernelSS, uint16_t kernelESP) {
+
+	//! install TSS descriptor
+	uint32_t base = (uint32_t) &amp;TSS;
+	gdt_set_descriptor (idx, base, base + sizeof (tss_entry),
+		I86_GDT_DESC_ACCESS|I86_GDT_DESC_EXEC_CODE|I86_GDT_DESC_DPL|I86_GDT_DESC_MEMORY,
+		0);
+
+	//! initialize TSS
+	memset ((void*) &amp;TSS, 0, sizeof (tss_entry));
+
+	TSS.ss0 = kernelSS;
+	TSS.esp0 = kernelESP;
+
+	TSS.cs=0x0b;
+	TSS.ss = 0x13;
+	TSS.es = 0x13;
+	TSS.ds = 0x13;
+	TSS.fs = 0x13;
+	TSS.gs = 0x13;
+
+	//! flush tss
+	flush_tss (idx * sizeof (gdt_descriptor));
+}</div></pre></blockquote>
+	<p>
+	In the above code, <b>TSS</b> is a global structure definition for our <b>tss_entry</b> structure.
+	We set up the TSSs selector entries to match the previous task (user mode selectors) and ring 0
+	stack (kernel stack, located at kernelSS:kernelESP). <b>flush_tss</b> installs the TSS into TSR.
+	</p>
+
+	<h1>Additional Instructions</h1>
+
+	There are a few other instructions that can be useful. All of these instructions can be executed
+	by user mode software.
+
+	<h3>VERR Instruction</h3>
+
+	<p>
+	<b>VERR</b> (Verify Segment is Readable) can be used to check if a segment is readable. The processor
+	will set the zero flag (ZF) to 1 if it can be read. This instruction can be executed at any proviledge level.
+	</p>
+
+      <blockquote><pre><div class="code">verr [ebx]
+jz .readable	</div></pre></blockquote> 
+
+	<h3>VERW Instruction</h3>
+	<p>
+	<b>VERW</b> (Verify Segment is Writable) can be used to check if a segment is writable. The processor
+	will set the zero flag (ZF) to 1 if it can be written. This instruction can be executed at any proviledge level.
+	</p>
+
+      <blockquote><pre><div class="code">verw [ebx]
+jz .readable	</div></pre></blockquote> 
+<!--
+	<h3>LSA Instruction</h3>
+-->
+	<h3>LSL Instruction</h3>
+	<p>
+	This instruction can be used to load the segment limit of a selector into a register.
+	</p>
+
+<blockquote><pre><div class="code">lsl ebx, esp
+jz .success</div></pre></blockquote> 
+
+	<h3>ARPL Instruction</h3>
+	<p>
+	This instruction can be used to adjust the RPL of a selector. It takes the form <b>arpl dest,src</b>,
+	where dest is a memory location or register, src is a register. If the RPL of dest are less then src,
+	the RPL bits of dest are set to the RPL bits of src. For example:
+	</p>
+      <blockquote><pre><div class="code">arpl ebx, esp</div></pre></blockquote> 
+
+	<h1>System API</h1>
+
+	<h2>Abstract</h2>
+
+	<p>
+	A <b>System API</b> provides tools, documentations, and interfaces that allow software to interact
+	with the operating system. Different operating systems may use different termonology but the basic
+	idea is the same. For example, Windows calls this API the "Native API".
+	</p>
+	<p>
+	The System API facilitates software interacting with the operating system and device drivers.
+	The System API is the interface between user mode software and kernel mode software. Whenever the
+	software needs system information or to perform a system task, such as creating a file, the software
+	would invoke a system call.
+	</p>
+	<p>
+	A <b>System Call</b> also known as a <b>System Service</b> is a service provided by the operating system.
+	This service is usually a function or routine. Software can invoke system calls in order to perform system
+	tasks.
+	</p>
+
+	<h2>Design</h2>
+
+	<h3>SYSENTER / SYSEXIT</h3>
+
+	This section is planned to be expanded on.
+
+	<h3>Software Interrupt</h3>
+<p>
+	Most System APIs are implemented by using a software interrupt. Software can use an instruction,
+	like <b>int 0x21</b> to call an operating system service. For example, to call the DOS's Terminate
+	function we would do:
+</p>
+      <blockquote><pre><div class="code">mov ax, 0x4c00 ; function 0x4c (terminate) return code 0
+int 0x21 ; call DOS service</div></pre></blockquote> 
+
+	<p>
+	In the above code, AH contains a function number. The int 0x21 calls the 0x21 interrupt vector
+	to call DOS.
+	</p>
+	<p>
+	In order for the above to work, the operating system will need to install an ISR for interrupt vector
+	0x21. The ISR would be a <b>Finity State Machine (FSM)</b> that compares AH and passes control to the
+	correct kernel mode function. And that, dear readers, is the design.
+	</p>
+	<p>
+	Software interrupts are more portable then SYSENTER and SYSEXIT. Because of this, most operating systems
+	provide support for this method (possibly along with other methods.) We will be using this method in the
+	series.
+	</p>
+
+
+	<h3>Examples</h3>
+	<p>
+	System APIs typically consist of hundreds of system calls.
+	</p>
+	<p>
+	This lists some operating systems and what methods they support. The INT numbers are software interrupt
+	vector numbers using the above method.
+	</p>
+
+	<ul>
+		<li>DOS: INT 0x21</li>
+		<li>Win9x (95,98): INT 0x2F</li>
+		<li>WinNT (2k,XP,Vista,7): INT 0x2E, SYSENTER/SYSEXIT, SYSCALL/SYSRET</li>
+		<ul>
+			<li>Over 211 functions</li>
+		</ul>
+		<li>Linux: INT 0x80, SYSENTER/SYSEXIT</li>
+		<ul>
+			<li>Over 190 functions</li>
+		</ul>
+	</ul>
+
+	<h2>Basic System API</h2>
+
+	<h3>Step 1: System Call Table</h3>
+
+	<p>
+	Most System APIs implement a System Call table that contains all services. This table can be
+	static, dynamic, auto generated, or a combination of the three. Large operating systems typically
+	employ an auto-generated dynamic size table of system calls. This is do to the large number of
+	system services that might be in this table; it would be very tedius to create it by hand.
+	</p>
+	<p>
+	For our purposes, we can just define a system service table in the kernel. It would contain the
+	addresses of different functions that we have in the kernel that would like to be callable:
+	</p>
+      <blockquote><pre><div class="code">#define MAX_SYSCALL 3
+
+void* _syscalls[] = {
+
+	DebugPrintf
+};</div></pre></blockquote>
+	<p>
+	Hm, this table is quite small. We will add more to this list in the upcoming chapters, however
+	it wont be too complex.
+	</p>
+	<p>
+	Because DebugPrintf is accessable from user mode (do to the kernel pages being mapped to allow this),
+	and DebugPrintf not using any privedge instruction, the user mode software can technically call this
+	routine directly without any problems. Depending on the design of your operating system or executive
+	software this can cause security and stabability issues.
+	</p>
+	<p>
+	This is why it is typically recommended to keep the kernel pages accessable only from kernel mode.
+	While it adds complexity to the software, the end result might be worth the effort.
+	</p>
+
+	<h3>Step 2: The Service Dispatcher</h3>
+
+	<p>
+	The next step is to create the service dispatcher ISR. Before that, we need to decide on what ISR
+	to use... hm... Ill just follow Linux here and use 0x80. You can use any interrupt vector you like
+	however, a lot of OSs use different vectors. So, lets install the ISR.
+	</p>
+	<p>
+	Remember that ISRs are stored
+	in the IDT managed by the HAL layer. Also recall from <a href="OSDev15.html">chapter 15</a> that each
+	IDT descriptor has its own DPL setting. <b>If the DPL of an IDT entery is less then the CPL, a GPF will
+	result.</b> In other words, when we enter user mode, we can only call ISRs with IDT descriptors with
+	DPL 3. Because we want our system interrupt callable from ring 3 software, we must install this ISR with
+	the correct flags.
+	</p>
+	<p>
+	However, do to the current design of the HAL subsystem, this cannot be done by just calling setvect(),
+	as this function does not allow us to set specific flags. To work around this issue, <b>setvect()
+	has been modified with a second paramater to allow optional flags to be set.</b> This uses the C++
+	default paramater feature to achieve this so no other code needs to be updated.
+	</p>
+      <blockquote><pre><div class="code">void syscall_init () {
+
+	//! install interrupt handler!
+	setvect (0x80, syscall_dispatcher, I86_IDT_DESC_RING3);
+}</div></pre></blockquote>
+	<p>
+	Thats all there is to it :)
+	</p>
+	<p>
+	<b>syscall_dispatcher</b> is our ISR for system calls. This ISR will need to determin what
+	system service to call by looking up the function in <b>_syscalls</b>. Usually System APIs
+	use EAX to idenitify function numbers. We are going to do the same here. Thanks to the system
+	service table we defined above, we can use EAX as an index. So, the function to call will be
+	<b>_syscalls [eax]</b>.
+	</p>
+
+      <blockquote><pre><div class="code">_declspec(naked)
+void syscall_dispatcher () {
+
+	static int idx=0;
+	_asm mov [idx], eax
+
+	//! bounds check
+	if (idx&gt;=MAX_SYSCALL)
+		_asm iretd
+
+	//! get service
+	static void* fnct = _syscalls[idx];</div></pre></blockquote>
+	<p>
+	Okay, so now we have a pointer to the function to call. However
+	now we a small problem. The above will effectively get a pointer to the service function
+	we want based on the value given by EAX. However we dont know what function it is. We also dont know
+	what to pass to the function nor the amount of paramaters it has.
+	</p>
+	<p>
+	One possible solution is to push all registers on the stack for the function call. Because the services
+	are all C routines, we have to pass the paramaters in the way C functions would expect them.
+	</p>
+
+      <blockquote><pre><div class="code">	//! and call service
+	_asm {
+		push edi
+		push esi
+		push edx
+		push ecx
+		push ebx
+		call fnct
+		add esp, 20
+		iretd
+	}
+}</div></pre></blockquote>
+	<p>
+	Thats it :) The <b>add esp, 20</b> pops the 20 bytes off the stack that we pushed; and notice we
+	return from the ISR with an <b>IRETD</b> instruction.
+	</p>
+	<p>
+	After the system software or executive installs their ISR to their respective interrupt vector,
+	the software can call it by issuing a software interrupt. For example, if we call <b>syscall_init</b>
+	to install our ISR, we can call a system service like this:
+	</p>
+     <blockquote><pre><div class="code">_asm {
+	xor eax, eax ; function 0, DebugPrintf
+	lea ebx, [stringToPrint]
+	int 0x80 ; call OS
+}</div></pre></blockquote>
+
+
+	<h3>Notes on design</h3>
+	<p>
+	Most operating systems abstract the interrupt vector number and register details behind C interfaces.
+	While calling system services in larger OSs directly is still possible, it is recommended to develop
+	a standard C interface around the system services your system provides to user land software.
+	</p>
+	<p>
+	Large OSs typically wont have a system service for printing a message to the display. Rather it would contain
+	services that can be called from user land software that allows user APIs to interact with kernel mode services,
+	servers, or device drivers. Because of this, large OSs typically contain system APIs consisting of several hundred
+	function calls.
+	</p>
+
+	<h1>Demo</h1>
+
+	<center><img src="images/ch23.png"><br><i>Enter into user mode</i>
+	<br><a href="Demos/demo23.zip">Demo download</a>
+	</center>
+
+	<h3>New and Modified Files</h3>
+
+	<p>
+	This chapter adds a few more files to the series demo. This includes:
+	</p>
+
+	<ul>
+		<li>hal/tss.h</li>
+		<li>hal/tss.cpp</li>
+		<ul>
+			<li>Includes TSS routines described in this chapter</li>
+		</ul>
+		<li>hal/user.cpp</li>
+		<ul>
+			<li>Includes user mode switching routines</li>
+		</ul>
+	</ul>
+
+	<p>
+	This chapter also modifies the following files:
+	</p>
+	<ul>
+		<li>kernel/mmngr_virtual.cpp</li>
+		<ul>
+			<li>vmmngr_initialize has been updated to allow kernel pages to be user accessable</li>
+		</ul>
+		<li>hal/hal.h/cpp</li>
+		<ul>
+			<li>set_vect() has been modified with an added second paramater</li>
+		</ul>
+		<li>hal/gdt.h</li>
+		<ul>
+			<li>MAX_DESCRIPTORS has been redefined to 6 for the added GDT entries</li>
+		</ul>
+		<li>hal/gdt.cpp</li>
+		<ul>
+			<li>Upgraded to include the installation of the user mode descriptors</li>
+		</ul>
+		<li>kernel/main.cpp</li>
+		<ul>
+			<li>Updated to reflect new changes</li>
+		</ul>
+	</ul>
+
+
+	<h1>Conclusion</h1>
+	<p>
+	Welcome to user land!
+	</p>
+	<p>
+	Now we have everything that is needed to switch between user land and kernel land. With this,
+	we now have the capability of mapping user mode pages, loading, and running a program
+	in usermode. We dont quite have the capability of returning back to the kernel of the OS
+	in a nice way do to the system not managing tasks. We will look at this in the next chapter.
+	</p>
+
+	Until next time,
+	<p>
+	~Mike<br>
+	<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2/">Neptune Operating System</a></i>
+
+	<br><br>
+	<i>Questions or comments? Feel free to <a href="mailto:neon6000@aol.com">Contact me</a>.</i>
+
+	<br><br>
+	Would you like to contribute and help improve the articles? If so, please <a href="mailto:neon6000@aol.com">let me know!</a>
+
+<br><br> 
+<table width="100%" border="0"> 
+<tbody><tr> 
+<td><p align="left"> 
+<a class="anchor" href="OSDev22.html"> 
+<img src="images/left.jpg" border="0"></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev22.html"> 
+<font size="4">Chapter 22</font> 
+</a> 
+ 
+</p></td> 
+<td> 
+<p align="center"> 
+<font size="4"><a class="anchor" href="OSDevIndex.html">Home</a></font> 
+</p> 
+</td> 
+
+<td><p align="right"> 
+<a class="anchor" href="OSDev24.html"><font size="4">Chapter 24</font></a> 
+&nbsp;&nbsp;
+<a class="anchor" href="OSDev24.html"><img src="images/right.jpg" border="0"></a> 
+
+</p></td> 
+</tr> 
+</tbody></table> 
+ 
+ 
+ 
+</p></td></tr></tbody></table></body></html>Ytext/htmlUUTF-8_1http://www.brokenthorn.com/Resources/OSDev23.htmlP¥#Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl1U­: ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl1U·| ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔOJO‰PNG
+
+   IHDR  ‡  Ü   +×—   sRGB ®Îé   gAMA  ±üa    cHRM  z&  €„  ú   €è  u0  ê`  :˜  pœºQ<  IÍIDATx^íÝçsÜV¢÷yyî3[µµ/v_<÷ØÚçÖnm=ûf¶ž­ºOÕõ<|m“ìñ‡±"%Q9s"ERY¢$[¶¬˜$Ë’¬h+Q9‹sîn…_ÏØ3æô!! ÑM:¤¾ª3œ&À9ø¿sÐÁ/¼5õò?ÿïÿÛþÏ?ùOÿËOÿé'?ùéOÿé§/¼ðŸ~2aÂ„ÿù…ÿéŸ^xáŸ^òí'ÿ@ ±(ðãc±Ù´YA‘†v§ÓÀ?´ÓÌòÙ¿[€?þ -ýë„	ÿøþÇïÿþÂ÷ß~ÿmßw¦ç6$¬®Oú¸9ùÓÖÔÏÚR·µgìè%kOwî^_á¾î¢J¿û"Ö§ €  ð|
+äïèt(™[»Œ%ããv½¤|Üš\Ö_R?aAÎ=‘ÊK×6Ê’XÖ$Z™Ð2¤EB›ŠLî§Êö®ô­FJ mkZb~Ö–²¥U×Z¾jeC‹VÖ–¤uÍ²$®kJ\­•¥+—–ÔKü²º	âñ%µ¢ˆl–EÏf1{Ö&ÐÁl¶(ÁF–-)·QAdqrS)q¡¤ 0I[dÑÏ(í×²1§Õâv]“–¡ÁÄÕòt(wJêÍ¥¨^Ë_Qòêârje‰O¯ ýßÓÁlJeýÎö`0“XöSÍ­z[y€À”i':Ð®˜”q*P²»ã‹sýÇ/?,—7–‹Ž_ìåXMÿ±¢ô;¯•âm­‰´ÛÃ²ä|Öº¾¼kSU÷`©ìÞ$KE÷ÆŠ®å¢tŠR¶¿³lo‡VvwlØÝž½±9im“6ýÎ}Kv´q6â–mjŠÏ¸·$åŽ(‹’njw°-SYÞÊœ.¦ÅÆ<~êÊ¼€rÞ#0bÁQ'p(ÞÑ¾çx_Üúž9¥˜"ÿ”|ÿ¤\ß‡Y¾³}ïehåéZy7¥û·ÉÝï$u¿ßõêÂößÆ5l«ì(ÚÒ"÷œõqËŠ	kÛ­lŸ_Ú6oyÛÜ¢ÖÙË´2« XòEi™‘Û“Ó2=«yjzóä”Æé©uEe™käÌ¸x[Û‘¯ªKwUå}R‘¹¡"uMEòÊò¥%å‰¥åñËEÙW´?®pÿÂ¼}òöÍËÙ›±{zòç³s«Ëo/[Ýð$•Å#1}Öob§¯¾·bó­Ov^Ï_u*¾ðXòÚ	e÷dkwÌ·¦ÈÆÉñP$ë÷Íy€À0¸!0‚ú[gx0Î¾ºÐ¿.³%÷Y m“?~­Ñ*ÿüRÿ¼bßœå¾Ø"_l¡oF/&Ï75§û£Ì®÷RºÞ‰ïøÍ¼†·ç^©:ì“öv$¬nK]ß–¶¾-iMkÂÊÖ¸ÒÖÅÅ­‹ŠZ¶,eYËüe-óò[ææ5ÏÎiš™Ñ4=¥qrBí´„+6_^Ù(ZR]²ë@Ù7}Y½¦¢ªxgÕ²mUyŸUæl©Ìú¸"ssEæ¦Šô²ŠÔõåIkÊVì_T´wvÎÖ©)k§gU~éLåø©\¿¯âö­-÷ïµ7ÜïnmîmmyP{·óÊÅúÃÇï|ºërÚòÃ–~r×úéT/hkÓë¡W³y€À0FðŠÌ®@`¼
+|u¾o^©?ÿ³@ÁÖ@Æ¦@â:ÿ’ÕþE+üóKüs—ûæùfúføfäù¦ewOÎèþ µëw	oÌoøÕäóGŽ‹õµ¹ò†=‹KÚÒ×i%yuëÒ•-ñ¥-qÅ­‹‹Z¶,\Ö²° eA^ËüÜ–¹9Ís²šfe4Å¤4NI¨ýpÁÕ5›†Rù|_eÞ§79¸ùhõÚªêÒÝUEÛ«ò?¯Ìý´"{KeæÇ•W¤mªH)+O\[¿rÿââ½só>Ÿ–Vú‡8ÑñŠòàì¡TÖÞçU]}çÑ_Gk{kKWG{OoàáßþöýÀÀÀÃGß]¿þ`û¶î÷þ´Y{ƒ™,z*'Ê¤ò0CˆÍ@ "©<c™_äqÖæ@òzÿ’Uþ¥"ý±…þ™ùþé9¾©Y¾IÝ¢|˜Úý^r÷ï“º~ßùæ‚Æ—¦^8z" «Û°»cA‘Èã¶”Õ­‰+ÅÇ“Z–·,*j]¸¬uAAë¼¼Ö¹9-s²ZfgµÄf4ÏJož‘Ö,æÊS—Öýiáõµ›šW4‰"ZR™±ñÀÚêëT¯ØWU("ù³J‘Ç›+RË*’×ÃxU0Kö/,Ú7ÙÞÙ¹Û¦g¬x/A´D¤²f}®¬¥rEÅ€¿³©¾åÎí†×î_»Xwÿnó7“ÆÌÜ[ùî‹HåHOÖG %¯Î÷OË÷/]'ò5 "YL‘gó8×7%Óÿ§tßû)¾?$uÿ>±ûÝ¥Ý¿Mè~'¡ûí¸Î·6½2½æè‰=•ç¶%¬l_º¢-¾¤uå–.ç2=µyZJÓ´ÄúI‹o¬ÝÜ2”Êýië«K÷T—î‘ÜrµNÌiƒy¼®|éšýqâ–uñþËöÏ+Ë›Î\Ý7'wOlÎ¶Y+?H-y’ÊÚ£¼:ñŽmq[¼¢r0•ïÝmºy½áÒù»WÎß-^þåô˜m™™‡ŠŠŽ0y™œ%Ë2øn¯à\¹¶ã¯ªºõf‰b‰(Æ%Ñ=¾Xû±ŸÌÍ­bsñS<Kä®ÎÞz,Jt»uÞêÄÕG×¿]G,ÏoAúü™x,–DÑ »ýG}DÅ;:Ä¶Ò¼úL¤Mr>®¨[i3ôõE{Äœ¹õØá/Yž›ZÄ:â§<1äúbCçm£¾@œ¸úPœ¦Í%»(â©Ã5ýÅÛÛ+TŸéËåá˜ž’«‰…â©¡¾ëÓ·Íû´U.Çµ¡¢;ìr½úƒ¨“+ÇÎ÷OÉ,^Õ³xu`Ai`NQ`V˜"û§dù?J÷#Ù÷n¢ÆãEñ‰òv\×ÄEÍ¯Ä\<zROåÎyËÚãKÛãJÛ—·¹Hå–é)ÍÓ’&-¹±î“V™Ê¢%Ék«Å¹hGUþV½òŸˆd1?._,"¹pßÜ|}ù¾Øì½±ÙÛE*˜$ZŸ]78W–iŸ£
+Må«5µ7¯5lÙt,-õ@ié™•+Ï~4­Ð˜Êƒñ\Ö*SY‘ú…u¤RYdŒØÕê½bÏâ§1uœÓbïÉ^=¿#»Æ‹åb·úÞÄãèFvû:ÿvÈñ(ˆG:Vp>®¨[)»\_öxñöŽ¤u"q[d?ÊÇÆ"W[µ§S,?å‰!WJeó&Î;­"t‰ì8Ór}aÆ¦Á•­Eä±(yŸ¶‰Ç‡kˆc	Ýçö#Zß‰åb5Ùwâ±ØU0ãÈõ#µ[nÜ­ÜÜ–‚Àø8v®ÿ£lq×ºgáŠÀ¼â@ì²ÀŒ¼ÀÔlÿ¤ÿ‡i¾÷R|¿Kò½³Tã7ã´ò–Ì]oi©|é«SƒvuÎ)yÜWÒ¾¸¨ÝM*OÓe-•o®×Sù\EâÊª¼­ÚkÉ9ŸŠW‘Ÿó’ÒòEË÷Ï×fÉòßþY™ûc³öÆfmŸ‘¹êÃ$Ñ’„ìû¢hw°µGEõZÔ¯nsåžàì{÷´¹ò•`*oÿìÄÒ¤}	iÖ¨Íÿø«ì-W“×ßJX[—,^KÖ?‘]¦Maå\AŸJŽT*Ë$©#®×â§žÐa¯øÃi€C*“^N×Â¶$t…á´-luQì\l2"Ç¶mnV0µßîpÔ91Œ-”£"‰)mòÔuYô]M‚Ã\¹O‘²O†,!Ëû—Û–U>uïÊeX±% SyÎòÀÜâžàD9“Ð&ÊþRýHö½›ä{{©ïÍxßëq¾×â|ohÁÜõÖâÁT–+SyÑòöÅËÛSy~AÛÜ¼¶99­±Ym33[gd´NOo–Ö:5U»¿-~NKm™–Ü09îæ†-mI+´—–EKD*Wf|Óõ'•é›+S6<‰á……OÏLß?#mÿÌŒ}±™;fd®6¤²ö-"	9õK‹µ/"÷+Ê+îôõtvµµÕÕ5Ý¼Ñ Í•¯4lØz¢xåW%«ÏOÝpö­Â“¿]vxîšo¦¤X²ú¶ñ»räÕ¤úlÿÙÛå—^_‚År}ñ«XGüšÿy»x,~šë{üÒ²à®N\{$~?µ4ìßô«¨H» ÕnlƒÝc™¬²
+Ù$SãõfïÔÆ¦ÖŠ_År¹Žå®v|Õ#—‹Ÿ«÷u÷/G,—õÊèðÅòæ§±m&L½yò¨b0äW¾¹(ÎÇej•Ãáèø¡=.&û]?^ËÕôê¤ƒéWÓá(rb{M¶Y{ùcè|ÐOª°}aì»ÁßP÷™öiüÓu‹œ ‡­îùZÁõÀhle­÷ßK÷Ï\ˆ-
+Äf¦çú§dS9Ýÿ‡Tÿ»)þ‰Iþ7—ú_Oðÿ&ÞÿZ¼O|dùE-/Ç\3ÔÁTÞÝ›ß¾°Hæ§S¹-6»mfVÛŒÌ¶émÓÒÛ¦¦i÷·E*OMk™šÜ89î––Ê«›E0‹–”Ç-¯ÌØ$ßn]©½ÝZ|j­Æƒ7´gg–ÏJß?S¤rÚ¾Yé;bÒW¨Í•sêÅ$9˜Êy"äµ®k)¯¸wüxíÙoênÝª¯»ÛtãJýÍ+õ›öœM«¼½pËùÙ¾^qàæÚµ•~ó«ß%ÇæÖ¿^1u“–¬ò2*®¼2Aõ%2E>=ä—ñkY•O<Ø+DÊZÅOÓcñ¬éz!¯ærŸÆÌZ±­)ùŒ×/càéå
+rp`9¤0¥²¸\ê-——N=•Cw%2L?:±âWc*‹Je"ZÖ+N_Gª†bZZé¹¹òÊ68—îì|8:¾ìSù«~ørx‘ùI›8Xq2è]oZÍxæ­,D‘ÃxŠ”'yè„íy8²ïB“^ÿ0žº¦ÕÄ†ú_YØêXq pìüƒß§ú§åf,ˆlž!R9Ï?%ÇÿQ–ÿƒLÿ3ü¿Kó¿x39ðz¢ÿ7K¿Ið¿–à{mqëKZ*÷I²Ý]3óÚç¶/(Ò²Y›+/k››ß6'¯-6·mVnÛÌìö˜ìöi™íSÓƒ©œÞ6%­mJJÓ¤¸Û¶´‹S‰-)_\X™º¾2}ceú¦Ê´"•+ÄG“—®Ôƒ¹b~NÅÜÌŠØôŠY©¢ìŸ•¶3&mõKEK´TÎ©×Ryia£yÉ¢e'N´=è\s¾¥ªòVuõ­CÇn½ß[~±y÷åö‡ïUÔ4çî»ºöøékÏÿ/M‹É:šº¥C‘Íz*‹ÙŸvˆëïsÚ+a¢ˆ%òr,ÈÕÄ¯r¡þ t¡\Y/;iWùÕ~ñS<Ö—ëU`ù¬iã†¢©²…Î{{ÍØwºïRÝ_Ä¯â§xllRè®Ä:ú±È®®°Ë-1MP²yîKØãÒ[åæpìz\n[º»[o˜Ý±,{VµCo°8ùE²Šãœ[Ú;²ô¾³C‹säÒC±ÎÚò'ÎîÏÖD`Ì	¿ðàÝÔ€xÃWLˆäž˜üÀôüÀ”¼À¤œÀ‡Ù÷²¿Ë¼“x3µçµ”À«IW¯&ø_]Üöë˜«ÇN÷ËãÝ¸·{f^Ç¼Bñù(­h©\Ø.Þÿ5· }v~{l^ûÌÜö9Ó³;¦fi™=%£}Jzû””æIñw7|Ö‘º^{¥I´¤|aAEòšÊô2-˜ÓÊDBW¤˜çÊ•ó²*ç¤WÄ¦TÌJ)Ÿ™²szÊš÷DKó›Ä$YL—'$iem¿±uaê¶Ó'/÷ûôþ|õJÛþ½×>¹Þ±áBã•Î‡gš{ÏÜï¿åüÊc·þÇÔ{sáìÜÓé[ºdIûxðÖ®x ÊŠ½ÚTXý)}‰\¸ó¸–gÎkWãO±\îÄXäO^×fâ±þ”^…©rã³¦_õ§ä>7ì±[ÁØÙæe;´ùŸØD,Ûl¹+SÂ¶Üîˆœ1åns¶vÉœ3Ûoì÷Çe”qs8v’ÂíRÖ<â±xØàÑ/"ãÅÊ'®ihÌ{ãL{KË•å>Å@Ða<gÿÉýˆ£+ØÖ)Ÿ²Ä„^øäXÖx¦mÅSúXP<6Vm„‰gåx—‚Àó p¼æáÛ)=åôLËï‰©\Ð3½ gj~Ï¤¼ÀŸrïç~Ÿx'³çÍŒž×Óz^Méy9¹çåDÿ¿/nÿeÌµcß¦ò¦ý¾ù]s‹:ç/ï\°¼Säîñ¸¨snaÇœe³:fåwÌÈí˜žÛ1-GËì)ÙS2Û'§¶|”poÃç©eí"˜EKÊäU$­ªL]W•¾¡J¤rÚ“×•+—Ëó÷ÿñ]Õ¼ôª9©•³“+f%ïš–´öýxÑ‘Å2˜'$‹W”µHÖ¦¼[:&'WÍŽß¼uÛ‘ÆzŸ¿óá¾û=Ÿ\éºÕñðJçã/ï¦mø&³êÊý×‰g®Z²æfúVñ_o–-ZP‰¢çôÖ#ÚÀ_.¹Þ¤]nô§äƒÜÏµë©viúV_Gü*–›Ö”¿ê‰b|ÖX©©¡M²\Ùn¡{;”¹+Èt?e-b¹©:çc·[ÙÍrKLi"›·ÿ›~K@‡…ÎÇel•]í&.ãjzËÈÃØézÿÊ…Îz*œ–g‹hêÁÚ só=a{$´ïŽ\ÖÞs°rŸ_l+~ŠÇboâ±ÝrYÅº*íírMŠQ t¬Ï’ñ!pââ£·’{>Èî™œ×3­ ×ô"®üõìž·2{_Ïèy%½÷åÔž—¿^Üñ‘ÊgH„Måþ˜‚®9Ë»æ/ïZP¬}XyA±ÏÁ`îœ]Ø9« sF~GL^ç´\-³§ävNÎê˜œÞúÑÒ{eÛ»µT.k-)ŸŸ]‘XZ™²¦*m½f½1UÉ+«KªâŸ¼á«znJÕœ¤Š™‰»§%¬{‰hIrI«("˜µTemHµ¥Cü—q3¶w‰2§èëÉË
+–m?ÐÖ¿õVÇ¶«Ÿ]lßu«ëÍØÔ·çä¼øö¢˜Ü#Úzy{·(2˜/LzNoí:rE»¬ˆ§vÔ^W?·~Õ+®¼ûÏöËMÖh×,ù«ø©]Mj>IzÃ®ÄB¹7ñÓ¸‚±ÒÐfÃÐ~.Ý×¢´pO÷ºÚ•K¶M¶A,m“Åc±Ü´­¬ôä`*µV¶\Kåív¥»<ýØíZv¹¦<¨³wþlè°Üù¸ŒëæptŸÍ_öHUyÔ¢]Là!FÓj¡ç’e_è‡£Â‰zîÉæåîè'žx O Ë3Ü²ïVVhI,Oxy–ÊØ-7þM	Ò(N6A`,
+œ¸ôèõÄž?fõ~”Û;%ß:•›ÛûVNßkY}¯dô½”Úû«Äž_.êøyÌõãçgS¥¸Þ={y÷¼’î%ÝZ*—jæwÏ+îi[Ô5³°+fY÷ôíÙ)¹]“sº&e´}”T·iWwÚ¦NQDKÊçfT$,¯L^U•úäÆuUÊêê”•UI%ÕK‹ÄçéQ]=;±jfÂî©ñëÞ_,Z"SYÌ˜'ˆ•µœŠäÌ]™;}Y»ý¢,^wå‹®Ç»ï6_n]ýuÓÇ×ºÿë¿¾ùë÷’þ”´+~ãm±BÆNß`Ù>8ñ•9­—swÿ,ï:Ý#8cW¨¢ý>¹pep\/?µ™AUÀ´ý×ÏƒwÅOã
+òj(—Ë%›‡æëú¯²GƒßP¡oxð¢vÉ+?÷@>Xÿ…ÖñS¬lWl­lyØ]‰c—ã±ÛµÜÍrKLyhÆb'º\¯Ôî¸Œ­
+{8rÿSÂšºCœú9ºZhWšúÑÔ~¥NŒP[q¤úù&\ž]¦b×wâÀõ3Ç¸¡Ýr±[¹~îîÁ?1÷ç k"0FN\~üjbï»½ïçô~d“Êïä÷½•×÷ZNßË™}¿NíûEbÏÏu¾sýÄ¹‡ƒW§ªÀôB_l±oni÷üR-wË”üîI"•3Û?J¾¿i—OÞ•-)Ÿ“V·¬2©¤*eUË¥Û"€«SWW¥®ªJYQT\Xx !ï@\¶XÞzöâÙK«fÄí™²xÝ{‹DKRVj©,ÊñHL”ÅÅy0’÷tgïõçî×Êâµ5¯OËÿ××bdyuRæŒüÃIŸÖeìêÉ-‹Èf‘å@ ¼8yõñ+K{'¦õý>»÷ýÜÞóû>Ìëû ¿ïýü¾÷òû~Ÿß÷Ûüþ‰yýoäöÿ&»ÿß3ú•Ú÷?–ö¾(Sùü#ÙÔöˆTžUìŸ½Â7w…oÞJß¼àQæ”úf—úbKý3Kü3JüÓ—û§ú§ø&åvOÊêø(åþ¦=LqoìÓnÑ’òÙ)‹s+
+ƒÁ¼B+É¥UÉ%UZ$U/-8Ÿs`IæEiæ%˜P5cÉž)‹Ö½¿H´$uM‡(†TÞ»y¬Gr~y sGË’uç•œ”E„túŽf¹Ž^ŒñÌc@ <8yíÏ/Å^O	¼“Ñó»¬ž?d÷ü1»G$´(ïæôþ6§wbNïÙ½¿Éê{9#8QNê}1¡çß´¿síDÍcÙÎO¾èVä›QÜ=Kd°Hb½hyì‹-ñÍ*ñÍ(ñÅû§i©<Y¤ržï£ìŽIi÷7ï¼&Z²/6iÿ‚Œò%yå	…K—W$.¯XZ¤•„e•ñùUq¹UK²ª¦WÏO©ž“X5+¾"fñÎÉ‹ÖˆT®y,SYÌ“‡æÊ[;ÅD9{ç“Y²ˆd»"§Ñ¢ÌžyT„  *pøÒ£wÒÚ_Ih{=©í­”Ž·SÛE™˜Ò>1µýÍ”ö7RÚ_Ké|5¥óåä®—;¹´ëÄw½¸¨ýÅ¹o,¼zââ`*o<Ø[Ú9}yÇŒâŽY%¢ÄŠŸÅ¢tÌ—wÄ,ÏvN+êœº¬sÊ²ÎÉ“ò:&e·ÎÈ¹¿¹|0•_|¸cIþŽÙ);æeì\˜½sQîÎEy;æîZ˜³kAö®ù™{ægì™—ºgNÊžØÄ=3öÄ,Ù5uñ§“­™%Z"ÞÅmNe9WÎ2Ü¾›Êz0ëR^Þ¸ .@ ç\`MuÏ®ã½ï$ßyiþÕ—ÝxyáõW^{yáµWÞåßÜüõ‚›¿Zpë—óoÿbîÍŸÏ¹ùâœÛ/ÎºñÆâk;¿_lz…{ü«Êý±%MÓ–ÕO/l˜¾L”úé¢4LÏo˜–×05¯aŠ(¹“s&g7LÊnœ”Õ0#ïþÊÝù[ß)²¦2ðåWõå¯žž¸nfòÚ)kf¦®™‘².XÖÇ$o˜ž¸aZBÙÔøSâ6LZR6iñº?-Z›uð±¿9•å»½DÑ^ZÞÑ5˜Í{µÚúÌ87ø«å½ky`OÞüÅc†/ò®¨1únš £'¾­kue@Ü=6—«>)ÊQ–ËO•/Ï>X%>vø¹xCUð“DÛº
+vû>9Ô÷É¡^­|1Tö~"ÊÞôh¥ºçãª'¥l `kwú§âEå`éZ]yKÎ<X¹Ý—ºZ›(Î•Å{°µ¯	~ë˜xÛ—ö©åÏÚÒ¶†´ü ”eyê=ô¢AÁï¡ €  0îÌßÐüÈ²ü:‘'%´ƒq»¦-eM›ønNñÊ±±È÷]‹ö›ñ%õ¢Èÿ˜£öŸ©Ð¾[+ZZo»ÿÂáßµÿX˜Ø‚  €Àó! SþÇ•µ/®*â[@ìŠøoAiß§,"|EûO*‹oÜßíE*3’@ @ 
+QIå¸åqËzýµ@ x†qb®L*?Ã j@ tR™; € ¨"@*«Ò@ «©¼oW™²§lÛ”m˜²]IÃ@ Â§²¸”;\ÍOìE_Ö«“‹¬Ëø3R8ÓÎêrÞsh;GÖÁÍq™j´k€÷sÓxÖA ˆàue÷©<²¬Î2ÌÑ@èÎ£Þ¡ó®FÖÄno¤²7ÎÔ‚ Œ¶@˜¹²~¹7…–ÕÆ¹¬qec–G7µLåÐ	®œ1;,çÙÎÝO+RÙÔ°PË%zÃ¢nƒCG¹Üï´ÏBö   "Ne‡i™|*tÒÝ4ÔMb…Öè¦_íòÞ¸­ûÄ2¶ÓØ7nÖqyDvÍ›;7ÌM¬ƒ  à€Ò©ì0µ‹7d#žÊ–ít“¸–ã•(†–C%÷Ã7h¬ƒ  à€S*›.ë–iuö„=6‡;Ã“¿°»5Íæõõî8ïÓ®QËŒ`*».¸Ac@ Â¤²±ã&•-ƒ9ºÛì»Š:•íÆgƒÝ\Ù4æ°{‰ÁƒóŒ*@ ÜDœÊ23d‘èMKŒ¿ÚMI“Æ8Y7ÖeW£›6¶Äx ¡u¹Ü›ÃœÞ*”Î¸D?L—µ[®ïÜQiDMbe@ (Â^9Š²‰¥€ó=ù(.Ñ9‡6#ºý° €ÀˆÊÞ}ã&©<â§/;D Æ™ ©ì]*³S‡ÃA qR™TF @@RY•žñ;D s¤2©Œ  €€*ORy€ €  ðLž¤rè7y±@ <ã§Ryáüi@ ð^àÑƒ6‹Tž0a@ < • €   Š€m*ïyúŸ>X°\n·ò1F¶
+¹·lžÜ•i·£TKh³£®WWŽÂÔ)£A]Ã"Ýj”zjdOÚHŠõ@`,
+X§²ÝUÞáê¯?5¸¨SÇ®KF£‘Ï<•e(F´Ã¤0n>Ì]=Ã¿ŸÑkù¨þ]<C1ªF QùT§á7}ÄSyøM²ÜÃ³jgèœÕý´u˜4>Ry”ÎÓßÂ0©G¯‘ìÔˆ,•×îêlw/Ò«¹ÝÍrÿ¦	Š)¢,g“Îít9{/!t?Q´ßî¶Ã®Â²¾O;7wBç….×4Åt?¡·ŒCy„žHv´¼ñ`\ÙMÊFôwá°óHûEK-A ˆ"Ne»{¤–WŸ°)%Ûêæêæp‰4]”ût¾[nhlCû#š+Ûí'¬]ûMµcÌeûC“/´#ÜôKØÑŒ›öØE—]Z?tÛÐ&™–Ø³ón-“>ì[DvíŒô<Û*V@ e¢IeË(u¸úX^¸.ÄÎXn®Âa/ –—¹°íÛ‹aSÖ2MÃÖ6#M};ü°é*`×¶(ÒÈýyeLk»Š,G.GivçO'mDQŒ®Âž“¬€ cK úTvH>Ëy˜Ýô.tŠV0Òý‡ÍçØÓ³Ê}ÃFƒå
+vsµ¨ëu“ÖQ$›vZ’FÚ»sÃyT!·R?•NK»ö‡=mÂž*¬€ ŠD–Ê.ç‚‘¦æHÍÝ¤EØ	™]‡…mdh„„M&‡}º©Î.Ýíü-—“Ê–Ùv®ï²ƒÂîÇò¤%•¿nÒ<FO`äSÙá*oên®nnæX¦k«›éoÔ©æ2¹#JÇˆÚoj@¤>açšîçdvÎaG$–sÙaŽlŒàªÍ•Ýü]„m¿û~½K{F Qõo‘ýŸsœ8ªÝ~,—;Ô¨_¬†r¦b¼Úµ?´ÁµÓÔ½^çöÛUj9ÈÛËÑ€ËãµkgØÝ¤ýhÜÃpF?ÎçCh
+:ŸÏ–§·%¦ÃñFÔ£zu`ç à½ ß¸9òßðå}/Ž§í&ßªãXi§jn´œHeRùÙ8ÜÝUêx¬´S)4ƒ 	ÊÏ>“"ê°ñºr¤7íŸ•ÃXiç³ò¡^¦ ©L*#€   Š ©¬JOsxÅæ € ã@@¹T~V/Ý=«zU;‡ž•Ã³ªW5Úƒ Ï¹€ÛOF?,4ªd#{u¶{£lèáDW¯g,&s÷ÇigY:¸ü ”e#]Eá]«"q¿¾C{"}Ã¶K4ç¶©æã^R_sBGÍ&Ï¹Àó˜Ê–—È¨Sá™œ@a!êVÙ9Dš+²î·ŠÔ__ß}Q›¸ßÐa´ä>hGäˆÔôq/i
+æ(6dÆ¨€S*¯ªî¯)Ã‡Ðë¥JÃN4]Ö;"WÏásøõËÒ?ºƒh«ˆúÝ”â#È8œ]Et¼vøN\žÏÃ9ðÑÛvD4F¯yìóº²éOÂîWÓÀÜxœ.ý_Ô`¹7ÍshLÔW+Sc†s¼ú®Lc cD™ÚiÜÄ8%5¶*jç°QaiÚ$Ë¹²Ãyiƒ†V¡QÔ¦e«,qÎçˆª¶ûûŠ4Ìœ÷c:Ë“V?åéêpž„Ž#Ã™6±;ß"=‹XF&•M„¦‹àð'sékW—e*8,Œ¢oB/|í´Ü¿q}7%#½GtÈ–â°ÇëLuƒír+ìybÎ5Òneg¨°Œa‡J¦;¢\·KÐ°ËCƒÜ´ÄR#lY‹ó /¢3™•P\À‹T¶†»§qþkw8»¹.¸o†iÍç0•®þÓ£›Ýà#Ò^pÓ³t,;×áÔ
+;Ì²;ê°CC÷ã —	Ö6ÒÁ„¾¾i”c·\øPOË>r8IÜã„=jV@@M/RyøGîü§H*‡½Ðl/¾òºìr2gš~ç
+;œT«õÐÁe¼û+Ð=ËXIe—)ky^Ù}O¼°]Ì
+(+@*Gÿ-"ch®ìþBï&_Ie7JÎseýÙ°g‘ûAÏh&BûÝå\ydSÙƒ1¨²×kö<xšÊQgƒ›9›É“éï9êöØíÇ¡aoxÚ]¹Fä¸†y¤vsÜ°Çë9Ãi•–I©ˆér®ììõ gDŽ×Ø×ví4¶Ðr}»´6HnÎ+—‰þ<\¬9ÆçDÀ)•åßƒå_fèSÆ%òoÒt›.¢«[¨¾åþÝ\Ý.ßÆvF×ßa}Âî6¬›Ý…,¢ã)üÐiŠ]ûõf;Ÿ?a}F3Î¡WóˆŒ=ërCË¿—èBÏ+çÙ¹i}»–„v»<Ÿíþîþí<C»ÉtÝ°Ln÷>Ñ`l…À3Ö7nÚýE=Ãã»U»¼ôGq€£·ç±Þ˜(ÚÏ& €À¨
+DŸÊÎóÔQmô¸Ü¹RÙ9zÂÏÉaŽ {F ñ-Y*‡½Ý:ü{Âã›ÛÍ}Èq,ÅÕq¬Á¡!€ ¡‘¥2‚ €  0z¤rôŸŒ½^aÏ € Ï§ ©L*#€   Š ©¬JO<Ÿ£BŽ@À(@*“Ê € ¨"@*«ÒŒ@ ˆì7ñB p)À§ó]B±Zw°9«8]@ è¸~Fçöœoe;W6}aˆüzË,×ÿöðá<	ýÂçÐïÞá<ßç‰å%ñ9Oß½ w°y]æÊî£ˆ5uRyTþ9Ã@ R™s 
+ÞƒM*#€   Š ©¬JOD1¤b@ q&@*“Ê € ¨"@*«Òãl¸Çá € D!`ÊÖ
+~8Š‚  € £$@*3Î@ @@î`«Ò£4ìb· € cH€T&•@ PE€TV¥'ÆÐPŽ¦"€ Œ’ ©L*#€   Š ©¬JOŒÒ°‹Ý"€ Œ!R™TF @@RY•žCC9šŠ  0J¤2©Œ  €€*¤²*=1JÃ.v‹  0†HeR@ UHeUzbåh* €À(	Ê¤2 € ªÊªôÄ(»Ø- €À •Ie@ T •Ué‰14”£© € £$@*“Ê € ¨"@*«Ò£4ìb· € cH€T&•@ PEÀ)•÷þ)2ÐÐ[¤H{h € #(`›Ê2ÿdMÆÇ#Xwt»25F©¶EwDl…  €€°NåÐ¨Óú™ÃY¶Mæ=s€  0vÜ¦²~„ÆÛÚ¦É´ü5t’º\_Ínâky§ÚáŽºË³Ã Ëã2µ3ôæwÔÇî©OË@ "Kå°!j
+NSÔYf§ÃiËµ`7Ál—ÊÎÇe‘ïê[8ìfš„  0&F2•åÌÒ8]ÖÓÎaí&•æ¸Få°Áv®lê3‡Q…Ë&‰“€F"€ ("ðlRÙe:C=ôî±e‚:³:Gièíh‡˜;P¤ƒi €Àp›Ê–·jCSÓå\yÄSÙeFº™àºYÇx?`u6ME P\ ²OF…}ýõ™¤²ËH6E©›‘›»ëŠw0ÍC C‹ˆé¥Vy¨aÓ:t5ãíb»€]n÷ú´{qçzínb›–ÜWÍš € 8ð›ª|Ëg* € ¤2©Œ  €€*¤²*=Á@ R™TF @@RY•ž`„ˆ  € ©L*#€   Š€«oqÿàg5Ì©Úí'ôS#x¤£ºólç3Ü•üD÷¤òS×zï¿b3ôûÑÆý9éŽÔ+ÒzYð^`œ¤²p£”¦oJñà@Æ\£$?æh0<§²åw{9HY~–i‚h¼?éþEÕv_Èåð”åMc»;É‡àþæ³ÝqE9¦•-¿û,t¡ìËå#Õ~Ó~Œ¿º©×¹ÍîýÎ«çá™cD q &•e^ÚÝe~¢ŒÔþC[âz·9oe
+3»ä0žå9a—¦–yvˆÚ~çý‡¦²i¼¶Ýì?ô<±ˆ„í—ˆ:ÅnÀa:¯ÆÁ*‡€ Ï‰@4©l7ís¤Ð9™ój˜qe75› vñc¹C÷.wöœ‹.RÙò©ÐfØÅvØö„¦ã¦²ûÔË
+ €€"Ñ¤²û¦G:¿;i³«Úå\ÙB20LÅe|FÚN—»6M)©¿{^ç¤×ëÕTv†•d@@M§T‹'’I§‰tÿ:’ÃÑe|FÚN—»{ŠÊa'÷‘vMXsV@ ¼“Ê¢)ú?ý±ût®æ&¹]ÎÂÞ)=çŒôXŒíg©lœ
+o9„.Ù¹rØz-ûÔ¡#ÂžÉd¼—#êB !`ûÝ^ÎW@cT;;Z†ºqnÚ<t‚¶Ÿ,÷f¢ûwØ]ºDáÚ°ˆ.ý¦öë¡hw\‘úÛi‡Ý¿ËQKØý8Œ–BG &‡óÊy’m×uMØ•@ °|ãæþÆ¨±˜c±ÍaÿŠX)Ry¬¦ò·1Úì‘ú{c? €€³ ©<–R9ŠÛûJý„½Ã¬Tki à½ ©<–RÙûóƒ@ ¼ •Ie@ T •Ué	/ÇbÔ…   ¦ ©L*#€   Š ©¬JO¨9j£U € ^
+Ê¤2 € ªÊªô„—c1êB PS€T&•@ PE€TV¥'ÔµÑ*@ /HeR@ UHeUzÂË±u!€ ¨)@*“Ê € ¨"@*«ÒjŽÚh €€—¤2©Œ  €€*¤²*=áåXŒº@ Ô •Ie@ T •Ué	5Gm´
+@ÀKR™TF @@RY•žðr,F] € j
+Ê¤2 € ªÊªô„š£6Z…  à¥ ©L*#€   Š ©¬JOx9£.@ 5HeR@ UHeUzBÍQ­B ðR€T&•@ PE€TV¥'¼‹Q €€š¤2©Œ  €€*¤²*=¡æ¨V!€ x)@*“Ê € ¨"@*«Ò^ŽÅ¨@@MR™TF @@RY•žPsÔF«@ ¼ •Ie@ T •Ué	/ÇbÔ…   ¦ ©L*#€   Š ©¬JO¨9j£U € ^
+Ê¤2 € ªÊªô„—c1êB PS€T&•@ PE€TV¥'ÔµÑ*@ /HeR@ UHeUzÂË±u!€ ¨)@*“Ê € ¨"@*«ÒjŽÚh €€—¤2©Œ  €€*¤²*=áåXŒº@ Ô •Ie@ T •Ué	5Gm´
+@ÀKR™TF @@RY•žðr,F] € j
+Ê¤2 € ªÊªô„š£6Z…  à¥ ©L*#€   Š ©¬JOx9£.@ 5HeR@ UHeUzBÍQ­B ðR€T&•@ PE€TV¥'¼‹Q €€š¤2©Œ  €€*¤²*=¡æ¨V!€ x)@*“Ê € ¨"@*«Ò^ŽÅ¨@@MR™TF @@RY•žPsÔF«@ ¼ •Ie@ T •Ué	/ÇbÔ…   ¦ ©L*#€   Š ©¬JO¨9j£U € ^
+Ê¤2 € ªÊªô„—c1êB PS€T&•@ PE€TV¥'ÔµÑ*@ /HeR@ UHeUzÂË±u!€ ¨)@*“Ê € ¨"@*«ÒjŽÚh €€—¤2©Œ  €€*¤²*=áåXŒº@ Ô •Ie@ T •Ué	5Gm´
+@ÀKR™TF @@RY•žðr,F] € j
+Ê¤2 € ªÊªô„š£6Z…  à¥ ©L*#€   Š ©¬JOx9£.@ 5HeR@ UHeUzBÍQ­B ðR€T&•@ PE€TV¥'¼‹Q €€š¤2©Œ  €€*¤²*=¡æ¨V!€ x)@*“Ê € ¨"@*«Ò^ŽÅ¨@@MR™TF @@RY•žPsÔF«@ ¼ •Ie@ T •Ué	/ÇbÔ…   ¦ ©L*#€   Š ©¬JO¨9j£U € ^
+Ê¤2 € ªÊªô„—c1êB PS€T&•@ PE€TV¥'ÔµÑ*@ /HeR@ UHeUzÂË±u!€ ¨)@*“Ê € ¨"@*«ÒjŽÚh €€—¤2©Œ  €€*¤²*=áåXŒº@ Ô •Ie@ T •Ué	5Gm´
+@ÀKR™TF @@RY•žðr,F] € j
+Ê¤2 € ªÊªô„š£6Z…  à¥ ©L*#€   Š ©¬JOx9£.@ 5HeR@ UHeUzBÍQ­B ðR€T&•@ PE€TV¥'¼‹Q €€š¤2©Œ  €€*¤²*=¡æ¨V!€ x)@*“Ê € ¨"@*«Ò^ŽÅ¨@@MR™TF @@RY•žPsÔF«@ ¼ •Ie@ T •Ué	/ÇbÔ…   ¦ ©L*#€   Š ©¬JO¨9j£U € ^
+Ê¤2 € ªÊªô„—c1êB PS€T&•@ PE€TV¥'ÔµÑ*@ /HeR@ UHeUzÂË±u!€ ¨)@*“Ê € ¨"@*«ÒjŽÚh €€—¤2©Œ  €€*¤²*=áåXŒº@ Ô •Ie@ T •Ué	5Gm´
+@ÀKR™TF @@RY•žðr,F] € j
+Ê¤2 € ªÊªô„š£6Z…  à¥ ©L*#€   Š ©¬JOx9£.@ 5HeR@ UHeUzBÍQ­B ðR€T&•@ PE€TV¥'¼‹Q €€š¤2©Œ  €€*¤²*=¡æ¨V!€ x)@*“Ê € ¨"@*«Ò^ŽÅ¨@@MR™TF @@RY•žPsÔF«@ ¼ •Ie@ T •Ué	/ÇbÔ…   ¦ ©L*#€   Š ©¬JO¨9j£U € ^
+Ê¤2 € ªÊªô„—c1êB PS€T&•@ PE€TV¥'ÔµÑ*@ /HeR@ UHeUzÂË±u!€ ¨)@*“Ê € ¨"@*«ÒjŽÚh €€—¤2©Œ  €€*¤²*=áåXŒº@ Ô •Ie@ T •Ué	5Gm´
+@ÀKR™TF @@RY•žðr,F] € j
+Ê¤2 € ªÊªô„š£6Z…  à¥ ©L*#€   Š ©¬JOx9£.@ 5HeR@ UHeUzBÍQ­B ðR€T&•@ PE€TV¥'¼‹Q €€š¤2©Œ  €€*¤²*=¡æ¨V!€ x)@*“Ê € ¨"@*«Ò^ŽÅ¨@@MR™TF @@RY•žPsÔF«@ ¼ •Ie@ T •Ué	/ÇbÔ…   ¦ ©L*#€   Š ©¬JO¨9j£U € ^
+Ê¤2 € ªÊªô„—c1êB PS€T&•@ PE€TV¥'ÔµÑ*@ /HeR@ UHeUzÂË±u!€ ¨)@*“Ê € ¨"@*«ÒjŽÚh €€—¤2©Œ  €€*¤²*=áåXŒº@ Ô •Ie@ T •Ué	5Gm´
+@ÀKR™TF @@RY•žðr,F] € j
+Ê¤2 € ªÊªô„š£6Z…  à¥ ©L*#€   Š ©¬JOx9£.@ 5HeR@ UHeUzBÍQ­B ðR€T&•@ PE€TV¥'¼‹Q €€š¤2©Œ  €€*¤²*=¡æ¨V!€ x)@*“Ê € ¨"@*«Ò^ŽÅ¨@@MR™TF @@RY•žPsÔF«@ ¼ •Ie@ T •Ué	/ÇbÔ…   ¦ ©L*#€   Š ©¬JO¨9j£U € ^
+Ê¤2 € ªÊªô„—c1êB PS€T&•@ PE€TV¥'ÔµÑ*@ /HeR@ UHeUzÂË±u!€ ¨)@*“Ê € ¨"@*«ÒjŽÚh €€—¤2©Œ  €€*¤²*=áåXŒº@ Ô •Ie@ T •Ué	5Gm´
+@ÀKR™TF @@RY•žðr,F] € j
+Ê¤2 € ªÊªô„š£6Z…  à¥ ©L*#€   Š ©¬JOx9£.@ 5HeR@ UHeUzBÍQ­B ðR€T&•@ PE€TV¥'¼‹Q €€š¤2©Œ  €€*¤²*=¡æ¨V!€ x)@*“Ê € ¨"@*«Ò^ŽÅ¨@@MR™TF @@RY•žPsÔF«@ ¼ •Ie@ T •Ué	/ÇbÔ…   ¦ ©L*#€   Š ©¬JO¨9j£U € ^
+Ê¤2 € ªÊªô„—c1êB PS€T&•@ PE€TV¥'ÔµÑ*@ /HeR@ UHeUzÂË±u!€ ¨)@*“Ê € ¨"@*«ÒjŽÚh €€—¤2©Œ  €€*¤²*=áåXŒº@ Ô •Ie@ T •Ué	5Gm´
+@ÀKR™TF @@RY•žðr,F] € j
+Ê¤2 € ªÊªô„š£6Z…  à¥ ©L*#€   Š ©¬JOx9£.@ 5HeR@ UHeUzBÍQ­B ðR€T&•@ PE€TV¥'¼‹Q €€š¤2©Œ  €€*¤²*=¡æ¨V!€ x)@*“Ê € ¨"@*«Ò^ŽÅ¨@@MR™TF @@RY•žPsÔF«@ ¼ •Ie@ T •Ué	/ÇbÔ…   ¦ ©L*#€   Š ©¬JO¨9j£U € ^
+Ê¤2 € ªÊªô„—c1êB PS€T&•@ PE€TV¥'ÔµÑ*@ /HeR@ UHeUzÂË±u!€ ¨)@*“Ê € ¨"@*«ÒjŽÚh €€—¤2©Œ  €€*¤²*=áåXŒº@ Ô •Ie@ T •Ué	5Gm´
+@ÀKëTÞ±mí'›Š7®/”eýÚ‚u«óÖ®Î¥ €  €Àˆˆ`ñºqC¡,[>.ákÊ·îÜ¼t¹æÜù3²œ9súëoNžþú„(§N›Ê±S§µrò”VN:j(GN:rêäáS'9•OËÉ`9qâÀÉÕÖåxåI
+ € cL âäñ'åÄ±rYN/?}²âÌ×U²ÔœûâúÕcÖ©ÜÞÑÜÔ|¿¾¡N–ºû÷jëîËíÚÚÛ÷joÕKðÁõr­¶6Xî‰råér¹öÞ`¹w÷âÝ;—jï\ÔÊÝ`¹sA”{wÎ›Ëís÷nŸ¥ €  0îÞ:sïö7ÆR{G,ùZ”Ú;ßÔÝ;#KCÝÙ–†Ö©ÜÓëôtûüƒÅ×áóñØ×>TZ}>½´ø|ziöùDi4”Ÿ¯Á×,]õZé¾¯—î®:Q|]÷¬Kçß`¹íë¤ €  06º;n=]nvw–®ö›Ár­«ãº,Ý7|7­SùÁÃž§ÊƒÀƒ¾^måA»(¡Þ¼yëêÕkçÎÕ\ºtõêÕë–{îïièï¹E¥b“þž:QžÕ¶²vS¹tþ‹Ë§Xˆ  0.z÷EéÔ=]îöž”ÞÀm­øïˆb“Ê|"†eéï×JÔ©Üß×"Š1:zãÆõÿø¿þðÃÀ_þ2ðøñ@_ß×¯7ˆå¦•Ç Æåyýõ²åËOŠW¹Cÿ‰åâY‡î¼\ÖyiCÇÅõí5ë¢‹j¹UÙÐ¿(vrñÜ!‘ÊQlÈ& € ãBàn¯_/ZËÒã»-J¯ÿ–(^§²ˆÞ¶¶6Nâß_¾xð@Dò@ 0ÐÓ3P_ÿÐÌ¦TŽ‰¹,Ò÷{«b¹xÖ.˜E$Ëå¿–ók¢î]ÊÍþå_þ%Š=\<§Í•£ØM@ Æ…Àh¦ò…à¿;wîˆŸW®\¹üªfš+ß¾}KOÇï¾èïðû:;ÚÛº»nÝê>pà ¾»T>yòä©S§¾þúk1i>{ö¬ˆi‡TŠäËzh:³²á›õ§KîŸ*®;¹üÞ‰"—ý=œT®9wTvéÌj €ÀxT>zôèÒ¥KgÏž}øðáÇÿýïïíímnnþî»ï.^¼(òRüÓ5©,¦Â÷î>üÛ?þœ,ü£wàoýþî––ŽŽÞÞ¿üòø¦M›äæ#2W7®~¸0ð·sOãÜy`àîñB—Ý?œT>ö ©ìÒ™Õ@ ñ(0Ò©|äÈ1!njj:þ|kk«HbS*ý—/7–KPc*Ÿ<y¡¦&pëÖƒÖ¶ïþ*^Qö=:{üÂý[Íßýy «K›4‹—™kjn„MåÓ§Oü'&Ê¢%ÎseñZòÀ·_<>Ùva­©4Ÿ[Ýxfeý×¥uÁ³(aO‚á¥r5©V˜@ ñ+`Ê‡~~øàgÑ¼®¼eË–Í›7ñÅ2•»ºº®_ŸW®½qã†ÈÈ²²		)¿øÅ¯32VÇÅå¤¤¤˜RùôéË÷î=®­ý¶±ñ¯ß=¸táZéÊ»vïyüè‡ÆÆ¿ÔÖ>nnþöêÕÆ­[?Á¹²x{×Àƒc"Ÿž?ýÛã“â÷_æ„=Hå°D¬€  `#`ŸÊ_|œ¶Eøn¯íÛ·———oØ°!++kÛ¶mbê,ò¸¤¤DÞÐÎÌÌœ<yòÏ~ö³¾Œ/Œ5¥rMÍåG´ÛÔþÀÀ÷ßÔßiÝ½sÏåšËß>úþêÕî3gZÏœé<tè‚Hw»T–oø
+-b¹Ý»½´<ö
+¾ºl|iù©Ç?´Uˆg¯Êv>“nîü/uÕ?¿[þÿÞÙûÿÜ,ÿ÷HO»óßT1WŽõ@ q$`{[ÎmSY|ª¯w°ô÷úú{»D‘.Á555Ÿþyzzºˆçää”×_}Á‚br<wîâiÓ–¼õÖï&Nœ˜””¤mÒÓ¢•à¶55—úûÿ!ÞnÝ)îWû¾ó|×ñãýÿøá‡tu=¾{÷Á¾}G¶lùD®ßã¯E>ŸŒ’ÑëPŒïÁîñÝEl(Þq=ÐY­½º,RY¼ÀlU¾kÜ#ž½úEÖ`½CÛêŸƒ’j½þ ç¾€û¶ÿö‰ÿlzÖ¸­¬ÝTÎžÙ?`ù@ ž÷àç zºokÅwK+Ý7E	tßÅú“Q}½¡Å8ZÉÈÈX²dÉòåËÅìyþü%ÿý¿ÿÛ/ùòÄ‰üÍoÞx÷Ýw.\¨¯ÜhEþ*Þíuýz£HeñŽkñö®.ñö.ßÀãÁ·~iÿ¾ýö?Ä\]Ù2•Eô^¸Ð°~ýÅªª‹¸víîÏ~VößþÛfÓ\YOeñâ±HåàìËÚÌVåqÝñì•ƒ™¡©,>¥—{ûþþ»‹:ÓÝ™óeþÿj|Jÿ¬”ÃYuúÄ^Rùyø«ã@ K¡HÖ’X¾–,SY>vJåÞÞvSéëi½‡°jÕª˜˜˜œœ’×^›øÊ+¯|ðÁbmZÍ˜Êâ©“'¿©¯$ÞÛ%ÞqíóiSY_'"þ‰7f‹<­YóäÃÄz²çÊ"•º6qâ—â>ö?üððáC‘Ê¢„¤²üPv­ø”Håæ³«´T~pÌ²ôÝ7ô/_>1”ÊƒÛŠ¬5þ«ÛÿÏ=§ÿï¦#ÿWàÔÿY‘öSÓ³ÆmåGÂMåØQ‘ýb®lñ@ ž'`_K³dý±í\¹'Ðö¤ô´ôîB‡f³HâeË–…æñ`Jê{õÆ­ÄŒùÎ_o¯ö­^¢üíoZ$‹÷r‹ÏS#Yl"†¢˜î`‹TÞ¼¹".îëƒï‹Hîèè°Lå@×-QÄ¶âsÉ"•Å­µTö²,þk›µT®N—uéÛšvwüŸ/|aûâŸìŠûÉÖù/„RèÛÊ=˜ŠüÆMË§Xˆ  ð|	t^—7‰µ)²þ¸óºõl¿¿A”€¿I”ÁÇ¾§’Õ2,ú»E¸š¿@»ªªúèÑÓW®ÜinöÝ½[/¾DÜ¸^»v­iÝ·DÑ¾òJ–ˆä—^*7®ÿd*‹§Œ¯+‹¯ùEn«Uˆø\ò¯
+nÍ¿y8W¼ãZ¼½K¼–,n\‹Y²ˆdq7^®oÜÖý‘·•{0ù›–O±@`¼
+ø´ÿ"Å_ð¿?!Ëµ'¥ýªo¨X§rgû]­tÜ*w:;ç¬‘¦T{ÛMQB·úì³­²ˆ÷L‰’õ×’kv´^%Òåúí­WDyVÛÊÚME~ã¦åS,D —­WDio¹$Š|ý¸£ù’(òqpyÍàãæšöæëTniº*Jsãµ¦¦Á"ÕËàòÆ+MáJsÃÅð¥¾¦Y”†æR¾ÙPëÏé"¿qsLG ˆT ©þ¬,úëÇõg¬ßÿÆ:•ëë.†)µ5õVå~í9Çrö~íP¹wæ¾©Üýú¾(r¡|l(uw¿®»{Š‚  €À¸÷´^D³åkÉ²ýOßz|ç„u*çÄ×[šn´4Ý*â±¹ˆuZ‡JKã5s	N¸-Êàš—[íKÃ¥–§Kø	·›I9ë €  ðì†îË[ÅõÅü»©î\cÝY‹T‹( €  ðLÄ:.¯aBÜòÆ¸åCßçÁÿ#€  €À³¦ò²&Ìâ
+ € <3üÆ`*ç7R@ @à™L˜»ä
+@ Tøÿ ÆÎ ñ†F    IEND®B`‚_4http://www.brokenthorn.com/Resources/images/ch23.pngO^bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_4http://www.brokenthorn.com/Resources/images/ch23.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl1U¿8 ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/png_timeout=2, max=99_Sat, 18 Sep 2010 00:18:22 GMTVApache_Mon, 12 Apr 2021 11:24:18 GMT_max-age=2592000_Sat, 13 Mar 2021 11:24:18 GMTU19023ZKeep-Alive_°
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDllpbWFnZS9wbmehEF8QEXRpbWVvdXQ9MiwgbWF4PTk5oRJfEBpVc2VyLUFnZW50LEFjY2VwdC1FbmNvZGluZ6EUVkFwYWNoZaEWXxAdTW9uLCAxMiBBcHIgMjAyMSAxMToyNDoxOCBHTVShGF8QD21heC1hZ2U9MjU5MjAwMKEaXxAdU2F0LCAxMyBNYXIgMjAyMSAxMToyNDoxOCBHTVShHFUxOTAyM6EeWktlZXAtQWxpdmWhIF8QFCI0YTRmLTQ5MDdkOWRmMTZmODAioSJVYnl0ZXOhJF8QHVNhdCwgMTggU2VwIDIwMTAgMDA6MTg6MjIgR01UAAgAIQAuADkAPgBFAE0AWwBgAG8AegB/AI0AmwCdAKcAqQC9AL8A3ADeAOUA5wEHAQkBGwEdAT0BPwFFAUcBUgFUAWsBbQFzAXUAAAAAAAACAQAAAAAAAAAlAAAAAAAAAAAAAAAAAAABlQ==_"4a4f-4907d9df16f80"_User-Agent,Accept-EncodingUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë"'2;ADMVXZait‚„†ˆŠŒŽ’”–˜šœª¬®°²´¶¸º¼¾ÀÂÄÆÓÞìóû	(16;ISg‡Ž®Ààæñ¥¼Ùßäúþ$(<             z              JÔ !"OÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      ) 1;    Â        ‚     €{    È        €€           Ø       è       ð        „‚(     }=     Ui          õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  ) " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? ÷Òq\ï‹|[eáM4\N¾uÔ¹[[Ul4Ì=û(ÈËvÈêHñw‹¬|%¦‹€eº—+mj­†™‡òQ‘–í‘Ô”Ú%Ö¡©KâzQ%üƒ…Æ…Q’œ¼’I$šãÆc#‡™ÍˆÄÆ’Óq.ü?¨ø†9õÝgPhu–Ä°:‹læUSœ¦:Œƒó’r–ÿ /tûxí5Þúî!¶K•Ô<7Ð”Bœc88ÎH p-XY_üBÕÂÊWµÐíŸwŠ9r9Ø™±È=Â‚	çjŸbÓtÛ=NƒO°·ö°.Ô9¹$žI$’I$’I$šÃ.Ž!§R³ßdc„]e'¹óùºÔ5^\x:ëhÛX ä"‘´g#wI&Ÿ¬Kæ\ÙÁ{<öúD’(ºžÝ’(Ï?/_NÇœ66ŸYñÏàñU¢ÝZ²ÛkË‹{œ|®:ˆäÇUÉ8=T’Gp|žÚâC5Æ“ªÛ47Ð.h$$ŒvÎä‚ ò+—Ft«,GÄŽ|E)S©í¨÷ÏM°Ñ¬íô……tõŒ<–Ü¬§Á¿‹9Îã’IÉ$œÖxg†|Qsàk¿²]4—óò‚ÍjÇ’Ê:‘œîQÉå†C{\)soöÒC4¨xåI2®§AAë^½
+Ð­h•±©Äœô®3Ç>‡ÅV«wlËm¬Û/ú=ÆßË“”É8=T’GRgÚŠÑÅIY—(©+3æéµQcowe­Û47–ÙŽh%É uÇ±#‚ ž	ÑÓ>üGŸN†m?Z“H´ŠÉõàhÁ$ó)
+OÞ#¨Ï89{âOü–ÿ Ü?ÿ JÞ½ÄtË†ÂBŒ¥ËÔä£‡Œ±ÿÙZimage/jpeg_4http://www.brokenthorn.com/Resources/images/left.jpgO‚bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_4http://www.brokenthorn.com/Resources/images/left.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl1UÆ¨ ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpegRh2_timeout=2, max=100_Fri, 24 Jul 2009 23:29:22 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1540_Upgrade, Keep-Alive_À
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9aaW1hZ2UvanBlZ6ERUmgyoRNfEBJ0aW1lb3V0PTIsIG1heD0xMDChFVpVc2VyLUFnZW50oRdWQXBhY2hloRlfEB1Nb24sIDEyIEFwciAyMDIxIDEwOjEzOjE0IEdNVKEbXxAPbWF4LWFnZT0yNTkyMDAwoR1fEB1TYXQsIDEzIE1hciAyMDIxIDEwOjEzOjE0IEdNVKEfVDE1NDChIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QEyI2MDQtNDZmN2JmOTViMTg4MCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyMiBHTVQACAAjADAAOABDAEgATwBXAGUAagB5AIQAiQCXAKUApwCyALQAtwC5AM4A0ADbAN0A5ADmAQYBCAEaARwBPAE+AUMBRQFbAV0BcwF1AXsBfQAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGd_"604-46f7bf95b1880"ZUser-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$)4=CFOXZ\ckv…‡‰‹‘“•—™›Ÿ¡°²´¶¸º¼¾ÀÂÄÆÈÊÌÎÛãîü-8AFKYdg|œ£ÃÕõúÔêõû ',@DX             ~              fÔ$ %&OdÿØÿà JFIF  ` `  ÿá Exif  II*     þ              -      )       Â                     È                     Ø       è       ð          (       =                 õ  ò  ×  í  ý	  å  g   `      `      ÿÛ C 		
+ $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ  % " ÿÄ           	
+ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
+%&'()*456789:CDEFGHIJSTUVWXYZcdefghijstuvwxyzƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚáâãäåæçèéêñòóôõö÷øùúÿÄ        	
+ÿÄ µ  w !1AQaq"2B‘¡±Á	#3RðbrÑ
+$4á%ñ&'()*56789:CDEFGHIJSTUVWXYZcdefghijstuvwxyz‚ƒ„…†‡ˆ‰Š’“”•–—˜™š¢£¤¥¦§¨©ª²³´µ¶·¸¹ºÂÃÄÅÆÇÈÉÊÒÓÔÕÖ×ØÙÚâãäåæçèéêòóôõö÷øùúÿÚ   ? eÕíçuKCR¸’ÖêÙÊZÚFJ›&S‘Ø6íÀdðI¦ à¯>¥/ö&¶-b1”|anÔÿ µÆHöÈèÁ[ã>©'öÞˆ«µÓ -Úáoö°8cØ {à#0x‚×ky–º…«äVX$RGÔ`ŽG\Ž ŠñëU«…­Ï-`ÿ Ëœêaê^Z¦{ÖáŒçŠ+„ðWŒßPŸû\Û±ù¢Ý¨þ!þß#ñ^
+W«
+‘œy¢zPœf®ŽÞkˆm­äžâdŠÔ¼’Hvª($“ÐÞ¼7VÕm¼Mã6Ö4ËakeˆÚà‚­wâuÎ FìNpªž/ñœž1»û£<:NS”k¶‡aÙsÈSþñç2mÍþ©¨C¡hP—¼¶HXTpYˆûª23ß$–â¼Ü]gWýž’½÷<üMgUû:h»©üC«Ùèº,mQ[Í[…b¿fÚFX¸åœsë€l
++×¼!àë/éf¶ýõÔ¸k«¶Pf8þ;Tp9êI$®¼.4)(^çM?³®yÅ=×Áwö÷:Qhíµ¥²ŽM¹Ùè§xã.ë¾ð…‡„´Ãkl|Û™6µÍÓ(3ÇÂ£«Ðdõ$’Q[Ó„T¤Ò*Š›i=QVnÿÙ_5http://www.brokenthorn.com/Resources/images/right.jpgO0bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯%'-.4567WXYZ[\]^_`abcdefghijklmnopquU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€$€€ €Ó()$+,WNS.base[NS.relative€ €€_5http://www.brokenthorn.com/Resources/images/right.jpgÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþl1UÎ ÈÓ89:HVWNS.keysZNS.objects­;<=>?@ABCDEFG€	€
+€€€€€€€€€€€­JKLMNOPQRSTU€€€€€€€€€€€ €!€"€#\Content-TypeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesZimage/jpeg_timeout=2, max=98_Fri, 24 Jul 2009 23:29:24 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTT1380ZKeep-Alive_”
+
+YnBsaXN0MDDcAQIDBAUGBwgJCgsMDQ8RExUXGRsdHyEjXENvbnRlbnQtVHlwZVpLZWVwLUFsaXZlVFZhcnlWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShDlppbWFnZS9qcGVnoRBfEBF0aW1lb3V0PTIsIG1heD05OKESWlVzZXItQWdlbnShFFZBcGFjaGWhFl8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRhfEA9tYXgtYWdlPTI1OTIwMDChGl8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoRxUMTM4MKEeWktlZXAtQWxpdmWhIF8QEyI1NjQtNDZmN2JmOTc5OWQwMCKhIlVieXRlc6EkXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyOToyNCBHTVQACAAhAC4AOQA+AEUATQBbAGAAbwB6AH8AjQCbAJ0AqACqAL4AwADLAM0A1ADWAPYA+AEKAQwBLAEuATMBNQFAAUIBWAFaAWABYgAAAAAAAAIBAAAAAAAAACUAAAAAAAAAAAAAAAAAAAGC_"564-46f7bf9799d00"ZUser-AgentUbytesÒ/0rs_NSMutableDictionary£rt3\NSDictionaryÒ/0vw_NSHTTPURLResponse£xy3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Œ ’ ­ Ï ñ ô;BdgjŒ®±³µ·¹»½¿ÁÂÄÆÈÊÑÙåçéë#(3<BENWY[bjuƒ…‡‰‹‘“•—™›«­¯±³µ·¹»½¿ÁÃÅÇÔßíôü
+)27<JUi‰°ÂâçòŠ «±¶ÌÐÝâöú             z                          1   <   N   d   ‚   ‘   ¨  Í  ×  Ý  Ž  Ž  Ž  Ž!  Ž7  ˜ê  ˜ó  ™.  ¡é  ¡ò  Þa  Þk  Þ  çM  çV 1© 1à :B :K @S @^ @• I I$ NŒ NÄ             '             Vø

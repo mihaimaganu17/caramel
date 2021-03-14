@@ -1,0 +1,836 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName^WebResourceURL_WebResourceFrameNameOfÏ<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+		<title>Operating Systems Development Series</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+		<link href="Files/reference.css" type="text/css" rel="stylesheet">
+		<meta content="MSHTML 6.00.6000.16441" name="GENERATOR">
+		<style type="text/css">
+			body
+			{
+				background-image: url(OSDevVga_files/watermark.htm);
+				background-color: #FFFFFF;
+				A:link: color: #666699  /* link="#666699" 	*/
+				A:visited color: 000000 /* alink="#000000"	*/
+				A:active color: 666699 	/* vlink="#666699"  */
+				margin-right: 0px;
+				margin-left: 0px;
+				margin-top: 0px;
+				margin-bottom: 0px;
+				text: #000000			/* text="#000000"	*/
+			}
+			.special
+			{
+				font-weight: 4;
+			}
+			.center
+			{
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"> 
+<tbody><tr> 
+     <td width="60%"> 
+	<a href="http://www.brokenthorn.com"><img src="site/5.png" border="0"></a> 
+     </td> 
+     <td width="40%"> 
+ 
+        <div id="ad_main"> 
+ 
+<script type="text/javascript"><!--
+google_ad_client = "pub-9243579471203558";
+google_ad_width = 468;
+google_ad_height = 60;
+google_ad_format = "468x60_as";
+google_ad_type = "image";
+google_ad_channel = "";
+google_ui_features = "rc:6";
+//-->
+</script> 
+<script type="text/javascript" src="http://pagead2.googlesyndication.com/pagead/show_ads.js"> 
+</script> 
+        </div> 
+ 
+     </td> 
+  </tr> 
+</tbody></table> 
+
+		<table border="0" cellpadding="3" cellspacing="0" width="100%">
+			<tbody>
+				<tr>
+					<td class="tblhdr">Operating Systems Development Series</td>
+				</tr>
+				<tr>
+					<td colspan="2" align="center"></td>
+				</tr>
+			</tbody>
+		</table>
+		<table border="0" cellpadding="5" cellspacing="0" width="100%">
+			<tbody>
+				<tr>
+					<td>
+						<p class="center"><span class="title">Operating Systems Development - Multiboot</span>
+						<br>
+						<span class="author">by Mike, 2010</span></p>
+						<p>This series is intended to demonstrate and teach operating system development from
+						the ground up.</p>
+
+						<h1>Introduction</h1>
+						<p>
+							This tutorial covers the multiboot standard and how to develop a multiboot-complient
+							operating system. While the series goes into the multiboot structure, there is more
+							to creating a multiboot complient system. By your system being multiboot complient,
+							it will be capable of being loaded by any multiboot complient boot loader. Cool, huh?
+							This means any multi boot complient bootloader can boot your OS.
+						</p>
+						<h1>Multiboot Specification</h1>
+
+						<h2>Abstract</h2>
+						<p>
+							The multiboot standard was originally created in 1995 and is overseen by the <b>Free Software Foundation</b>.
+							They provide a written specification that defines a standard way to allow <b>multi-booting</b>. <b>Multi-booting</b>
+							allows a computer system to install, and run, multiple operating systems and system environments. A <b>dual-boot</b> computer
+							system is an example of multibooting, with two operating systems installed.
+						</p>
+						<p>
+							Multibooting is made possible by another, unofficial software trick: <b>Partitioning</b>. <b>Partitioning</b> creates the effect
+							of multiple logical disks on one physical disk. Partitioning separates the storage on a storage medium (typically a hard disk) for
+							different uses. For example, the first partition can be from sector 0 to sector <i>n</i> and contain an NTFS formatted Windows operating
+							system. The other partitions can be of any file system - containing data or another operating system software.
+						</p>
+						<p>
+							Because partitioning is a software trick, it is up to the boot loader to be able to detect these partitions by reading the software
+							<b>Partition Table</b> and, typically, display a list of the partitions that contain an operating system to boot. This is the <b>boot menu</b>.
+							The Multiboot Specification defines the state of the computer when the bootloader transfers control to an operating system
+							and how data is passed to the operating system.
+						</p>
+						<p>
+							The multiboot standard can be used on disks that do not support multibooting as well. This means, if your multi-boot complient
+							bootloader can boot from a floppy disk, you can make your floppy disk OS boot from it.
+						</p>
+						<h2>Operating System Image</h2>
+						<p>
+							Typical bootloaders can be configured to boot different types of operating system images. Typically this is the Kernel or
+							another OS Loading program. The multiboot specification does not provide details on the format of the image. Because of this,
+							you can use any format that you want - flat binary, ELF, or even PE files.
+						</p>
+						<p>
+							However, this file requires an additional header - the <b>Multiboot Header</b>. This header must be located somewhere within the
+							first 8k of your image and aligned on a dword (32 bit) boundery. Any multiboot complient bootloader will be able to find this
+							header and obtain information from it. This is how the boot loader will know how to load and execute your image.
+						</p>
+						<p>
+							Here is the structure format:
+						</p>
+
+
+            <div class="code"><blockquote><pre>typedef struct _MULTIBOOT_INFO {
+
+   uint32_t magic;       //all required...
+   uint32_t flags;
+   uint32_t checksum;
+   uint32_t headerAddr;  //all optional, set if bit 16 in flags is set...
+   uint32_t loadAddr;
+   uint32_t loadEndAddr;
+   uint32_t bssEndAddr;
+   uint32_t entryPoint;
+   uint32_t modType;     //all optional, set if bit 2 in flags is set...
+   uint32_t width;
+   uint32_t height;
+   uint32_t depth;
+
+}MULTIBOOT_INFO, *PMULTIBOOT_INFO;</pre></blockquote></div>
+						<p>
+						You should make sure no padding is added. In MSVC, this can be done
+						by adding a <b>#pragma pack (push, 1)</b> and <b>#pragma pack(pop,1)</b>
+						around the structure declaration above.
+						</p>
+						<p>
+						The above is the only structure that you need to get your OS booted by a
+						multi boot complient bootloader, such as GRUB. Lets look at the members:
+						</p>
+						<p>
+						</p><ul>
+							<li><b>magic:</b> must always be 0x1BADB002</li>
+							<li><b>flags:</b></li>
+							<ul>
+								<li><b>Bit 0</b></li>
+								<ul>
+									<li>0: All boot modules and OS image must be aligned in page (4k) bounderies.</li>
+								</ul>
+								<li><b>Bit 1</b></li>
+								<ul>
+									<li>1: Boot loader must pass memory information to the operating system.</li>
+								</ul>
+								<li><b>Bit 2</b></li>
+								<ul>
+									<li>1: Boot loader must pass the video mode table to the operating system.</li>
+								</ul>
+								<li><b>Bit 16</b></li>
+								<ul>
+									<li>1: Offsets 12-28 of the multiboot header are valid. (That is, members header_addr through entry_addr
+									in the multiboot header are valid.) If this bit is set, the boot loader will use these values instead
+									of parsing the image format and obtaining the values from it. Multiboot complient bootloaders can provide support
+									for native executable file formats, such as ELF or PE that it can load.</li>
+
+								</ul>
+							</ul>
+							<li><b>checksum:</b> This must be a value that which, when added to <b>magic</b> and <b>flags</b> must be a 32 bit unsigned sum of 0.</li>
+							<li><b>headerAddr:</b> Address of multiboot header</li>
+							<li><b>loadAddr:</b> Base address to load to</li>
+							<li><b>loadEndAddr:</b> End load address. If 0, bootloader assumes the end is the end of the OS image file</li>
+							<li><b>bssEndAddr:</b> End of BSS segment. Bootloader null's this segment. If 0, no BSS segment is assumed</li>
+							<li><b>entryPoint:</b> Address of entry point function. Yes, thats right, the entry point of your operating system</li>
+							<li><b>modType:</b></li>
+							<ul>
+								<li>0: Linear graphics mode</li>
+								<li>1: EGA Standard text mode</li>
+								<li>Everything else is reserved</li>
+							</ul>
+							<li><b>width:</b> width of display in text columns or pixels. If 0, the bootloader assumes no preference</li>
+							<li><b>height:</b> height of display in text columns or pixels. If 0, the bootloader assumes no preference</li>
+							<li><b>depth:</b> Number of <b>Bits Per Pixels (BPP)</b> in a graphics mode. If 0, the bootloader assumes no preference</li>
+						</ul>
+						<p></p>
+						<p>
+						That is all there is to it. The boot loader can load and execute your operating system in two ways: By loading and reading
+						its executable image format (ELF and PE are examples) or by using the information found in this structure.
+						</p>
+						<p>
+						The boot loader looks for this structure in your image. Because of this, you need to fill out and create this structure.
+						</p>
+						<h2>Implementing the Multi boot Header</h2>
+						<p>
+						There are different solutions for implimenting the multiboot header into your operating system. Different
+						solutions for different toolchains. Lets look at some of them.
+						</p>
+						<h3>Visual C++ 2005, 2008</h3>
+						<p>
+						This is a recent trick I discovered and posted on another forum. It uses some extensions provided by Microsoft Visual C++
+						to define the header in your kernel.
+						</p>
+						<p>
+						We first declare the structure, making sure there is no extra padding:
+						</p>
+<div class="code"><blockquote><pre>#pragma pack (push, 1)
+
+/**
+*   Multiboot structure
+*/
+typedef struct _MULTIBOOT_INFO {
+
+   uint32_t magic;
+   uint32_t flags;
+   uint32_t checksum;
+   uint32_t headerAddr;
+   uint32_t loadAddr;
+   uint32_t loadEndAddr;
+   uint32_t bssEndAddr;
+   uint32_t entryPoint;
+   uint32_t modType;
+   uint32_t width;
+   uint32_t height;
+   uint32_t depth;
+
+}MULTIBOOT_INFO, *PMULTIBOOT_INFO;
+
+#pragma pack(pop,1)</pre></blockquote></div>
+						<p>
+						Now all that we need to do is define this structure somewhere. Remember that this header
+						must be defined on a dword (32 bit) boundery and within the first 8K of your kernel? This trick
+						uses section alignment to insure the proper alignment of the structure. We set up the section alignment
+						in the <b>Linker Options</b> of the IDE and it is guaranteed to be dword aligned. So, all we need to do is
+						create a new program section and define the structure in it. Neat, huh?
+						</p>
+						<p>
+						Lets do that now:
+						</p>
+<div class="code"><blockquote><pre>//! Bad example:
+#pragma section(".text")
+__declspec(allocate(".text"))
+MULTIBOOT_INFO _MultibootInfo = {
+
+   MULTIBOOT_HEADER_MAGIC,
+   MULTIBOOT_HEADER_FLAGS,
+   CHECKSUM,
+   HEADER_ADDRESS,
+   LOADBASE,
+   0, //load end address
+   0, //bss end address
+   KeStartup
+};</pre></blockquote></div>
+						<p>
+						This works but is problimatic. This allocates the structure in the .text section,
+						but <i>where?</i> This is going to be a problem - Multiboot specification requires
+						the structure be located in the first 8K of the image, but MSVC is still free to place
+						it outside the 8K region.
+						</p>
+						<p>
+						To fix this problem, we must use the section naming convention. The section naming conventions
+						used in MSVC follow the format <b>name$loc</b> where <b>name</b> is the name of the section, and
+						<b>loc</b> is an alpha-numeric value that represents where, in the section, it represents. Its in
+						alphanumeric order: <b>section$a</b> is first, <b>section$b</b> is second and so on. So, by using
+						<b>.text$0</b> we are representing the beginning of the .text segment. But of course, just replacing
+						the above <b>.text</b> to <b>.text$a</b> wont work - My, or my no, that would be too easy. :)
+						</p>
+						<p>
+						Instead, we define our own section - lets call it <b>.a$0</b>. We can create this as a code segment
+						and merge it into the .text section:
+						</p>
+<div class="code"><blockquote><pre>//! Complete example
+#pragma code_seg(".a$0")
+__declspec(allocate(".a$0"))
+MULTIBOOT_INFO _MultibootInfo = {
+
+   MULTIBOOT_HEADER_MAGIC,
+   MULTIBOOT_HEADER_FLAGS,
+   CHECKSUM,
+   HEADER_ADDRESS,
+   LOADBASE,
+   0, //load end address
+   0, //bss end address
+   KeStartup
+};
+
+#pragma comment(linker, "/merge:.text=.a")</pre></blockquote></div>
+
+						<p>
+						Thats all that there is to it.
+						<b>KeStartup</b> is your entry point function,
+						<b>OADBASE</b> is the base address of your kernel (like 1MB for example),
+						<b>HEADER_ADDRESS</b> is the address of the multiboot header 
+						(which happens to be <b>LOADBASE+0x400</b> do to .text
+						always starting at offset 0x400), magic is <b>0x1BADB002</b>,
+						flags of <b>0x00010003</b> and the checksum being
+						<b>-(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)</b>.
+						</p>
+						<p>
+						Here is the complete example:
+						</p>
+
+<div class="code"><blockquote><pre>#pragma pack (push, 1)
+
+/**
+*   Multiboot structure
+*/
+typedef struct _MULTIBOOT_INFO {
+
+   uint32_t magic;
+   uint32_t flags;
+   uint32_t checksum;
+   uint32_t headerAddr;
+   uint32_t loadAddr;
+   uint32_t loadEndAddr;
+   uint32_t bssEndAddr;
+   uint32_t entryPoint;
+   uint32_t modType;
+   uint32_t width;
+   uint32_t height;
+   uint32_t depth;
+
+}MULTIBOOT_INFO, *PMULTIBOOT_INFO;
+
+#pragma pack(pop,1)
+
+/**
+*   Kernel entry
+*/
+void KeStartup ( PMULTIBOOT_INFO* loaderBlock ) {
+
+   __halt ();
+}
+
+//! loading address
+#define LOADBASE                     0x100000
+
+//! header offset will always be this
+#define   ALIGN                           0x400
+#define   HEADER_ADDRESS         LOADBASE+ALIGN
+
+#define MULTIBOOT_HEADER_MAGIC        0x1BADB002
+#define MULTIBOOT_HEADER_FLAGS        0x00010003
+#define STACK_SIZE                    0x4000    
+#define CHECKSUM                      -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
+
+#pragma code_seg(".a$0")
+__declspec(allocate(".a$0"))
+MULTIBOOT_INFO _MultibootInfo = {
+
+   MULTIBOOT_HEADER_MAGIC,
+   MULTIBOOT_HEADER_FLAGS,
+   CHECKSUM,
+   HEADER_ADDRESS,
+   LOADBASE,
+   0, //load end address
+   0, //bss end address
+   KeStartup
+};
+
+#pragma comment(linker, "/merge:.text=.a")</pre></blockquote></div>
+					<p>
+					Assuming this kernel has the base address of 1MB, and is compiled with Visual C++
+					to produce a valid PE executable, this should be bootable by any multiboot complient bootloader.
+					</p>
+
+<h2>Machine State</h2>
+
+<p>When the bootloader executes our operating system, the registers must be the following values:
+
+</p><ul>
+<li><b>EAX</b> - Magic Number. Must be 0x2BADB002. This will indicate to the kernel that our boot loader is multiboot standard</li>
+<li><b>EBX</b> - Containes the physical address of the Multiboot information structure</li>
+<li><b>CS</b> - Must be a 32-bit read/execute code segment with an offset of `0' and a limit of `0xFFFFFFFF'. The exact value is undefined.</li>
+<li><b>DS,ES,FS,GS,SS</b> - Must be a 32-bit read/write data segment with an offset of `0' and a limit of `0xFFFFFFFF'. The exact values are all undefined.</li>
+<li><b>A20 gate</b> must be enabled</li>
+<li><b>CR0</b> - Bit 31 (PG) bit must be cleared (paging disabled) and Bit 0 (PE) bit must be set (Protected Mode enabled). Other bits undefined</li>
+</ul>
+
+<p>
+All other registers are undefined. Most of this is already done in our existing boot loader. The only additional two things we must add are for the EAX register and EBX.
+The most important one for us is stored in EBX. This will contain the physical address of the multiboot information structure. Lets take a look!
+</p>
+
+					<h2>Multi boot Information Structure</h2>
+
+					<p>
+					Now that our operating system is being booted by the boot loader, whats next? Multiboot complient
+					boot loaders also creates an information structure providing information to the operating system.
+					These are passed by a pointer to the structure in the <b>EBX</b> register.
+					</p>
+					<p>
+					This is possibly one of the most important structures contained
+					in the multiboot specification. The information in this
+					structure is passed to the kernel from the EBX register,
+					<b>This allows a standard way for the boot loader to pass information to the kernel.</b>
+					</p>
+					<p>
+					This is a fairly big structure but isnt to bad.
+					Not all of these members are required. The specification states
+					that the operating system must use the flags member to determin
+					what members in the structure exist and what do not.
+					</p>
+					<p>
+					Here is the entire structure format. Simular to the multi-boot header structure,
+					it is recommended to insure there is no padding added.
+					</p>
+
+<div class="code"><blockquote><pre>typedef struct _MULTIBOOT_INFO {
+
+	uint32_t flags;			//required
+	uint32_t memLower;		//if bit 0 in flags are set
+	uint32_t memUpper;		//if bit 0 in flags are set
+	uint32_t bootDevice;		//if bit 1 in flags are set
+	uint32_t commandLine;		//if bit 2 in flags are set
+	uint32_t moduleCount;		//if bit 3 in flags are set
+	uint32_t moduleAddress;		//if bit 3 in flags are set
+	uint32_t syms[4];		//if bits 4 or 5 in flags are set
+	uint32_t memMapLength;		//if bit 6 in flags is set
+	uint32_t memMapAddress;		//if bit 6 in flags is set
+	uint32_t drivesLength;		//if bit 7 in flags is set
+	uint32_t drivesAddress;		//if bit 7 in flags is set
+	uint32_t configTable;		//if bit 8 in flags is set
+	uint32_t apmTable;		//if bit 9 in flags is set
+	uint32_t vbeControlInfo;	//if bit 10 in flags is set
+	uint32_t vbeModeInfo;		//if bit 11 in flags is set
+	uint32_t vbeMode;		// all vbe_* set if bit 12 in flags are set
+	uint32_t vbeInterfaceSeg;
+	uint32_t vbeInterfaceOff;
+	uint32_t vbeInterfaceLength;
+
+}MULTIBOOT_INFO, *PMULTIBOOT_INFO;</pre></blockquote></div>
+						<p>
+						This structure isnt as complex as it looks. If the corrosponding bit in the flags
+						member is set, it means that the members (shown above) are valid. Because of this,
+						<b>flags</b> is, technically, the only required member, all other members are optional.
+						</p>
+						<p>
+						Lets look at the members here:
+						</p>
+						<ul>
+							<li><b>memLow, memUpper:</b> Amount of low and upper memory in KB. Low memory starts at 0, upper memory starts at 1MB.</li>
+							<li><b>bootDevice:</b> Boot device (see below)</li>
+							<li><b>commandLine:</b> Pointer to C-string containing your kernel command line</li>
+							<li><b>moduleCount:</b> The number of additional boot modules that were loaded by the boot loader</li>
+							<li><b>moduleAddress:</b> address of first <b>module structure</b> (see below)</li>
+							<li><b>syms:</b> Location of symbol table. See below</li>
+							<li><b>memMapLength:</b> Number of entries in system memory map</li>
+							<li><b>memMapAddress:</b> Address of memory map</li>
+							<li><b>drivesLength, drivesAddress:</b> see below</li>
+							<li><b>configTable:</b> Address of BIOS ROM config table (returned from GET CONFIGUATION BIOS INT call)</li>
+							<li><b>apmTable:</b> Address of <b>Advanced Power Management (APM)</b> table</li>
+							<li><b>vbeControlInfo, VbevbeModeInfo:</b> Address of <b>Video Bios Extensions (VBE)</b> structures.
+							</li><li><b>vbeMode:</b> VBE mode</li>
+							<li><b>vbeInterfaceSeg, vbeInterfaceOff, vbeInterfaceLength:</b> Used to access VBE 2.0 protected mode interface</li>
+						</ul>
+						<p>
+							This chapter does not go over VBE nor APM so we wont cover them here. Memory map information
+							has been described in <a href="http://www.brokenthorn.com/Resources/OSDev17.html">Chapter 17</a>,
+							including the format of the <b>System Memory Map</b>.
+						</p>
+						<p>
+							The ROM configuation for <b>configTable</b> is the table obtained from <a href="http://www.ctyme.com/intr/rb-1594.htm">BIOS INT 0x15 Function 0xC0</a>.
+						</p>
+						<p>
+							Thats all there is to it. This structure isnt that bad :) There are a few members we havnt looked
+							at though: bootDevice, moduleAddress, syms, drivesLength, and drivesAddress. Lets look at those in detail.
+						</p>
+
+						<h3>bootDevice</h3>
+						<p>
+						The <b>bootDevice</b> member follows the format:
+						</p>
+						<ul>
+						<li>1st word: BIOS drive number</li>
+						<li>2nd, 3rd, 4th words: Partition</li>
+						</ul>
+						<p>
+						The BIOS drive number is the number used by the BIOS INT 0x13 services to represent the drive. The other words
+						reoresent the partitions: Words 2,3, and 4 represent Partition 1,2,and 3. Partition 1 is the top level partition,
+						partition 2 is the sub-partition in that partition and so on. Unused partitions are marked as 0xFF.
+						</p>
+						<h3>moduleAddress</h3>
+						<p>
+						This is a pointer to the first module structure. A module structure entry follows the format:
+						</p>
+
+<div class="code"><blockquote><pre>typedef struct _MODULE_ENTRY {
+
+	uint32_t moduleStart;
+	uint32_t moduleEnd;
+	char     string[8];
+
+}MODULE_ENTRY, *PMODULE_ENTRY;</pre></blockquote></div>
+						<p>
+						<b>moduleStart</b> and <b>moduleEnd</b> contain the start and end addresses of the loaded module.
+						"string" represents that module, typically can be a command line or path name or 0 if there is none.
+						</p>
+
+						<h3>drivesLength, drivesAddress</h3>
+						<p>
+						The <b>drivesLength</b> member contains the size of all of the drive structures. <b>drivesAddress</b> contains
+						a pointer to the first drive structure. A drive structure entry has the format:
+						</p>
+
+<div class="code"><blockquote><pre>typedef struct _DRIVE_ENTRY {
+
+	uint32_t size;			//size of structure
+	uint8_t driveNumber;
+	uint8_t driveMode;
+	uint16_t driveCylinders;
+	uint8_t driveHeads;
+	uint8_t driveSectors;
+	uint8_t ports [0];		//can be any number of elements
+
+}DRIVE_ENTRY, *PDRIVE_ENTRY;</pre></blockquote></div>
+						<p>
+						Lets take a closer look at each member:
+						</p>
+						<ul>
+							<li><b>driveNumber:</b> Number used by BIOS</li>
+							<li><b>driveMode:</b></li>
+							<ul>
+								<li>0: CHS</li>
+								<li>1: LBA</li>
+							</ul>
+							<li><b>driveCylinders,driveHeads,driveSectors:</b> Drive Geometry</li>
+							<li><b>ports:</b> contain a list of I/O port numbers used by the BIOS for drive access, terminated by 0</li>
+						</ul>
+						<p>
+						Thats all there is to this structure. Only one more member to cover, that strange <b>syms</b> member...lets take a look!
+						</p>
+						<h3>syms</h3>
+						<p>
+						The <b>syms</b> member is declared in the structure in this chapter as <b>uint32_t syms[4]</b> but that is not entirely
+						true. It is actually several members that occupy those bytes that follow the members:
+						</p>
+						<ul>
+							<li>syms[0] = uint32_t sym_num</li>
+							<li>syms[1] = uint32_t sym_size</li>
+							<li>syms[2] = uint32_t sym_addr</li>
+							<li>syms[3] = uint32_t sym_shndx</li>
+						</ul>
+						<p>
+						While the specifications state that any format for the operating system
+						image can be used (Such as ELF, PE, flat binary, or anything), this one is specific to ELF formats only. Technically
+						the system image (like the kernel) is able to parse itself to obtain symbolic information. However the miltiboot standard
+						allows the boot loader to pass ELF-specific symbolic information to the operating system as well through these members.
+						<b>sym_num</b> is the number of symbol entries in the ELF section header. <b>size</b> indicates the size of each entry,
+						<b>addr</b> contains the address of the symbol table in the ELF binary.
+						</p>
+
+						<h1>Conclusion</h1>
+						<p>
+						Thats all that there is to the Multi boot standard! Technically all that you need is to define
+						the <b>Multiboot Header</b> properly in order to get your system booted by any multiboot complient
+						bootloader. However, you can use the <b>multiboot information</b> structure to obtain information
+						that is normally obtained at boot time.
+						</p>
+						<p>
+						If you would like to support multi boot in the series, you must insure your kernel is loaded at
+						a <b>physical</b> address not a virtual one. This is because paging is disabled when a multiboot
+						complient bootloader passes control to your kernel. A good typical address is 1MB, which can be
+						loaded by alot of bootloaders, such as GRUB. You can, of course, enable paging and use it later on of course :)
+						</p>
+	
+						<p>Until next time,</p>
+						<p>
+							~Mike
+							<br>
+							<i>BrokenThorn Entertainment. Currently developing DoE and the <a href="http://www.brokenthorn.com/mos/site2">Neptune
+							Operating System Software Suite</a>.</i>
+
+						</p>
+						<p>
+							<i>
+								Questions or comments? Feel free to 
+								<a href="mailto:neon6000@aol.com">Contact me</a>.
+							</i>
+						</p>
+						<br>
+						<br>
+						<table border="0" width="100%">
+							<tbody>	
+								<tr>
+								<!--
+									<td>
+										<p align=left>
+											<a class="anchor" href="OSDev13.html">
+												<img src="images/left.jpg" border=0>
+											</a>
+											&nbsp;&nbsp;
+											<a class="anchor" href="OSDev13.html">
+												<font size=4>Chapter 13</font>
+											</a>
+										</p>
+									</td>
+								-->
+									<td>
+										<p class="center">
+											<span class="special">
+												<a class="anchor" href="http://www.brokenthorn.com/Resources/OSDevIndex.html">
+													Home
+												</a>
+											</span>
+										</p>
+									</td>
+									<!--
+										<td>
+											<p >
+												<a class="anchor" href="OSDev15.html">
+													<span class="special">Chapter 15</span>
+												</a>
+												&nbsp;&nbsp;
+												<a class="anchor" href="OSDev15.html">
+													<img src="images/right.jpg" border=0>
+												</a>
+											</p>
+										</td>
+									-->
+
+								</tr>
+							</tbody>
+						</table>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<p>
+			<a href="http://validator.w3.org/check?uri=referer">
+				<img src="http://www.w3.org/Icons/valid-xhtml10-blue" alt="Valid XHTML 1.0 Strict" height="31" width="88">
+			</a>
+		</p>
+	
+
+</body></html>Ytext/htmlUUTF-8_4http://www.brokenthorn.com/Resources/OSDevMulti.htmlP£Ô_WebResourceResponseO
+¯.mozilladummy {
+	FONT-SIZE: 12pt
+}
+.title {
+	FONT-WEIGHT: bold; FONT-SIZE: 19pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.subtitle {
+	FONT-WEIGHT: bold; FONT-SIZE: 16pt; COLOR: #003e98; FONT-FAMILY: Verdana
+}
+.author {
+	FONT-WEIGHT: bold; FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.code {
+	FONT-SIZE: 13px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.vbcode {
+	FONT-SIZE: 11px; COLOR: #000088; FONT-FAMILY: Courier New
+}
+.codecomment {
+	FONT-SIZE: 13px; COLOR: #008800; FONT-FAMILY: Courier New
+}
+.codekeyword {
+	FONT-SIZE: 13px; COLOR: #0000ff; FONT-FAMILY: Courier New
+}
+BODY {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #FFFFFF; FONT-FAMILY: Verdana
+}
+DIR {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+BLOCKQUOTE {
+	FONT-SIZE: 13px; COLOR: #000000; BACKGROUND: #CCDDDD; BORDER: 1px dashed #999; FONT-FAMILY: Verdana
+}
+P {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+OL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+TD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+UL {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+DD {
+	FONT-SIZE: 13px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.tblhdr {
+	FONT-WEIGHT: bold; FONT-SIZE: 10pt; BACKGROUND: #666699; COLOR: #ffffff; FONT-FAMILY: Verdana
+}
+.maintext-1 {
+	FONT-SIZE: 12px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.maintext-2 {
+	FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.caption {
+	FONT-WEIGHT: bold; FONT-SIZE: 11px; COLOR: #000000; FONT-FAMILY: Verdana
+}
+.inlinebox {
+	BORDER-RIGHT: #000000 1px solid; PADDING-RIGHT: 10px; BORDER-TOP: #000000 1px solid; PADDING-LEFT: 10px; BACKGROUND: #ccddee; PADDING-BOTTOM: 10px; BORDER-LEFT: #000000 1px solid; PADDING-TOP: 10px; BORDER-BOTTOM: #000000 1px solid
+}
+H1 {
+	FONT-WEIGHT: bold; FONT-SIZE: 22px; COLOR: #00983e; FONT-FAMILY: Verdana
+}
+H2 {
+	FONT-WEIGHT: bold; FONT-SIZE: 18px; COLOR: #3e0098; FONT-FAMILY: Verdana
+}
+H3 {
+	FONT-WEIGHT: bold; FONT-SIZE: 15px; COLOR: #800040; FONT-FAMILY: Verdana
+}
+A:link {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:visited {
+	COLOR: #666699; TEXT-DECORATION: underline
+}
+A:active {
+	COLOR: #000000; TEXT-DECORATION: none
+}
+A:hover {
+	COLOR: #aaaadd; TEXT-DECORATION: none
+}
+
+.anchor {
+
+	text-decoaration: none;
+}
+
+.anchor:link {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:visited {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:hover {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+.anchor:active {
+text-decoration: none;
+color: ##00983e;
+font-weight: normal;
+}
+Xtext/css_8http://www.brokenthorn.com/Resources/Files/reference.cssO·bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_8http://www.brokenthorn.com/Resources/Files/reference.cssÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlRu7* ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeZKeep-Alive]Last-Modified_Content-EncodingVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesXtext/css_timeout=2, max=99_Fri, 24 Jul 2009 23:28:20 GMTTgzipVApache_Mon, 12 Apr 2021 10:13:13 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:13 GMTS607ZKeep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlWktlZXAtQWxpdmVUVmFyeV8QEENvbnRlbnQtRW5jb2RpbmdWU2VydmVyV0V4cGlyZXNdQ2FjaGUtQ29udHJvbFREYXRlXkNvbnRlbnQtTGVuZ3RoWkNvbm5lY3Rpb25URXRhZ11BY2NlcHQtUmFuZ2VzXUxhc3QtTW9kaWZpZWShD1h0ZXh0L2Nzc6ERXxARdGltZW91dD0yLCBtYXg9OTmhE18QGkFjY2VwdC1FbmNvZGluZyxVc2VyLUFnZW50oRVUZ3ppcKEXVkFwYWNoZaEZXxAdTW9uLCAxMiBBcHIgMjAyMSAxMDoxMzoxMyBHTVShG18QD21heC1hZ2U9MjU5MjAwMKEdXxAdU2F0LCAxMyBNYXIgMjAyMSAxMDoxMzoxMyBHTVShH1M2MDehIVpLZWVwLUFsaXZloSNfEBgiYWFmLTQ2ZjdiZjVhOTBkMDAtZ3ppcCKhJVVieXRlc6EnXxAdRnJpLCAyNCBKdWwgMjAwOSAyMzoyODoyMCBHTVQACAAjADAAOwBAAFMAWgBiAHAAdQCEAI8AlACiALAAsgC7AL0A0QDTAPAA8gD3APkBAAECASIBJAE2ATgBWAFaAV4BYAFrAW0BiAGKAZABkgAAAAAAAAIBAAAAAAAAACgAAAAAAAAAAAAAAAAAAAGy_"aaf-46f7bf5a90d00-gzip"_Accept-Encoding,User-AgentUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí(-8AGJS\^`goz‰‹‘“•—™›Ÿ¡£¥´¶¸º¼¾ÀÂÄÆÈÊÌÎÐÒßêø(-<GPUZhq…¥ª±Ñãò*05KO\auy             ~              ›ÔO<k‰PNG
+
+   IHDR  w   G   s¯°   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ÞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆŽŽ€ŒQ,Š
+Øä!¢Žƒ£ˆŠÊûá{£kÖ¼÷æÍþµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sý# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zŽB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóýxÎ®ÎÎ6Ž¶_-ê¿ÿ"bbãþåÏ«p@  át~Ñþ,/³€;€mþ¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}þgÂ_ÀWýlù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqŽDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ýG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púažÁ(¼	AÈa!ÚˆbŠX#Ž™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ðdt1š ›Ðr´=Œ6¡çÐ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRÝ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºÝ•N—ÐWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªÞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yý‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ý»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠÞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSÝ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜ž¾^€žLo§Þy½çú}/ýTýmú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«žÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ý=‡Ù«Z~s´r:V:ÞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆÝÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)žY3sÐÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Þ2ÞY_Ì7À·È·ËOÃož_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿Ž?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖÐaæa‹Ã~'…‡…W†?ŽpˆXÑ1—5wÑÜCsßDúD–DÞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ðA*¨Œ%òw%Ž
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLÝ›:žšv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²þÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«ž+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæÞ-ž[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒÝµa×ønÑî{¼ö4ìÕÛ[¼÷ý>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒý#¶×¹ÔÕÒ=TRÖ+ëGÇ¾þïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêÞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<þ“ÓOÇ»œ»š®¹\k¹îz½µ{f÷éž7ÎÝô½yñÿÖÕž9=Ý½ózo÷Å÷õßÝ~r'ýÎË»Ùw'î­¼O¼_ô@íAÙCÝ‡Õ?[þÜØïÜjÀw óÑÜG÷…ƒÏþ‘õC™Ë††ëž8>99â?rýéü§CÏdÏ&žþ¢þË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ýêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSÐ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  1–IDATxÚì}W—]×yØ>½ÞÞËô€dŠ¢hÇŽ%/·Ø~‰ýœWÿ ¯¬•‡¬´—¼Ä‰/+ÅIÌ8–,Š%ŠI •`€©wæ–¹½ž^ó°1wî½3s§Aè~\à™s÷Þß÷íóí¯oÄ4Mp¤`YV£ÑøÁ~°¼¼üÝï~wll,"^Q0£Ùlnll\¿~=—Ëiš†aMÓÑhtfffjjŠçy—Ë…aÀ ~%?òQå8nzzúÁƒ÷îÝcÆårÑ4ýJ’Ï4ÍF£±´´tÿþýL&£ë:1CCC—.]â8Ž¢(E[m )s¤ƒâøääd<ôèÑðð0MÓããã¯ÞanY– sss…BÁ0A‚H&“_úÒ—FGG†¡(j°Éð+ÇrÆ¢(êõz/_¾¬ëz*•ÚÜÜTåÕ1’$---Ý¾}»X,† `fzzúõ×_O&“,ËDÌ p\R @ÄÙ³g'&&ŠÅ¢(Š¯˜¡Ôjµ–——oÜ¸‘Ïçu] Ð4=55õÚk¯:u*’$9Ø^ÀqYL  A<Ïë¯¿þÙgŸÕj5]×£Ñ¨Ïç{ÙéeÛ¶®ëÕjõéÓ§Õj•¢(hMLLLMM:uŠ ˆÁÆÀ Ž]—[Þ™d2Y«ÕLÓüÅ/~aÛöË®ÂH’´¼¼üé§ŸÞ¼y3—Ë©ªjYŽãcccgÎœ!Iò¨` 'H—  (êóù‰D©TÚÜÜŒD"Š¢$ùòºEQL¥R÷ïßÏf³’$Y–…aX ˜™™Ÿ˜˜„«0€ªË@WÅøø¸Ëå*‹årù§?ý©eY/©S¯×—––îÞ½›Éd ˆ!b||üÊ•+gÎœ™ššˆ˜à— eP…B###8Ž‹EUU5M{émÛFãéÓ§óóó¹\NQË²PM$çÎK&“+i øåH¨ÎŒù|>MÓJ¥ÒÇüryg$IÊår=zøð!É›¦I’d"‘¸páÂÈÈH4ˆ˜`À{Ãb±ØÄÄD­V+—Ë@@Q–eOþ—iÛv¹\ÎçóËËËÙl¶ÙlBCD"‘€yw¯@Ôl xéu°•«Ç-ËÚÜÜ¼qãÆ‘O9˜¦¹°°ððáÃÏ?ÿ|qq±R©H’äh1¯½öÚøøø@Ä` 'B—êL4œœ¬Õj‚ 
+UU1ë©Î¬,=ÎfÖ{Ž395OŽÓ"çn\“e	ê0–eÕª”ò>yòDUU]×¡/‰$Éd29;;;22âñxŽdÞ]ðí Ï^|ý­çël{xÂ7YŸ8ž:5Ž¼ª_Z.³¾¼ô ðå_{›¤è”9uf||<N§R©l6ûùçŸ¿õÖ[8Žwšf½t÷Æ(‚hºÞþ\×Ÿ¿÷÷‘Xò;¿û'Ã£ÓG¾Âr>Zy¤¨Ô³¾úå‹ÝYÁñ"!‡'&&.]ºt„y½™têç?þ{‡ßóÍ¯~ù¢$½¾ôä‹r~C7¸0ø¢¨“áÚ‰§í039ªÄU5JÄ+Y\ú×ùïdY
+|>yêÂ×~¥R7_”A$LMM•Ëåf³™Édæçç/\¸Ð-efÏÙT"wbf¡TýÅÿö7~çO#±á#Ü‹¢(Nžy¥,¿ûyåÑââb p
+MÓÉdòòåËG›w‡"È©é±óg&ûy9•J}åÍoåWçx–l˜L&Ýn÷‰Ýd»ð´Jå²EÃáð«Wÿµ²ôØÖïç¦ií™ƒòW§a3Á~©TJÅB¡P­VÃè&´eY¬o,óô³XÄû\¾˜6Ž!8Ž%b!†¦–|H3ßñú‡ÿÚMÓ´m[’¤ï}ï¿Ú¦üöÕ©d<ülÓ—J.—ËY¡Ûív»Ý4M­ßºÝEe˜¶iÙñ\zŠŠÉÑÏ•”µµµ‰‰	Ñòèõ‚Ïëvú|¾“,ezò´!š8Ú±«”Ëîóù|û’2²,ýà¿‘%ix8ùßü£ãXÿá§@ âóºpÃqØf*•bæ2}RæÅ©¦‚x½Þ‰‰	—Ë¥iÚúúú“'OºsgH’ôBu¯ÔÎÃne6K"|Ùëq‘šY{(IÒ!?o]×EùÑ~ôÿø­VëÑ£ÇkëÙ6
+ÊŽ€‹gYöÈ“ö¸~¾,nä…vÄï.”rù’ó¿‚  (JRÌ“¥TûCX~b¡'OoÍço=*§r5‡K§ÊeRón³¸vƒF£¡ïl”Â¥rØ)l`ã8¶¥’[ÅbQ–åWÂÙÔeÐ.«ÄPå˜rç`¹`0ˆ¢h±Xt&´†a~¿Ÿe¹l®ÔþÃ\ÕÜÈ  (Š 0¤R¹\>Ø–j—/ï¾ûn©TÊf³ðcØåW<ÏŸ={öXð‚lJ²ÒŽ¸àkÅöw(Šòy}†a¾D{±'O†I$µ¦‘/T9~<š=5 XZZá8P8ä‘hâµó§Ÿ%UYÓ´“f=BÊ Ý_àÃ‡—––©)ì¤Îp722Â0Œ®ëkkk;©3,Ã´?q»ÝS§JµgK¢)GíÍÍÍý¦iªª*ÂøÃwß}·Ùl¦R©L&£(
+Ïó»8z‚Áàhæ (6Šns
+º\.†÷5šÏ™‡¢(I½|šv7O].×ÔÔÔì¹K¥Jí0#†anm!Xüqä‹?ü$Åð¡ÙÍª¹¸ÑXÉ
+/u5ß(ƒwš¦aúÙq,ËårE"‘`0(Ër¥RÉf³<ÏuèÈöž¢¨X,–O+µFÀçâ@ley¬ÄöúàƒªÕj½^·m[–eUU¯w—`ÛŠcÝºaÙ ¦½ýã$i¥Zñ¸ù—}Gvð” ŸÏçñŒÞ¿ùþa†Í¦S@›ë8tðÃOa˜Û¶²Å†¬ø|p8Ìl—¹/)ôI¼›<Ïoll‚àv»Ü@@QÔãñ$‰Z­ÖjµVWWý~ÿðð0Žã{†^_¨Z^	ø<ŽßD–eXR´“p±¶à'?ù	 @’¤b±X©TöUå€ ŽãÇÝº¸ÒP(ŠÂQMÛ>u8:´þ$^Q iÚí+ŠJÓŒ+-Ìß<ÇºÈÃOa˜Ïç›žžƒ8ŽG"–e_öõI¼[
+¸\.Aòù¼ßï?r‰ëMù|^–åZ­–J¥X–=sæÌîÚ‚ (ŠÊ²Ú®­É²l†aªªÂÀAÃ°,Ë¶í>úÈ²,EQi6›­VË4M—ËelÁ.çŠ¢4M»\.‚  œ6Ms'uÆ¶íCJdA2XÖ‹Z@ÛþÜŒ>–µWUÊÇ‹åõádô ?ÿøÃ÷6s¯Í¾ h	Ž^A8ª)X–M&“ápA’$_|™þ)ÓCƒ€ÍßJ¥R£Ñ8Žþû4MCý¥\.×ëõõõõ`08==½güÝþ[–yóúÏ?üéÿEAQUË´,Ûr{‚šÒÒ‹÷„iÖÍ0L«Õ’eAC5¹nÛ  Ápšõ’$ÛHêrk0³Þªˆ8Ž·*©õ¥{—^;û¿ó§Pš¬,=ž»qM–$ @"9òÖ7þ)E?£òûï¾Ó‘êzöÂåù·á¿'¦g¿ööovO'kv8èRE­[‰ã\~M×É^û²Þh)‚ú£ÿ÷}š¢w¼}µþ@èüÅ+c§œ¿v/xbzveñ1Ã²ßøöwC‘ÄÁ0êóÔºumÞ‘2×>øQ¹¸ÙÏ\ý—ÿ~eéñÅs3n Ðt}Ø‡4JkCCC;á¾'§:?Àþ@èëßüm×¿y£áÀoþîŸíwŸì´Tøï×¿üÖÄôìÜkÎ“×.]½øúWwß	‡Ù·}Ræ™*÷ñ\·,¦´ÀÐÀž¶Ì6üoµZm4Š¢Ø¶ÕHGH­.¶ê…Hø«JM044T­Ú®lTDõ»‰HÀôó‘Çïæ(Ü¢$àeÃ>:[¨g³›P+E]*ºyjj,zi†„a8Aó4MsÇ²l³^‹G<#C18þŸÜ?jøµ³A??6½|a
+ÇIÉ yž¿wûúÿúoÿISZ!KbV.“š¿cht’ãÝ €µ¥ˆÑt18‰[4	€¥m¦W©ô1¨­gÖ—e¡–â;µºH ²ÛÅ¥
+z2™ÔdA*íˆŒŒèš"4Š.žƒtÐ5emé!\§¦¶!¶õžƒC˜»qÍY-ƒzµðèÁœÏçóŸU“w,µõJ!­«"0•Rn5šœÈ®/¢f«OŒv‚ž<õx<$ÅÜ¿s=5E“qt±ŒÙB?sá@Kxc‘à3e¡1·?Ã¹âvÜ÷äTâñ¡)ŽÁöœâýwßùÁ;ßwÈ[-o>z0742ÁrîžäM(wEÑÕùþ÷IÏ¥šä÷P–¡>~xçÆg×}qÇÃ~,-½¾HQ”?ßi'rßöCüÝtÇ9Ž³m;—Ë%	Š¢ŽÜ;ÕØ¬³Z­ÂW=“ô:ü,PÏoÞ¹ÿø¾ûÆÔx¬·ŽêVþûß½þüùz½†­Ù™ñs³ÏSl[‚dÙHMóž=wçyÃîÜšYšÿôùøÅÊã¥ôÅóÓ0O¯)(ÿú?þï_{ãÍßÿýß{ÿÝw:F«ÖšÙ•{,ïcYöò¯}{~î§®·m¥ªAèÙÅXrªÍá¯!š$Iò<ßªaÝ†[(’xz†ºGs»8·‹Iì4¸,KÝ«m	R-ÿ´öù†í¾à\êÑ¹/½µ2ÍÃá}b´/ (Š÷<Gíì—¾–Z¸Þõ†§.Þù¬@¦“Š²¾)Údáý###†õÄ½NeÖbÓ¥b~—)~ðÎ÷çn\û£ßývûËÕúÊü',ÿ]Žãéžeqqqrrr_ûd÷—-Ë2L³]Û%Ås•r1C3ÿÔèXÏžÄß¶‡{zªX–%I²Ñh”J¥ãpÚCïÌØØX<'IR×õl6»ºººû¯ò¹´ƒ À´¬Z½ùþÇ2¹m%ŸÝY% @b&AårY•j‰Ÿž ¬ml–*  Ç28†$Âœßï…BÐˆë C­!,¯=ó¼þïøùf¾˜Édæ>ÿ­ÜÐÓ ð<ƒÙRf}IUU#TàéXÕzAÞú¨HEóÙT½^·,Ëçu“!)&¼¯§ß'žÝÝm‘Ú”z/Û2ájÙTTân[FfõQ =œ))5¡Q.Ë‚Áõ‰QÿÛ Ù¨}òá{b³:=}êy
+Áú¤ ÀDØ¥Õ6:¦i¢(ê(2àT;â¥RI1©¦˜pûÑƒ[ô»ß¶Z¨ÛO7DøC¿×Í3ØÆê<¼ ¨{ØÑu_û¤çËuAwŽ"(bšÒ3óŸ¡)`›éÔó–ƒQcÇõ èîÄßCÊÀ`¶ËåRåø’	‚‡ÃÉd:›K¥R.—Û=|.ËÏ=÷ÌÏ/¬ùýþp(Òž°ûàñÆ¿ú·ÿù_þ›¿ ðŽ¢¨$I.š†êƒïÞº¿R©5`vÐjÕjõYvßv-û½¼m=‹F]»~Ïãñ0³‘ZMÀÑî=)=]+‹¢y\-¦›Í&EQ,Çµ¯*S–7ê÷rºþ,ÑT0«09<®¡¾–‚¸\.†azªïòE&s•Þ	¾™‚°’iô 0÷ùGî›Íµ\ËÁÝR«•JE×uš¦»üd­úhµ  P£Ñh8Ù'FûˆP<¼ýðÎ5Y(…âc-ÑLê¹}RÇqŸß_®ÔŸŠãb±X0„*ÕÃû·À©vÄ›Í&Ïñ;MÑ,§¾óOÞÔmæ‹UùÉZ¹ÒÔ<É	¢?³z9_«Õ,ËêÆHÓ4Û¶ûÇt'Í/WWSmÙêªqk¾°²ž  ( h5JF~V£ÆNëafwâï-eH’ôù|8Žg2™õõõcÊ!Â	cI’´²²’J¥vJ–WUy}m‘çŸI™R¥U¯×	‚ Èm(}67Ï0L±*þâÓ{·,ú|¾¯½ùb[c#qøï	£Ãk©, €¦H³‹…ÞÙ}“ã>7ˆ‡ w.[6‡iŠ[õ¡DÆžY–Ut=ýÌ[iêbµZ xÜÛÂ{ÅšêóùtM9ošf½^WU•æ|(¢Xï.õ;A¸Cã*pñ<ßí&Ûeðj¥ÔjÔÜeÍVM¬w’${.ØíU»ÒÔEaX¦ÏIûÕgýxþÎ›_¹X¯Õ$YGèNyH’¤(ªOê™¦És|G'ÃY–6³ã”ƒ¸$IV|û§/¼a3COÓ¢¢j±XìôéÓÅ¥³…-3F.—Ëªªv“×ñë÷¿Oz¾LPìâÊF›PY–MeJ-á™n«*
+Lü?5z®Çñ]ˆ¿·”Û–í‚P«Õ4íX"©0TL’¤eY†aäóù7n¤Óéž9ÞahÚI–YLÒé4Œa·¿öàÑr"‘xë­· Ã¸äÛo¿=6:Äó³•ŽŸ©5Z`+¯Õ(uç,†yîôÏ±Ñp  ð³np8ìq³<ÇB¿:¯×&- `Y6°­z½®i†o3|$I$>¯Ï‰ÄÛ–-I’¦i$IÂ†‰Db§”Ã`	ØØØÇqÝeðj¥ØŽ»a±ÄhOÜ»œL&OŸ>Í&«eÛ6Šö‹Q?¬W51E`[ €r¹Üh4‚Áàøøx("I²ê!(ÒA(§	F.“:§:ÈŽS «šÇq.\8wîœ×çÓ4Ýñ•4¸?;fy>¾ªv¿<44äL U+‰%ËŠãU€Ù¦Æ.ëÙ…ø{G²¡:Kóù|­VËf³ãããÇÑõÎ‚¢¨eYªª.//Ë²|áÂ…••~KG©Õ›ª >\¸wñÜÌÖ5~ü³ÏH’dEÐŽ¿ò•¯üñÿ±ÇãÉf³†å3Ë.þù—ér¹B¡Ð¶: S†}ð¶KÃÃ"£Ã1 €¬hs÷žž:u*
+¡ˆåÞ*†FÄår¹=,Í0G”$©Ûj€bÞÒšÒ–‚ifë
+… æ¸‹ëfHC_iÿƒgÓëí¸SÕîÎ˜‰DÂçó¡(Ša˜©K}NÚßÝ`	ub4ÕX‚7¡V‹aX76W6ò”S» Þá·ŽÅb° Þëõ’$Y-œ|Ë²5UÝW!ë¾0eY6Ýæ­#	2–³d{ÌJ=5Ìå½¥EQ0y¿^¯K’t-ÁÁ0Œ¦i‚ `<[Ó´r¹œZžóÊé-Å
+ùuîÜÌôä @ÓÍ¿úÛŸ=œ<99Ù}°_¾|ùþà&''MÓ„é••Â:Ï=Óö+…$)·ÛE-Ë†¶«i˜¢(vÇñ€—qsQ ÀÍ»
+‚V³ò8J?ŽãŽð†&®¢(ÝÜ"IÒår•{å@ûtÏ
+)è’ïù§]·m«w‚èwgLÈš©©) @z}¹ÏIû†¡¢$òóðÌG„ ˆ ¸{D’céƒqjÄ;¤L$y(ŠÎÝ¸öôñý·Þø’C~˜}Þÿš÷…)I’å5ó<¢ÈÑR£|è\–ã8ÏóE	‚pLÓÖ—`w£^¯+[* €çXÇrù?¹ÍMx‹Ïçci ÑyyvvÖårAG7<k•²c(" !‚ %Í”î8fC­r;úŽcÐÖXYÏûý~Žã$IÒ¤Žû»ÓÚ\Ôr7·PíÙð¨Ï¯”ŠÀÝ³Œ±ÉÃa„¢(‰¢€8,‚»@.³Žo×ÿûçÔ.ˆwèh^0¤}îô¤³Q–•;½¼}=(†aQŒCSãðûß†a‚0Ã4M£:ÚïÄ¶mEQdYî_ŠY–-Kò¿ø³ßùÑ‡ó_º|evvV•›ç~Þ¾ì®pi5èáÚÃgA 8nsŠ@t]ßÉÃ­VS###4M›¦iZ†×óì Ñ5PÀ2-µÍ66¶zež8$î/5èºðoqJ7 yŒœ‚"æ×®\JDÔØ‡”A„eY†aAhµZétz||ühç6Ms}}½\.ï¹Ëo?.MxÜ‰¢HÀï•õï7fÎ¿Ÿ<ÜCäc(ËPíº"‚ H›¼·mÛÜÙÔÌ„K—.ñ<ŸN§eYFl›À1ènµ¹•Œ®ëÏuÑ‡ÄýX¡ÒPünêøúõ  q8%´ÙBú˜8õñ‡ïÍÝ¸öÖ_:ŒsÜðÂ¨±?)¶
+št]¯V«ÉdòðÛµ«^¯onnö#eZ²µ¸Ñ
+¢‘jT,¡Š¢ØÏE{JhÛš¦íä¥C1Âáðõë×­­ÑPMDnžQ5ºîO ÷c…bUÑ!º•¢~ô¸ƒçœŠGü.Ž>N­,=~ÿÝw.ž›‰†¦i§‹bÌOR'¯Ð‹¡ÆAt‚ `'mAt]?B…
+ù666dYÞsdžçã‰Dzu.ò hŠDQ;¿™îëF¤½WmÃîî?(Šñ3-Û
+…‚Á`:^z”ÛâBÓTG¿Ý°^d“ÓcÅýØ¥L]·Ôc”2îÇÊ©ø»ïÅa\b-×2Lsu½ókOš˜ù%î[|—cEQ ¡Ñhhšv$ lÛ.‹+++?îÙ”³†I&“åÜSA”xŽÝÊõ¨ˆ¢Žó!IEQÕ0 ~¿ÿÊ•+«sÎ_Ó¹êøËÿûÍo~“aÇ¬í(SÀNÀ²l0Ø²õõµÅññIÎå=&ëìÞÓ*†a¶m!§æÜn6ªo^}Vúœ++eöIwr5¨Ë@0Š¢‚ ”J¥L&311qÈ¬Û¶[­ÖÆÆÆ“'Oòù|O¿/†a	?(Šò<'Ê•ôó"CEÑ´Ž‘©YKkÉ²ìóùNŸ>½MÎ" ÞÆ‰D¢E"š¦%a Fö š¦O"W/5$EÎ¬}¾x÷ŸýÉŸQÌÙãhHˆ Äit„œZ^|4œŒÂ@d¥¡b:0N:å‰ôËÀq(Šêº^.—[­Ö.éúÓ4ÆÚÚÔbvìxÞ¢ƒŠ†aÍÖó µaš’$!öñz.E¥q»Ùl†B!š¦#‘°CAxž¿zõj<oÿxÜnwµ¼9#»†an i­äÖ¾úå‹Š,U«U¯×{Dã£íœ
+‡ÃÓÓÓíƒžS•r!è÷níFÛívc¶¬6k'’ÚÇNƒK‚ 0ƒžZALÓ<X»Ë²Z­V¥RY___ZZªV«N¦LÇRU°BaÔÓÍŒmp°	µ×rHG±ƒKFÇqiÔ«Š’ I2–H¦ìÐ‡$Éx<Þ³sÏI€Câ~ÜÀq\4…B_Ì}ÀK”+Åæ»3-Ÿß0Eçøæy>‰„Ãá#\>›Oœ…ÿd“çyS5ÕIê@Ýl‚Ý­Š¢lÛ¶m[EAR©Ô~=…¶m‚Ífççç¯_¿~çÎÍÍMA`Æ'Š¢ÑhôÔ©S‰DÂ‘µpÆžb¯chË²¬½t™XbLQvËÇ©µz«Tºa `.“&–aE¥ËíwJÑ @œ+´O&÷8Žûý~–¡D¡ D±g¹ÃEïmãÔ±€i^Ë9†ÁOêÍ/€”2`« AÛ¶aÅwÿRÊ¦|>¿´´tëÖ­›7o.//Ã¢,Û¶1c&‰$“IŠ¢¢Ñ¨£¿A¿ÔÑm«Zkv<Ô4Ýh»Ñ†ÝN2UÕ ÒL¥Õj† ˆ¢¨Î9Ž;É7®÷ä @Ã6Ö–¼n4vp‡SÇe† ¨“P‹¢(I’ÈI½áûPã€¬¯aYAg‰ÿŠÒÏ÷/!iµZårymm-•J9¿u*V‚˜˜˜ˆF£‚À{æ lÓ†ØÓ€2Ì¾$Žã†  4]÷¹HY  €ôúòôØg¯$Ùm	ÖZš"6F‡cºn¸Ö×²ìs}ž¦¨?üÃ?<ÉÍèŒû‹„r¹àóºžIó£ƒvN½˜ÏÇq 's'¼`jìÏ/C’d$I¥R`«Ò¡Ùlîž¥8Åbq}}}mm­R©(Š7¼6‘Hp#‘H,ƒFÙüü¼(Š™Lvï92,upþWÕ- Àž|Ä’éå{`«*Š0š¦œ&’jº:• ê‚¥XÍÑáA(Š4Z%Uóúƒ°Ö^Óu¿‡R0ïI¾¾ëÀ¸¿HXYzpðt:ÂaÛ9åHØ_YøåRcoï/ÇqpB³{34EQjµÚÚÚÚÒÒR>Ÿ—$©Ý €88Ž›žžŽD"Î	¶mŽŽjš¶¼¼¬ëúNRkO]mÎ^Í 8Ž#è Í°‚(µ¯P×õvåÜ´@Ï6‚8Aé2¶ÚŽYº Šb(WTÍùn-S?9UKGˆûY–ò¹ôÅÙ7Ž|äp4yÜœ"üe‘2/€”2  Š¢ Ý]3¢(ÂTÑnuÞ|P*•ž>}º²²ÒÝœÞX:111::Ê²l»–k¦|>Ÿ×ë…z’ ^«ŒŸy–U©–icEkJËhl¨ý+"P-½¾ì„«tÃR´g÷Š¢h6^*×BAŸªéf×ëu·{˜ Ÿ§Ì`öózù¼ó}†ßþî??9{«÷ÌúJ?¸¿8Efñ±‹çŽ#ÕãøãæT(w¾7‡ tÓÐO¤ŸîPcØããyž¦i–e¡G¶gy¸mÛðÎÆ§OŸÞ¾}{~~¾=JÙÙÙóçÏŸ?~llÌívw;à–n·›¦iš¦mtÄ²«ZÅµµ	Þ÷ˆ¡èîBÇñ`dšl–ek²°ºüÔãyÖL°ÒPà8ÝKÂq<IJUè¿`)¤Y¯˜¦ŠÃ´YQmC‚ý>þð½'ó·‡b>˜$ìê¿mÛ{æüwÜÓ°ƒß«ßÁ;p749¿™î»½—½rPŒv2x!dÒk=DLßs! é8ðîßþtéñ]ˆû9Õç¼ËSo´àk›š®ëo;	EIÑT¹[ß	£}SuÇ—·Ÿ÷½ŽèÃPc§õìB™ýIØ. ^–[òtt´2£V«­¬¬ÌÍÍÍÍÍ­¬¬ÀnÆ0|À²ìäääÅ‹OŸ>}õêÕÑÑQ—ËÕ[Ú¡(¼*„ã8EQ¢a¯ã½¯Õ›J«ø³ÿŸ±‘„ÃÂR]ƒ%ãŠ"·ŸÝÙ!8ŽG#ÙÍ @QUÔÅz>ô;.^†a neYÖ¶>r B1I5 8ŽµI“ÊªªLÀ½…  åû·?ýèç?zÿÝw~ë[o¨¾²²"Š¢$	Ý«EA7àÝ6¾CËf.ípNU5šèÁÝþÇq<šupGŒV)·Ú÷žclÒ µö´ƒ§7¯ÿüÓ~’ˆ…<Óæz/WëRm}ñÑ-Ä¨Ã´ƒáÑÉƒqªv™"Ž;áaIROnÊ’ »,[–¥HÒæÚÝÌÒ]×±Õs–}Qµãe±UUnß±°  ¢Ð²-Šuèû‡§ø©±Ózv¡LÇq²·a	uBÛ¶á‘Øjµ2™L €­g ˆY\\„‰vÐƒã8Ã0Ñh4‹y<žd2‰Dö¼©Çq¯×Ûh4LµA f|kóó¡645>ìÂ¢
+F|>C?üÙ[‡sµÖ¤¤;>51}îfö	 €¦È¡˜?p‘$M†rÃœ‰zàåó÷Û¡ÞhÑIÓ´¤˜õFËëq!*™r1žÊ¥æ 4M…C¾ÍBùéÃ'ðFžÕlƒwc¡`àïo[•Üh•
+¹›×?¸réÜ‚B³Žt%~üá{íÍÖ$Y±åª¦Êí&ª,KýŽ ÈÄÌ¹›Ùˆ{2êùùnÜEî³ƒŒûš´'|üá{ë«‹ßüúU‡§ZËç–®\:ã\&µå<ÚÇ\áh’ØRB]{z‚æÎÈ’ÉdâñøÈÄlvíá¾8Õ½v™"1<9_X„gd0àu»ô™ñ°sÅý“cQeÓë¿øé?„|Ïga1Ô¶í}Qµ×ËÍÇ_XŽoH%±Q^x8W*æØóc  UÓM¥ajÏ’ñ@Ý¹¼;ñÛ³+‘Ý“ ,ËzòäÉ'Ÿ|’ËåÃšššr»Ýð:«F£‘Ëå²Ù,lk³`hšŽÇãÉd¶ã†ò¨Ë_„ÕÕÕ¿ùë¿ŒÈo|íõ~Òµ»O*þ@èÂ…îj)Õ³§'¶©EthêÜWÛ{\Š¢¸ððe;†z°XÑsáÂ…™™™ë½·øhî­7.m›Ëð<˜ûèÍ¯\lSZQÊ*“ÞðuŠÜöQe+F¶¤LOO§W"z½cUùbEph[Ÿ=.|nd|búè‹Û?ùáÿèFÜFéÉßrâåïüíÑÅRÿƒ+Š²'îïýðvÙNÆýNÚÂN¨u@º¨úcÓk‹÷€Vës®øÐøÜ§?ö2z»?{­„…ÂÑ3gÎÐ4½¸ð…-¦:4”\ÕÌå8Õ±t]¿qí{N1<<œK}Áaâ6)©Y4ù|¾µ‚E¢j­œë˜EE|ëëëZT¥ü§Ü½aÈåŽ—EQ¦i²ªÐmÚþÄ¶‘èô×C¡¢( Æ.\¶,k'Êœ9s¦=ï©È(Šï¢ Àjžç$QaKGXÀÆÆÆ‰l•€aXÿñŠ¢(Šš™ñrÈü“5Ë²qƒ$I ‚ ˆnXõ–š-Š4ÃÅb±p8ìýÊ•f­ ‚,Ç0Œ4„J¥
+…WEQ¡ØøÓGuÌjb(‚ @VÌ|ElJÖèh (Ž¹Ä¶ôS'hÎzóÍ¯Ê’,+Šm[‚Ù(ä›¢ö“ës~IÄü  U3J5•`£££‘Hd$ÊRÇª¼þ0†a‚¢Â¤D ‚À¥rÉŒy½^AÂ÷w~û·$IjŠ’¡ë°!Š¢4nnnÂÜE ÀW®^nTóýÎqÜž¸÷³Œûbô\€¨‰RSÝ€¨ÁÌoçÃ  @ÝÿË¯_”ÅZŸsyÑ¡‰™å»¦!Û¶-«f¦(—H’8ŽSŽ?š¯êB¡A,)×µBUŽD";qªcÿà8>2uqcñv÷<Ïb3©Å{$ªØ¶m˜v®$7E-býn
+ P¬Ê•–u~&ûeMmŸ£ôsgOëJBÅ=1ÅÑÚ¥‹ç±.ŠÛ–JQœn#‚ø¬‡9Š¢$I¡(ª«š® Ø0¥P(@ë¨±—Ýn÷N”éðrâ{:#áMp¨ªº¹¹	÷‡cFÁRFŽã†‡‡§§§ ¼1r¿-¯ œ5âïþáÇ©T
+EÑx<þ­o}«½…2,±‹Çãããã^¯W¡élY_L—›Í&\!Š¢~?Ny
+.—‹çyÇóûýáøØÒÒR¥R)¼8NÄb~Ø<Ã0wh²Ø Ë¹§ÕjkKÊàá0íñxÊe±RiAºS54ä=sæL4ýÞ÷¾÷÷?þ´V«Ñ4}îÜ¹·ß	‡ÃÙ¬š«¢iÇq(š\’IW¤Ñàyž W`¸*ØkkóùºÙ–›Ë²Æ$–óûýPÊ¸‚™’¶¯Á÷Ä½ç˜íd<À¤írj]tg·ÛEQÂ/6‘~çŠ59Þ˜Xje^¢ožÆ(Šz½Þ¡áñÅEc9WpÔí@ °§:ö‚ .··çð¸­T†¡;Ò²,ÇÝŸj«yÖå…B!”‰Ö5m#½Ñ>K0HÚ„×0¸t¥Ln¤¥Y«Û—
+¦ªªBªB™‚¢¨¦i)ŠÅh4Ê²ì¨±;—w¢LÇ?øîæ’išp_v(8í{AŸÏk‘ÆÇÇüš}‡»P®rtt”aŸÏ7222;;ë4[€é•n·;ƒA’$UUå8.‘H´×}Á›Ãº"yÜèè(I’¥RIUUèÕƒ±XÌ1F(Š
+‡Ãí…ªP½ŠD"í¡Á¯^½Ê²l: ŒMMM¹\.I’ºWµS¯ýk$"t$Ã ]ûÿîwð=qï9f;0iWjIÔ:³{hÚçó‘$¹¯¹àUÈ8Ž·Z-  Ë²±X,
+ÁeÐ4H$‚ƒ0ƒ¢(¿ßÇwâT÷þÙi
+øIOLLÐ4]­VÃ (ÊëõRÕl6[­‚ Á`ð™·Ñ4Ûg¡[Ã0úÄ”¢(Ë²úy¹§ø†ÊÅ¨±çÖÚ…ø{øe ’"Šâ_|Ñl6çççñÖ„âyþµ×^ƒ-¸T·m»R©Ü¾}ûóÏ?oµZ“““ÉdòêÕ«Ï»ð#†ap[É¬²,;]»NÄ0L‡Ú¯|Rª—AÀ;ç LÜi(xWTûC‚ àà¥Ré½÷Þ[^^Ö4-þú¯ÿúÙ³gI’ì9Ôi]Ã0NOQ”ž7ÞÁ:è)8ØàÃÝ!ãÁ&m×ˆwB­#›†Õ5Më.‡àð°…·tá,À¶m]×áio5¡(
+j:ýïMÓvšÂÁê24MÃËÞ#Ãp‡}¤úÁ” Ó4VÛ¾öK=¹¼ev“2PÄ¬­­­¯¯¯®®jš–Ïç{NŒa˜ÏçK$“““gÎœÙéÖþ¶éüä“OÆììl4ýú×¿ŽžÔ
+4AnÜ¸±°°P.—9Ž»|ùò•+W3m @o‹	
+×õõõL&3??_­V;Nò)ãr¹\.×èèèáE´P|>Çq‚ @1y¢ó÷i:‰Ôj5Ø¹V«)Š22ÀŽRJUUWWWóù<ìÒ°{[Ã0`J–eEQc.9š˜Ûív¹\ÅbvÏ:É´Ã0,‰(ŠR­V+•
+ŒOíMÀ+"e þ"ËòÚÚZ³ÙL§Ó¹\N„ÃÉí-¦,ËªÕj,ËÞ¾}ûòåËðªcè»®Õj’$Y–åóùX–í³=´ÌaGRAÞxã“L;èÛkµZ~¿¿\.7›ÍF£‘L&Rf Ø&eàíÔËËË¥R)—Ë•J¥V«Õ	[M3Ýn7Š¢F¶æ„²FQ”b±HÄÜÜÜåË—@.—›ŸŸ‡mbTU¥(êí·ßî¿	Žã,ËÂ>Øë÷$“EQš¦=¼éÞ-ubIÀ/GÊäóùr¹œJ¥R©T­VƒïvoI’Ñhtxx8`V,—––jµšS9ÝjµR©ÔÄÄÄÝ»w¡ÙU¯×añ•a²,K’´¯nOÇ1sxì@8Îf³ÇÕëõ\.W(‰Ä@À žK™ÅÅÅL&“ÍfEQìöÂÀ(ÒÌÌÌÈÈË²(Šúý~’$=zÔ~'¤¢(Ùl6‹!R,¡Ï àóùàÝÌý‹x'·Ûíþåv$Ø—w&
+E£Ñf³Y,s¹\(:_ø ðŠH™;wîÀpw·ˆ©„°Ü1
+Áì8–ea£™f³ÙÞ z%à¯`â€Ïç>wî\(êA†aÀbËöB¤n4Á€ëëë²,onnÎÌÌ¤Ì ð\ÊÀ@Ø¯§ÓÁï÷»\.˜k`o'šŽF£™L¦T*õŒ4“$
+…†††`òò¾TÃ0`¯™ééé—ÅÁÁ²l0„¡1Ïv¹\ïÌ ðLÊ´«ÐH!j7†ùýþ`0ØaÑÀ€7‚ Ãô”28Žó<ãø¾´°í 0óR˜K¾n·Ûëõ.//onnÖjµ@ Ð-e`Å†ž‡å`ðŠˆÁF<0ÀfÆ0 
+¶ÑÃmi·A·ûK¡<tô“æ ã@ûÃcZ^Ç=²ŽëAœJ˜ýáv»ý~?¼ª0¦iÂþ2«««¢(BÁÔ’;{½ÞýÖLÂpÓ4½^/MÓ/Kî	Š¢,Ë-,,ÔëõB¡0::ÚÝ|ï—Ûa÷•='qü%Z-”n'y'ÇÅu]ƒñxÜ©È‚%žñx<*Š‚aX«Õ²m› I’²ÙìÚÚŒ1MNNz<žZ­¶±±áÜéœ0n·
+ }‘Õëõž9sª¿,‡<,&L&“3337oÞÜØØ¸xñbw€Ì²,]×;ü_ðº^ÇÍ æaàJ,è"xÁd?ðjwRsÚŸ8Wk #XTdFŸzÖ¾¥ÌÈÈÈää$EQº®
+…jµZ­V†mÛ>ŸÏ0QVá‚ À\;A’Éäðð°mÛ°^ùÉ“'í‚F’¤••—Ëå÷û½^oŸEÑí%:£À¥K—
+…Øñ<ß5,Ã8†V¾¿D$=±«…uÈÇ§daþçÕ———ïß¿_,aÖ/¼Ó:›Í.//—Ëe¨’ (
+2CcJQE¡mE’¤išÎ='š¦‹E’$a<û•?«	‚€UªÙlv||Üív¿D®¥à­ZEWWW`‡ˆn‰ËåJ$ccc0Du3Ç‡a“—Û·oã8†††J¥ÒãÇK¥’ã$¾yó¦ÏçÓuŠ¡Wû\…ÝÔ———+•J,{µñÀ ú•2×®]+—ËÝÇ2lÔF†q¹\ÇAo.A.—ËÑú,Ë:}ú´mÛªªŠ¢ÈqÏóétºP(”ËeEQšÍæ­[· -
+}º¯05¡Ý4==Óa/µÁ&À¯8üÿ ›ºl¶a¬    IEND®B`‚Yimage/png_/http://www.brokenthorn.com/Resources/site/5.pngO¬bplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯''-.4567YZ[\]^_`abcdefghijklmnopqrstuyU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€€€	€€&€€ €Ó()$+,WNS.base[NS.relative€ €€_/http://www.brokenthorn.com/Resources/site/5.pngÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlRuAc ÈÓ89:IXWNS.keysZNS.objects®;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€®KLMNOPQRSTUVW€€€€€€€€€€ €!€"€#€$€%\Content-TypeWUpgradeZKeep-Alive]Last-ModifiedVServerWExpires]Cache-ControlTDate^Content-LengthZConnectionX__hhaa__TEtagTVary]Accept-RangesYimage/pngRh2_timeout=2, max=100_Mon, 17 May 2010 00:55:30 GMTVApache_Mon, 12 Apr 2021 10:13:14 GMT_max-age=2592000_Sat, 13 Mar 2021 10:13:14 GMTU15467_Upgrade, Keep-Alive_Ü
+
+YnBsaXN0MDDdAQIDBAUGBwgJCgsMDQ4QEhQWGBocHiAiJCZcQ29udGVudC1UeXBlV1VwZ3JhZGVaS2VlcC1BbGl2ZVRWYXJ5VlNlcnZlcldFeHBpcmVzXUNhY2hlLUNvbnRyb2xURGF0ZV5Db250ZW50LUxlbmd0aFpDb25uZWN0aW9uVEV0YWddQWNjZXB0LVJhbmdlc11MYXN0LU1vZGlmaWVkoQ9ZaW1hZ2UvcG5noRFSaDKhE18QEnRpbWVvdXQ9MiwgbWF4PTEwMKEVXxAaVXNlci1BZ2VudCxBY2NlcHQtRW5jb2RpbmehF1ZBcGFjaGWhGV8QHU1vbiwgMTIgQXByIDIwMjEgMTA6MTM6MTQgR01UoRtfEA9tYXgtYWdlPTI1OTIwMDChHV8QHVNhdCwgMTMgTWFyIDIwMjEgMTA6MTM6MTQgR01UoR9VMTU0NjehIV8QE1VwZ3JhZGUsIEtlZXAtQWxpdmWhI18QFCIzYzZiLTQ4NmJmYWU2Yjg0ODAioSVVYnl0ZXOhJ18QHU1vbiwgMTcgTWF5IDIwMTAgMDA6NTU6MzAgR01UAAgAIwAwADgAQwBIAE8AVwBlAGoAeQCEAIkAlwClAKcAsQCzALYAuADNAM8A7ADuAPUA9wEXARkBKwEtAU0BTwFVAVcBbQFvAYYBiAGOAZAAAAAAAAACAQAAAAAAAAAoAAAAAAAAAAAAAAAAAAABsA==_"3c6b-486bfae6b8480"_User-Agent,Accept-EncodingUbytesÒ/0vw_NSMutableDictionary£vx3\NSDictionaryÒ/0z{_NSHTTPURLResponse£|}3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d Ž ” ¯ Ñ ó ö=DfilŽ°³µ·¹»½¿ÁÃÄÆÈÊÌÓÛçéëí$/8>AJSUW^fq€‚„†ˆŠŒŽ’”–˜šœ«­¯±³µ·¹»½¿ÁÃÅÇÉÖÞé÷þ(3<AFT^av–½Ïïõë%*@DQVjn‚             ~              ÔOê‰PNG
+
+   IHDR   X      TúÒ   PLTE 	
+! #### %)#)-(((&,0)/4*15-49333;;;6>D8AG;DKKKLAKROOPFPXJU]TUU[[[D]oLX`P\eY^bUbkYfp[ireeelll`nxcr}vwz{{{ Zœ_Ÿ[‡	`Ÿb¡e¢h¤k¦m¨2m™!o©%rª)u¬1y¯9t¡5|°8~²gw‚iy…m~‰y}<³D†¶Gˆ·JŠ¹U‘½Z”¿kƒ—q‚Žs…‘xŠ–zš}v‘§]–ÀcšÂižÄm¡Æu¥É|ªÌƒƒƒ‰Ž–———˜˜˜€“¡…™§†š¨— ‹ ¯¢±™¡ª‘§¶”ªº£¥¦««­´´´¿¿¿‚®Î†°Ï…°Ð‰³Ñ›³Ã·Ô•ºÕ˜¼×›¾Ø¢ºË¥¾ÐŸÁÚ§ÀÒ£ÃÛ©ÂÔªÆÙ­ÉÝ°ÊÝ²Íà¶ÐãÂÂÂÌÌÌÔÔÔØØØÀÖçÆÚèÍßìÓãîÝéòçççìììâìóéñöîôøóóóò÷úõøûþþþÌÌÌ                                                                                                                                                                                                                                                                                                                                                               wŠº   ‹tRNSÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ …Ãï   bKGDÿ¥òÅ   	pHYs   H   H FÉk>  ìIDATHÇ­–‹WU‡ïbZ@cli `Rmûp¢IND-µRi‘Önú '{*ËÉã>D ­å•ë_íÌÝl²I¬œôô—³³³É¹ßÎÎ™Ûyëzô‰íèÓuÀ•RB	¡¤‘òÿÐÃµË}€'®òqè‰·6äæbõ?!÷	¦4˜0‰h~¤¢è¥äæ6âÀ\8v]‰¢]¯]%œ"/Ú¤"·íº”Û–ÂvÞ(âÛ,.m+,æÙ5¡ÂÌf¤a‡á÷2Ê,á²p¸š-àêòT™ GÉd–”Óúø×+;úIÁøØ£ìÎ{VQúàß7â,¾a»Œl#Ýâ.‹ô€_B‰{0Gà*xZÕ:†«vGvŒÜcW%‚ÇæçÏ2Wˆkt—·¾½t&L÷‚õ4<G›†C´Ë;<Ø‚Ì‰~ÄÞ¿~!4ðÊó8³j6r•B°B\4>40±ðÕ.À&Ú¨¢ÍÀK­§È¸€Yøìsí‹,DéÄTðz8q´È,7bRÁ{À{0‹«0¯û0é¦k¢ŸÇX„­b”-X‰H âQŸTJÅÐââ¢ 0@«*R˜…-€´Ö«PÐ‡)ØÇ­¶ô$bÜwÎÔ(buÁ~Ä£fØ’®IÑ6‚¿ "{à>zf@a>öt’+Gºvžë`‹¸N½æT¸r.TÍ©)Á—À®#…CâêáWfï›à*ä©,‡ÂEË Ì6ô½6˜6ÏtµwxƒH˜6o7³×ß4«ÊBZAþ$9½?Òõ~¸þ³Œ<„)Õ1>|ø&×ï¼9ÌƒÔ7À«­W ì<)[ BW^;ÛZ\\ø²Õ pd®9Lu‚0cë^
+œóÌŠw ùÜ³n®~p“Z~ÐMpö•çSUHgrÌ_bß³ WÌBªÜÅm¡,üaZ°¬Ÿ-›T,<õÈWžRUàªO=°PÃg¹Í>ézþä¦”ö£Žé–‡Ó‚/Ð+UÓPm\ü›¸Ö_Þæù`UcçD…}Ðæ®x¼ÂMsJÞºØ–3d÷¾Öú$I ÖÛL$Þewu'XªÐ°pØ‡ÁC[É¥®yÜØ4'œiúÅJ&“?Ag718òØ¯
+nÀW?rÌr~b?s¼Ðæ–ûô4ƒP!aJ>°,6T	V…Xnqû~ƒÔï¬¯/mÈ¿!Ç¹½¸ÝU¿Ë>·ßwž|mK4õrS¥þ_¦R–«ÉTIñþ_¦ü40/•8§þÿ	5÷)È
+ú4£x'øÉ©z|Ÿt—ÌÚý¶Öî‘ñ¾iÙï¯ûàX"›˜˜h‰X÷ÙhñXSQßXO‰Øˆÿ*[E\    IEND®B`‚_*http://www.w3.org/Icons/valid-xhtml10-blueOîbplist00Ô
+X$versionY$archiverT$topX$objects † _NSKeyedArchiverÑ	_WebResourceResponse€¯"'-.4567STUVWXYZ[\]^_`abcdefghimnU$nullÝ !"#$%&___nsurlrequest_proto_prop_obj_6___nsurlrequest_proto_prop_obj_3R$2___nsurlrequest_proto_prop_obj_0R$3___nsurlrequest_proto_prop_obj_4V$class___nsurlrequest_proto_prop_obj_1R$4R$0___nsurlrequest_proto_prop_obj_5___nsurlrequest_proto_prop_obj_2R$1€ €€	€€!€€ €Ó()$+,WNS.base[NS.relative€ €€_*http://www.w3.org/Icons/valid-xhtml10-blueÒ/012Z$classnameX$classesUNSURL¢13XNSObject#AÂþlRuIØ ÈÓ89:FRWNS.keysZNS.objects«;<=>?@ABCDE€	€
+€€€€€€€€€«GHIJKLMNOPQ€€€€€€€€€€€€TEtag\Content-TypeTVary]Last-Modified]Cache-ControlX__hhaa__TDate]Accept-Ranges^Content-LengthWExpires_Access-Control-Allow-Origin_!"7ea-41880ced83900;5b8ff22e2f97a"_image/png; qs=0.7_negotiate,accept_Fri, 14 Jul 2006 01:43:32 GMT_max-age=2592000_t
+
+YnBsaXN0MDDaAQIDBAUGBwgJCgsNDxETFRcZGx1fEBtBY2Nlc3MtQ29udHJvbC1BbGxvdy1PcmlnaW5cQ29udGVudC1UeXBlVEV0YWddTGFzdC1Nb2RpZmllZFRWYXJ5VERhdGVdQWNjZXB0LVJhbmdlc15Db250ZW50LUxlbmd0aFdFeHBpcmVzXUNhY2hlLUNvbnRyb2yhDFEqoQ5fEBFpbWFnZS9wbmc7IHFzPTAuN6EQXxAhIjdlYS00MTg4MGNlZDgzOTAwOzViOGZmMjJlMmY5N2EioRJfEB1GcmksIDE0IEp1bCAyMDA2IDAxOjQzOjMyIEdNVKEUXxAQbmVnb3RpYXRlLGFjY2VwdKEWXxAdRnJpLCAxMiBNYXIgMjAyMSAxMjoyOTowOCBHTVShGFVieXRlc6EaVDIwMjahHF8QHVN1biwgMTEgQXByIDIwMjEgMTI6Mjk6MDggR01UoR5fEA9tYXgtYWdlPTI1OTIwMDAACAAdADsASABNAFsAYABlAHMAggCKAJgAmgCcAJ4AsgC0ANgA2gD6APwBDwERATEBMwE5ATsBQAFCAWIBZAAAAAAAAAIBAAAAAAAAAB8AAAAAAAAAAAAAAAAAAAF2_Fri, 12 Mar 2021 12:29:08 GMTUbytesT2026_Sun, 11 Apr 2021 12:29:08 GMTQ*Ò/0jk_NSMutableDictionary£jl3\NSDictionaryYimage/pngÒ/0op_NSHTTPURLResponse£qr3_NSHTTPURLResponse]NSURLResponse    $ ) 2 7 I L b d ‰  ª Ì î ñ8?adg‰«®°²´¶¸º¼¾¿ÁÃÅÇÎÖâäæè%.47@IKMT\gsuwy{}ƒ…‡‰•—™›Ÿ¡£¥§©«­²¿ÄÒàéîü1Ui|œ®&FLQqsxŽ’Ÿ©®ÂÆÚ             s              è    1 < N d ‚ ‘ ¨g{g…g‹gÂgÃgÇgÐgær™r¢rÝ{˜{¡¸¸¸LÀüÁÈóÉ                            Ñ
